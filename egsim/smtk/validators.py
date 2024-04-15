@@ -106,10 +106,10 @@ def validate_inputs(gsims:dict[str, GMPE], imts: dict[str, IMT]):
         invalid_imts = imt_names - intensity_measures_defined_for(gsim_inst)
         if not invalid_imts:
             continue
-        errors.append([gm_name] + list(invalid_imts))
+        errors.append([gm_name] + sorted(invalid_imts))
 
     if errors:
-        raise IncompatibleInput(*errors) from None
+        raise ModelUndefinedForImtError(*errors) from None
 
     return gsims, imts
 
@@ -140,27 +140,17 @@ def validate_imt_sa_limits(gsim: GMPE, imts: dict[str, IMT]) -> dict[str, IMT]:
 
 # Custom Exceptions:
 
-# FIXME: FlatfileError can inherit from this
+
 class InvalidInput(ValueError):
-    """Exception describing any invalid ground motion model or intensity measure
-    that was given as input in a routine.
-    `self.args: tuple[str]` will return the list of invalid input names
-    """
+    """Base exception for any input validation error"""
 
     def __str__(self):
-        # print each input separated by comma (superclass uses `repr(self.args)`):
-        return ", ".join(self.args)
+        """Reformat ``str(self)``"""
+        # Basically remove the brackets if `self.arg` is a tuple i.e. if  `__init__`
+        # was called with multiple arguments:
+        return ", ".join(repr(a) for a in self.args)
 
 
-class IncompatibleInput(InvalidInput):
-    """Exception describing any invalid ground motion model or intensity measure
-    that was given as input in a routine.
-    `self.args` will yield all incompatible inputs as `tuple[str, list[str]]`
-    (the model name and the list of incompatible IMT names)
-    """
-
-    def __str__(self):
-        # print each input separated by comma, where each input has the form:
-        # "({model}, {imt1}, {imt2}, ...)"
-        return ", ".join(f"({', '.join(a)})" for a in self.args)
+class ModelUndefinedForImtError(InvalidInput):
+    pass
 

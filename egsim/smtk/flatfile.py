@@ -19,7 +19,7 @@ try:
 except ImportError:
     from yaml import SafeLoader  # same as using yaml.safe_load
 
-from .validators import sa_period
+from .validators import sa_period, InvalidInput
 
 _csv_default_args = (
     ('na_values', ("", "null", "NULL", "None",
@@ -96,7 +96,7 @@ def read_flatfile(
             dfr = pd.read_csv(filepath_or_buffer, **kwargs)
         except ValueError as exc:
             # invalid_columns = _read_csv_inspect_failure(filepath_or_buffer, **kwargs)
-            raise InvalidDataError(str(exc)) from None
+            raise InvalidColumnDataError(str(exc)) from None
 
     if rename:
         dfr.rename(columns=rename, inplace=True)
@@ -115,7 +115,7 @@ def read_flatfile(
 
 def _infer_csv_sep(filepath_or_buffer: IOBase, **kwargs) -> str:
     """Infer `sep` from kwargs, and or return it"""
-    sep = kwargs.get('sep', None)
+    sep = kwargs.get('sep')
     if sep is not None:
         return sep
     nrows = kwargs.pop('nrows', None)
@@ -213,7 +213,7 @@ def validate_flatfile_dataframe(
             continue
 
     if invalid_columns:
-        raise InvalidDataError(*invalid_columns)
+        raise InvalidColumnDataError(*invalid_columns)
 
     # check no dupes:
     ff_cols = set(dfr.columns)
@@ -221,7 +221,7 @@ def validate_flatfile_dataframe(
     for c in dfr.columns:
         aliases = set(FlatfileMetadata.get_aliases(c))
         if len(aliases & ff_cols) > 1:
-            raise ColumnConflictError(*list(aliases & ff_cols))
+            raise ColumnNamesConflictError(*list(aliases & ff_cols))
         if not has_imt and FlatfileMetadata.get_type(c) == ColumnType.intensity:
             has_imt = True
 
@@ -436,15 +436,8 @@ def cast_to_dtype(
 # Exceptions:
 
 
-class FlatfileError(Exception):
-    """
-    General flatfile column(s) error. See subclasses for details
-    """
-    def __str__(self):
-        """Reformat ``str(self)``"""
-        # Basically remove the brackets if `self.arg` is a tuple i.e. if  `__init__`
-        # was called with multiple arguments:
-        return ", ".join(str(arg) for arg in self.args)
+class FlatfileError(InvalidInput):
+    """General flatfile column(s) error. See subclasses for details"""
 
 
 class MissingColumnError(FlatfileError, AttributeError, KeyError):
@@ -453,11 +446,11 @@ class MissingColumnError(FlatfileError, AttributeError, KeyError):
     pass
 
 
-class ColumnConflictError(FlatfileError):
+class ColumnNamesConflictError(FlatfileError):
     pass
 
 
-class InvalidDataError(FlatfileError, ValueError, TypeError):
+class InvalidColumnDataError(FlatfileError, ValueError, TypeError):
     pass
 
 

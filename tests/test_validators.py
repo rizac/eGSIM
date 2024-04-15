@@ -2,13 +2,13 @@ import pytest
 from openquake.hazardlib import imt
 
 from egsim.smtk import validate_inputs, harmonize_input_gsims, harmonize_input_imts, gsim
-from egsim.smtk.validators import IncompatibleInput, validate_imt_sa_limits
+from egsim.smtk.validators import ModelUndefinedForImtError, validate_imt_sa_limits
 
 
 def test_invalid_imts():
     gsims = ['BindiEtAl2014Rjb']
     imts = ['CAV']
-    with pytest.raises(IncompatibleInput):
+    with pytest.raises(ModelUndefinedForImtError) as err:
         validate_inputs(
             harmonize_input_gsims(gsims),
             harmonize_input_imts(imts)

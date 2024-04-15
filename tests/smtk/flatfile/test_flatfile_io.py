@@ -3,7 +3,6 @@ Created on 16 Feb 2018
 
 @author: riccardo
 """
-from typing import re
 
 import os
 from os.path import dirname, join, abspath
@@ -152,4 +151,4 @@ def test_flatfile_exceptions():
                 traceback.print_exc(file=s)
                 strr = s.getvalue()
                 assert f'{exc_cls.__name__}:' in strr
-                assert ", ".join(str(_) for _ in cols) in strr
+                assert ", ".join(repr(_) for _ in cols) in strr

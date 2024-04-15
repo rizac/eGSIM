@@ -18,7 +18,8 @@ from egsim.smtk.flatfile import (ColumnType, ColumnDtype,
                                  _flatfile_metadata_path, cast_to_dtype,
                                  FlatfileMetadata,
                                  _load_flatfile_metadata, get_dtype_of,
-                                 validate_flatfile_dataframe, InvalidDataError)
+                                 validate_flatfile_dataframe,
+                                 InvalidColumnDataError)
 
 
 def test_flatfile_extract_from_yaml():
@@ -275,7 +276,7 @@ def test_flatfile_invalid_categories():
     validate_flatfile_dataframe(d)
 
     d = pd.DataFrame({'geology': ['?'], 'PGA': [1.2]})
-    with pytest.raises(InvalidDataError) as err:
+    with pytest.raises(InvalidColumnDataError) as err:
         validate_flatfile_dataframe(d)
 
 

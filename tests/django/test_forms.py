@@ -189,9 +189,9 @@ class Test:
         }
         form = GsimImtForm(data)
         assert not form.is_valid()
-        assert form.errors_json_data()['message'] == \
-              'gsim, imt: BindiEtAl2011 not defined for PGD, ' \
-              'BindiEtAl2014Rjb not defined for PGD'
+        msg = form.errors_json_data()['message']
+        assert msg == ('gsim: some model is not defined for all imts; '
+                       'imt: some imt is not supported by all models')
 
     def test_arrayfields_all_valid_input_types(self):
         """Tests some valid inputs in the egsim Fields accepting array of values

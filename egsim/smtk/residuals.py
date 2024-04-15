@@ -20,7 +20,7 @@ from openquake.hazardlib.contexts import RuptureContext, ContextMaker
 from openquake.hazardlib.scalerel import PeerMSR
 
 from .flatfile import (FlatfileError, MissingColumnError, FlatfileMetadata,
-                       InvalidDataError, ColumnConflictError)
+                       InvalidColumnDataError, ColumnNamesConflictError)
 from .validators import (validate_inputs, harmonize_input_gsims, sa_period,
                           harmonize_input_imts, validate_imt_sa_limits)
 from .registry import (get_ground_motion_values, Clabel,
@@ -326,7 +326,7 @@ def get_column_name(flatfile: pd.DataFrame, column: str) -> Union[str, None]:
     ff_cols = set(flatfile.columns)
     cols = set(FlatfileMetadata.get_aliases(column)) & ff_cols
     if len(cols) > 1:
-        raise ColumnConflictError(*cols)
+        raise ColumnNamesConflictError(*cols)
     elif len(cols) == 0:
         return None
     else:
@@ -439,7 +439,7 @@ def get_required_sa(flatfile: pd.DataFrame, sa_imts: Iterable[str]) -> pd.DataFr
         if p not in source_sa:
             tgt_sa.append((p, i))
     if invalid_sa:
-        raise InvalidDataError(*invalid_sa)
+        raise InvalidColumnDataError(*invalid_sa)
 
     # source_sa: period [float] -> mapped to the relative column:
     target_sa: dict[float, str] = {p: c for p, c in sorted(tgt_sa, key=lambda t: t[0])}
