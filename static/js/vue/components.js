@@ -393,15 +393,16 @@ EGSIM.component('gsim-map', {
 				// prevent click on anything on the div to propagate on the map:
 				L.DomEvent.disableClickPropagation(div);
 				var html = `<button class="border-0" type="button"
-								onclick='this.parentNode.querySelector("._panel").classList.toggle("d-none")'
+								onclick='this.parentNode.querySelector("._panel").classList.toggle("d-none");this.querySelectorAll("._arrow").forEach(e => e.classList.toggle("d-none"))'
 								style='width:100%; background-color:transparent'>
-								<i class="fa fa-sort"></i>
+								<span class='_arrow'>&#9207;</span>
+								<span class="_arrow d-none">&#9206;</span>
 							</button>
 							<div class='_panel d-none'>`;
 				// Add title:
 				html += `<h6 class="mt-1">Map options</h6>
-					<div style='max-width:12rem' class='mb-2'>On mouse click, return the models selected for the
-					geographic position by querying the following seismic hazard
+					<div style='max-width:12rem' class='mb-2'>On mouse click, querying the models
+					selected in the following seismic hazard
 					source regionalizations:
 					</div>`;
 				for (var regx of regionalizations){
