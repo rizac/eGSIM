@@ -9,7 +9,7 @@
 	<link href="https://fonts.googleapis.com/css?family=Encode+Sans+Condensed|Lato&display=swap" rel="stylesheet">
 	
 	<!--  -->
-	<!-- BOOTSTRAP for safety, it must be loaded before all posibble plugins -->
+	<!-- BOOTSTRAP for safety, it must be loaded before all possible plugins -->
 	<!--<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css"
 		integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO"
 		crossorigin="anonymous">-->
@@ -19,7 +19,7 @@
 	-->
 	<link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
 
-	<!-- syntax highlighings library (scroll to the bottom for specific syntaxes): -->
+	<!-- syntax highlights library (scroll to the bottom for specific syntax): -->
 	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.16.0/themes/prism.min.css">
 
 	<style type='text/css'>
@@ -102,14 +102,14 @@ See javascript code at the page bottom.
 Everything you write here will be overridden -->
 </div>
 
-<p style='font-weight:bold;font-size:200%'>eGSIM deployment</p>
+<p style='font-weight:bold;font-size:200%'>eGSIM deployment (Django and wsgi)</p>
 
 <p>
-The following cheatsheet covers two main aspect: Maintenance and Deployment
-(no docker container). It assumes that you already have access to a remote
+The following cheatsheet covers two main aspect: Maintenance and Deployment.
+It assumes that you already have access to a remote
 machine. The following instructions have been tested on Ubuntu 18.04 MATE.
 The procedure to obtain or update an SSL certificate (in order to have
-an http<b>s</b> address) is covered in a separate document
+a http<b>s</b> address) is not covered here
 </p>
 
 <p>
@@ -132,8 +132,9 @@ automatically):
 		</td>
 		<td>
 			The eGSIM Django project name where all Python packages will be placed
-			(including the eGSIM git repository). <b>As this also is the name of the Gunicorn
-			service file: please provide only alphanumeric or underscore characters</b>
+			(including the eGSIM git repository) <b>usually egsim followed by some numeric version,
+			but note that this also is the name of the Gunicorn
+			service file, so please provide only alphanumeric or underscore characters</b>
 		</td>
 	</tr>
 	<tr>
@@ -159,7 +160,7 @@ automatically):
 
 <h1>Maintenance</h1>
 
-This section covers informations for an already installed program. To perform a
+This section covers information for an already installed program. To perform a
 server installation, scroll down
  
 <h2>Important files</h2>
@@ -195,20 +196,19 @@ server installation, scroll down
 	</tr>
 	<tr>
 		<td><i class="fa fa-file-o"></i></td>
-		<td><span class="token important">/etc/nginx/sites-available/egsim</span><br>
-		the nginx config for the egsim site (new deployment configurations will be added
-		to this file)</td>
+		<td><span class="token important">/etc/nginx/sites-available/$DJANGO_PROJECT</span><br>
+		the nginx config for the egsim site</td>
 	</tr>
 	<tr>
 		<td><i class="fa fa-file-o"></i></td>
 		<td><span class="token important">/var/log/nginx/access.log</span><br>
-		inspects the nginx log (access infos).<br>
+		inspects the nginx log (access info).<br>
 			Example: sudo tail -30 /var/log/nginx/access.log</td>
 	</tr>
 	<tr>
 		<td><i class="fa fa-file-o"></i></td>
 		<td><span class="token important">/var/log/nginx/error.log</span><br>
-		inspects the nginx log (error infos)<br>
+		inspects the nginx log (error info)<br>
 			Example: sudo tail -30 /var/log/nginx/error.log</td>
 	</tr>
 	<tr>
@@ -229,7 +229,7 @@ server installation, scroll down
 	<tr>
 		<td><i class="fa fa-file-o"></i></td>
 		<td><span class="token important">/etc/hosts</span><br>
-		where the maching hosts are written: should not be modified
+		where the matching hosts are written: should not be modified
 		frequently, we did it only once to add the domain name
 		(line "127.0.0.1  $DOMAIN", without quotes)
 		</td>
@@ -451,10 +451,10 @@ Eventually, we added in the apt-install command above all packages that we
 discovered missing, so hopefully a fresh new installation might work fine
 without any new error</p>
 
-<p>Install eGSIM: activate virtualenv, then</p>
+<p>Install eGSIM + required packages: activate virtualenv, then</p>
 <pre><code class="language-bash">
 cd ./eGSIM/
-pip install -r ./requirements.dev.txt
+pip install --upgrade pip setuptools && pip install -r ./requirements.txt && pip install gunicorn
 </code></pre>
 
 
@@ -483,7 +483,7 @@ chmod 750 $EGSIM_CONFIG_DIR
 </code></pre>
 
 
-<h2>Setup the project</h2>
+<h2>Set up the project</h2>
 
 <p>Create the settings file:
 
@@ -508,9 +508,9 @@ from egsim.settings_debug import *
 
 DEBUG = False  # DO NOT CHANGE THIS!
 ALLOWED_HOSTS = ['$DOMAIN']
-# SECRET_KEY SHOULD BE UNIQUE FOR EACH SETTINGS FILE AND CAN BE GENERATED ON THE TERMINAL (WITHIN THE DJANGO VIRUAL ENV)  WITH THE COMMAND:
+# SECRET_KEY SHOULD BE UNIQUE FOR EACH SETTINGS FILE AND CAN BE GENERATED ON THE TERMINAL (WITHIN THE DJANGO VIRTUAL ENV)  WITH THE COMMAND:
 # python -c "from django.core.management.utils import get_random_secret_key;print(get_random_secret_key())"
-# COPY THE OTUPUT STRING HERE BELOW
+# COPY THE OUTPUT STRING HERE BELOW
 SECRET_KEY = ''
 DATABASES = {
 	'default': {
@@ -531,9 +531,6 @@ MEDIA_ROOT = '$EGSIM_DATA_DIR/media/'
 CSRF_TRUSTED_ORIGINS = ["https://$DOMAIN"]  # required in Django 4+. Https or http depends on your SSL certificate
 </code></pre>
 
-<!--<pre><code class="language-bash">
-vim /etc/opt/egsim/settings.py
-</code></pre>-->
 
 Then, inside $EGSIM_CWD:
 
@@ -541,7 +538,6 @@ Then, inside $EGSIM_CWD:
 Activate virtualenv and:</p>
 <pre><code class="language-bash">
 (cd $EGSIM_CWD; export PYTHONPATH=$EGSIM_CONFIG_DIR DJANGO_SETTINGS_MODULE=settings; python manage.py collectstatic)
-<!--export PYTHONPATH=$EGSIM_CONFIG_DIR/;python manage.py collectstatic &#45;&#45;settings=settings-->
 </code></pre>
 
 <p class='note'>(the PYTHONPATH simply makes the option
@@ -595,48 +591,38 @@ service nginx restart
 
 <h3>Gunicorn</h3>
 
-<p>Become root:</p>
-<pre><code class="language-bash">
-su root
-</code></pre>
-
-<p>The command above should get you out of the activated virtual environment.
-<b>(Re)activate virtualenv</b> and install Gunicorn:</p>
-
-<pre><code class="language-bash">
-pip install gunicorn
-</code></pre>
-
-<p>OPTIONAL, test: start Gunicorn and go to $DOMAIN (from the server or another
-external computer) to test:</p>
-
-<pre><code class="language-bash">
-export PYTHONPATH=$EGSIM_CONFIG_DIR; export DJANGO_SETTINGS_MODULE=settings
-gunicorn --workers=4 --log-file=$EGSIM_LOG_DIR/gunicorn.log --bind=127.0.0.1:$GUNICORN_PORT --bind=[::1]:$GUNICORN_PORT egsim.wsgi:application
-</code></pre>
-
-<p>Create the systemd task to start automatically egsim django server</p>
-<pre><code class="language-bash">
-su $DJANGO_USER
-</code></pre>
-
-<p>Save the content below in <code>/etc/systemd/system/$DJANGO_PROJECT.service</code>.
-(or copy a previous service file and use the template below as reference. <b>Remember</b>
-that $DJANGO_PROJECT cannot contain dots)
-
 <p>
-<b>Important</b>: in the file below, note the --bind argument: it is typed twice to
-bind our Django application on localhost both on ipv6 and ipv4 interfaces.
-We will then tell Nginx (see below) to proxy each request to localhost
-(see <code>proxy_pass</code> argument) delegating Gunicorn for everything that is not a
-static file (everything not in media or static directories)
+(become root <code class="language-bash">su root</code> and <b>(re)activate virtualenv if necessary</b>)
 </p>
+
+Check that gunicorn is installed, i.e. the file <code>$VENV_PATH/bin/gunicorn</code> exists
+(otherwise <code>pip install gunicorn</code>)
+
+<details>
+<summary>
+	Start Gunicorn and go to $DOMAIN (from the server or another external computer)
+	to test:
+</summary>
+
+	<pre><code class="language-bash">
+	export PYTHONPATH=$EGSIM_CONFIG_DIR; export DJANGO_SETTINGS_MODULE=settings
+	gunicorn --workers=4 --log-file=$EGSIM_LOG_DIR/gunicorn.log --bind=127.0.0.1:$GUNICORN_PORT --bind=[::1]:$GUNICORN_PORT egsim.wsgi:application
+	</code></pre>
+
+	<!-- <p>Create the systemd task to start automatically egsim django server</p>
+	<pre><code class="language-bash">
+	su $DJANGO_USER
+	</code></pre> -->
+</details>
+
 <p>
-The URL port of the <code>--bind</code> arguments is set as
-<input type='number' step="1" id='GUNICORN_PORT' style="width:6rem"/>, you can change the
-value in the field to automatically update the templates below. Changing the port is useful if
-you want to run several Gunicorn instances from Nginx (e.g., previous versions
-alongside the current)
+Create the so-called service <i>unit file</i> (<code>touch</code> or
+<code>cp</code> from a previous unit file, if available.
+<i>Remember: not dots in the file name</i>):
+</p>
+<pre><code class="language-bash">/etc/systemd/system/$DJANGO_PROJECT.service</code></pre>
+<p>
+with the following content:
 </p>
 
 <pre><code class="language-bash">
@@ -659,32 +645,89 @@ ExecStart=$VENV_PATH/bin/gunicorn \
 WantedBy=multi-user.target
 </code></pre>
 
-<p>To restart the service (second line is mandatory only if the script above has been changed):</p>
-<pre><code class="language-bash">
-service $DJANGO_PROJECT restart
-</code></pre>
+<b>Important notes:</b>
+<ul>
+	<li>--bind argument: it is typed twice to
+	bind our Django application on localhost both on ipv6 and ipv4 interfaces.
+	We will then tell Nginx (see below) to proxy each request to localhost
+	(see <code>proxy_pass</code> argument) delegating Gunicorn for everything that is not a
+	static file (everything not in media or static directories)
 
-<p>To restart the service if the script above has been changed:</p>
+	<li>The URL port of the <code>--bind</code> arguments is set as
+	<input type='number' step="1" id='GUNICORN_PORT' style="width:6rem"/>, you can change
+	the value in the field to automatically update the templates below. Changing the port
+	is useful if you want to run several Gunicorn instances from Nginx (e.g., previous
+	versions alongside the current)
+</ul>
+
+<p>Stop all running egsim services</p>
+
+List  all running services via:
+<pre><code class="language-bash">
+systemctl list-units --type=service --state=running
+</code></pre>
+And then, after identifying the old egsim service:
+<pre><code class="language-bash">
+service [old_egsim_unit_file] stop
+</code></pre>
+</p>
+<p><b>Important note</b> without this procedure, if the old service is using the same url
+and port specified in the unit file above, then our service will not work, as the port is
+already in use
+</p>
+
+
+<p>Restart the service</p>
 <pre><code class="language-bash">
 service $DJANGO_PROJECT stop
 systemctl daemon-reload
 service $DJANGO_PROJECT start
 </code></pre>
 
-<p>Optional. To start the service automatically on boot:</p>
+<p>Check the status of the service</p>
 <pre><code class="language-bash">
-systemctl enable $DJANGO_PROJECT
+sudo systemctl status $DJANGO_PROJECT
 </code></pre>
+
+<details>
+	<summary>command details</summary>
+	The usual way to restart the service:
+	<pre><code class="language-bash">
+		service $DJANGO_PROJECT restart
+	</code></pre>
+	works if the service file has not been changed. so for safety we
+	instruct systemd to reload its configuration files, including unit files and security
+	profiles, without restarting the system or services (the command is essential after making
+	changes to any unit file to ensure systemd applies the updates correctly)
+</details>
+
+<p>
+<details>
+	<summary>To start the service automatically on boot:</summary>
+	<pre><code class="language-bash">
+	systemctl enable $DJANGO_PROJECT
+	</code></pre>
+</details>
+</p>
 
 
 <h3>NGINX</h3>
 
-<p>Create <code>/etc/nginx/sites-available/$DJANGO_PROJECT</code> (or edit the existing one).
-See template below with the relevant variables to be overwritten.
-<b> NOTE: proxy_pass below must point to the Gunicorn URL just configured (see above)</b>.
-<p class='note'>The line <code>proxy_pass http://localhost:$GUNICORN_PORT;</code>
-is the line that forwards to Gunicorn all locations starting with '/' and not
-matching '/static/' or '/media/'</p>
+<p>
+(become root <code class="language-bash">su root</code> and <b>(re)activate virtualenv if necessary</b>)
+</p>
+
+<p>
+Create the config file (<code>touch</code> or
+<code>cp</code> from a previous config file, if available):
+</p>
+
+<pre><code class="language-bash">
+/etc/nginx/sites-available/$DJANGO_PROJECT
+</code></pre>
+
+<p>
+with the following content (checking <code>proxy_pass</code>, see notes below):
 </p>
 
 <pre><code class="language-nginx">
@@ -704,26 +747,42 @@ server {
 }
 </code></pre>
 
+<b>Important notes:</b>
+<ul>
+<li>The line <code>proxy_pass http://localhost:$GUNICORN_PORT;</code>
+is the line that forwards to Gunicorn all locations starting with '/' and not
+matching '/static/' or '/media/'. As such, <code>proxy_pass</code> must point to the Gunicorn
+URL just configured in the service unit file (see above)
+</li>
+</ul>
 
+<p>Remove the previous egsim link (if present)</p>
+<pre><code class="language-bash">
+ls -l /etc/nginx/sites-enabled
+# then rm ... the link pointing to the previous config
+</code></pre>
+
+
+<p>Create link in sites-enabled</p>
+
+<pre><code class="language-bash">
+cd /etc/nginx/sites-enabled
+ln -s ../sites-available/$DJANGO_PROJECT .
+</code></pre>
+
+<p>
 <details>
-<summary>Add symbolic link to sites-enabled and $DOMAIN to known hosts (click for details)</summary>
+<summary>Add $DOMAIN to known hosts (one time operation)</summary>
+	<b>NOTE: This operation should be investigated: it is not mentioned
+	in any documentation, but we needed to do it once, in order to make the site work
+	</b>:
 
-	[UPDATE 3/2023]: The operations below should be already performed and thus unnecessary
-
-	<p>Create symbolik link in sites-enabled:</p>
-	<pre><code class="language-bash">
-	cd /etc/nginx/sites-enabled
-	ln -s ../sites-available/$DJANGO_PROJECT .
-	</code></pre>
-
-
-	<p>Add $DOMAIN to known host (<b>This should be investigated: it is not mentioned
-	in any documentation, but we needed to do it to make the site work</b>):
-	open <code>/etc/hosts</code> and add the line</p>
+	open <code>/etc/hosts</code> and add the line:
 
 	<pre><code class="language-bash">
 	127.0.0.1	$DOMAIN
 	</code></pre>
+</p>
 
 </details>
 
@@ -758,7 +817,7 @@ var allVars = [
 window.onload=function(){
 
 	// replace variables $... with <span> updated automatically everytime
-	// we change the content of the $.. variable
+	// we change the content of the $... variable
 	var body = document.querySelector('body');
 	var docText = body.innerHTML;
 	for (var v of allVars){
@@ -820,7 +879,7 @@ window.onload=function(){
 		a.innerHTML = h.innerHTML;
 		// create a <li> wrapping the anchor above:
 		var li = document.createElement('li');
-	 	// indent the li accoring to its level (h1, h2 etcetera):
+	 	// indent the li according to its level (h1, h2 etcetera):
 		margin = parseInt(h.tagName.substring(1));
 		li.style.marginLeft = margin + 'rem';
 		// append all:

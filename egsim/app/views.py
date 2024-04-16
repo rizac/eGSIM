@@ -135,7 +135,7 @@ def _get_init_data_json(debug=False) -> dict:
         'imt': [],
         'format': 'hdf'
     })
-    if not debug:
+    if debug:
         predictions_form = PredictionsForm({
             'gsim': ['CauzziEtAl2014', 'BindiEtAl2014Rjb'],
             'imt': ['SA(0.05)', 'SA(0.075)'],  # default_imts,
