@@ -234,18 +234,20 @@ def test_get_dtype():
         # np.array:
         assert get_dtype_of(pd.Series(val).values[0]) == ctype
         assert get_dtype_of(pd.Series([val]).values) == ctype
-        if ctype != ColumnDtype.datetime:
-            # skip np.array(datetime) and use to_datetime (see below):
-            assert get_dtype_of(np.array(val)) == ctype
-            assert get_dtype_of(np.array([val])) == ctype
         # pd.numeric and pd.to_datetime
         if ctype in (ColumnDtype.float, ColumnDtype.bool, ColumnDtype.int):
             assert get_dtype_of(pd.to_numeric(val)) == ctype
             assert get_dtype_of(pd.to_numeric([val])) == ctype
         elif ctype == ColumnDtype.datetime:
-            # to_datetime returns a Timestamp so it is not datetime dtype:
+            # to_datetime returns a Timestamp, so it is not datetime dtype:
             assert get_dtype_of(pd.to_datetime(val)) == ctype
             assert get_dtype_of(pd.to_datetime([val])) == ctype
+        # NOTE: NUMPY IS ACTUALLY NOT SUPPORTED, THE CODE BELOW IS LEGACY CODE:
+        # IF IT FAILS AND THE FIX IS A PAIN, YOU CAN REMOVE THE TEST
+        if ctype != ColumnDtype.datetime:
+            # skip np.array(datetime) and use to_datetime (see above):
+            assert get_dtype_of(np.array(val)) == ctype
+            assert get_dtype_of(np.array([val])) == ctype
 
     # cases of mixed types that return None as dtype (by default they return string
     # but this is a behaviour of pandas that we do not want to mimic):
@@ -284,8 +286,10 @@ def test_get_dtype_mixed_categories():
     """test that get_dtypoe_of mixed categorical returns None and not
     ColumnDtype.category"""
     assert get_dtype_of(pd.Series([2, True]).astype('category')) is None
-    assert get_dtype_of(pd.Series([False, True]).astype('category')) is ColumnDtype.category
-    assert get_dtype_of(pd.Series([False, None]).astype('category')) is ColumnDtype.category
+    assert (get_dtype_of(pd.Series([False, True]).astype('category'))
+            is ColumnDtype.category)
+    assert (get_dtype_of(pd.Series([False, None]).astype('category'))
+            is ColumnDtype.category)
     assert get_dtype_of(pd.Series([datetime.utcnow(), pd.NaT]).astype(
         'category')) is ColumnDtype.category
     assert get_dtype_of(pd.Series([2, 3]).astype(
@@ -320,7 +324,9 @@ def test_mixed_arrays_are_mostly_null_dtype():
             if set(val) == {2, 2.2} and cdtype == ColumnDtype.float:
                 pass
 
-        # test n umpy arrays
+        # test numpy arrays
+        # NOTE: NUMPY IS ACTUALLY NOT SUPPORTED, THE CODE BELOW IS LEGACY CODE:
+        # IF IT FAILS AND THE FIX IS A PAIN, YOU CAN REMOVE THE TEST
         cdtype = None
         try:
             cdtype = get_dtype_of(np.array(val))
@@ -355,7 +361,8 @@ def test_dtypes_with_null():
             assert cdtype in (ColumnDtype.int, ColumnDtype.bool)
 
         # test numpy array:
-        # assert cdtype == get_dtype_of(np.array(vals))
+        # NOTE: NUMPY IS ACTUALLY NOT SUPPORTED, THE CODE BELOW IS LEGACY CODE:
+        # IF IT FAILS AND THE FIX IS A PAIN, YOU CAN REMOVE THE TEST
         try:
             assert cdtype != get_dtype_of(np.array(vals))
         except AssertionError:

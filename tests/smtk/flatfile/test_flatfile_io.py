@@ -33,7 +33,7 @@ def test_read_flatifle_yaml():
 
 def test_flatfile_turkey():
     fpath = abspath(join(dirname(dirname(dirname(__file__))),
-                         'data', 'tk_20230206_flatfile_geometric_mean.csv'))
+                         'data', 'test_flatfile.csv'))
     dfr = read_flatfile(fpath)
 
     # tst with file-like object

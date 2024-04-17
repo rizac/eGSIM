@@ -21,7 +21,7 @@ from egsim.smtk.scenarios import RuptureProperties, SiteProperties
 GSIM, IMT = 'gsim', 'imt'
 
 flatfile_tk_path = abspath(join(dirname(dirname(__file__)), 'data',
-                                'tk_20230206_flatfile_geometric_mean.csv'))
+                                'test_flatfile.csv'))
 
 @pytest.mark.django_db
 class Test:

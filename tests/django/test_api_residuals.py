@@ -37,7 +37,7 @@ class Test:
     # flatfile 2 (in parent data dir because it is shared with egsim.smtk):
     flatfile_tk_content: bytes
     data_dir = join(dirname(dirname(data_dir)), 'data')
-    with open(join(data_dir, 'tk_20230206_flatfile_geometric_mean.csv'), 'rb') as _:
+    with open(join(data_dir, 'test_flatfile.csv'), 'rb') as _:
         flatfile_tk_content = _.read()
 
     

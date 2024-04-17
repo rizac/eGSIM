@@ -41,7 +41,7 @@ except URLError as exc:
 @pytest.mark.django_db
 class Test:
     with open(abspath(join(dirname(dirname(__file__)), 'data',
-                           'tk_20230206_flatfile_geometric_mean.csv')), 'rb') as _:
+                           'test_flatfile.csv')), 'rb') as _:
         flatfile_tk_content = _.read()
         del _
 

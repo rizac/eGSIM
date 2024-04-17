@@ -13,7 +13,8 @@ def get_egsim_predictions(
         distances: list[float],
         rupture_params: Optional[dict] = None,
         site_params: Optional[dict] = None,
-        data_format="hdf"
+        data_format="hdf",
+        base_url="https://egsim.gfz-potsdam.de/query/predictions"
 ) -> pd.DataFrame:
     """Retrieve the ground motion predictions for the selected set of ground motion
     models and intensity measure types. Each prediction will be the result of a given
@@ -65,21 +66,19 @@ def get_egsim_predictions(
         'dist': distances
     }
 
-    # POST request for eGSIM
-    response = requests.post(
-        "https://egsim.gfz-potsdam.de/query/predictions",  # the base request URL
-        json=parameters
-    )
+    # POST request to eGSIM
+    response = requests.post(base_url, json=parameters)
+
     # eGSIM might return response denoting an error. Treat these response as
-    # Python exceptions outputting the original eGSIM message (more meaningful)
+    # Python exceptions and output the original eGSIM message
     try:
         response.raise_for_status()
     except requests.exceptions.HTTPError as exc:
         msg = exc.response.json()['message']  # eGSIM detailed error message
         raise ValueError(f"eGSIM error: {msg} ({exc.response.url}) ") from None
 
-    # `response.content` is the computation result, as bytes sequence in CSV or HDF
-    # format. Read it into a pandas.DataFrame:
+    # `response.content` is the computed data, as in-memory file (bytes sequence)
+    # in CSV or HDF format. Read it into a pandas.DataFrame:
     if parameters['format'] == 'hdf':
         # `pd.read_hdf` works for HDF files on disk. Workaround:
         with pd.HDFStore(
