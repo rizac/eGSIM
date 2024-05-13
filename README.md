@@ -204,9 +204,14 @@ source .env/<ENVNAME>/bin/activate
 pip install --upgrade pip setuptools
 ```
 
-Install OpenQuake (recommended way. If this does not work, you can skip this
-and go to the next step, which installs the last supported OpenQuake version,
-see `setup.py`):
+Upgrade OpenQuake (optional). **Disclaimer: please note that newer OpenQuake versions are 
+not always backward compatible**:
+if you want only to upgrade other packages - e.g. django or 
+pandas - **you can skip this step and go to the next one**, 
+which installs the last tested OpenQuake version in setup.py.
+Also note that `pip install openquake==[version]` 
+works but is not the recommended way.
+
 
 ```console
 pip install -r "https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py311-macos_x86_64.txt"
