@@ -204,13 +204,13 @@ source .env/<ENVNAME>/bin/activate
 pip install --upgrade pip setuptools
 ```
 
-Upgrade OpenQuake (optional). **Disclaimer: please note that newer OpenQuake versions are 
-not always backward compatible**:
-if you want only to upgrade other packages - e.g. django or 
-pandas - **you can skip this step and go to the next one**, 
-which installs the last tested OpenQuake version in setup.py.
-Also note that `pip install openquake==[version]` 
-works but is not the recommended way.
+Upgrade OpenQuake (optional). **Disclaimer: newer OpenQuake versions are 
+not always backward compatible:
+if you only want to upgrade other packages - e.g. django or 
+pandas you can skip this step** (openquake will be installed in the next step
+via `pip install` which installs the last tested OpenQuake version in `setup.py`).
+If you want to upgrade OpenQuake (`pip install openquake==[version]` 
+works but is not the recommended way):
 
 
 ```console
