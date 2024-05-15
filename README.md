@@ -219,7 +219,7 @@ pip install -r "https://raw.githubusercontent.com/gem/oq-engine/master/requireme
 
 Install eGSIM Python library, upgrading its dependencies:
 ```console
-pip install -Ue . && pip freeze >./requirements.lib.txt && pip install pytest
+pip install -U --upgrade-strategy eager . && pip freeze >./requirements.lib.txt && pip install pytest
 ```
 
 Run tests:
