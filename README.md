@@ -204,25 +204,24 @@ source .env/<ENVNAME>/bin/activate
 pip install --upgrade pip setuptools
 ```
 
-Upgrade OpenQuake (optional). **Disclaimer: newer OpenQuake versions are 
-not always backward compatible:
-if you only want to upgrade other packages - e.g. django or 
-pandas you can skip this step** (openquake will be installed in the next step
-via `pip install` which installs the last tested OpenQuake version in `setup.py`).
-If you want to upgrade OpenQuake (`pip install openquake==[version]` 
-works but is not the recommended way):
+**Disclaimer: OpenQuake is not always backward compatible**.
 
+ - To upgrade eGSIM without upgrading OpenQuake (more common scenario):
+    ```console
+    pip install -e . && pip freeze >./requirements.lib.txt && pip install pytest
+    ```
+  - Otherwise, to upgrade eGSIM and OpenQuake (this operation should be done 
+    only in very specific cases, e.g. a big code refactoring or critical bug fixes):
+    
+    Open `setup.py` and **comment** the item of `install_requires` where OpenQuake
+    is installed (should be starting with `openquake.engine`). Then:
+    ```console
+    pip install -r "https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py311-macos_x86_64.txt"
+    # pip install -r "https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py311-linux64.txt"
+    pip install -Ue . && pip freeze >./requirements.lib.txt && pip install pytest
+    ```
+    (`pip install openquake` works but is not the recommended way)
 
-```console
-pip install -r "https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py311-macos_x86_64.txt"
-# pip install -r "https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py311-linux64.txt"
-```
-
-Install eGSIM library
-
-```console
-pip install -e . && pip freeze >./requirements.lib.txt && pip install pytest
-```
 
 Check that tests are running:
 ```console
@@ -231,7 +230,7 @@ pytest -vvv ./tests/smtk
 
 install eGSIM web app:
 ```console
-pip install ".[web]"
+pip install -U --upgrade-strategy eager ".[web]"
 pip freeze > ./requirements.txt
 ```
 
