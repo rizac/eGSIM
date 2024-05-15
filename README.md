@@ -204,31 +204,30 @@ source .env/<ENVNAME>/bin/activate
 pip install --upgrade pip setuptools
 ```
 
-**Disclaimer: OpenQuake is not always backward compatible**.
-
- - To upgrade eGSIM without upgrading OpenQuake (more common scenario):
-    ```console
-    pip install -e . && pip freeze >./requirements.lib.txt && pip install pytest
-    ```
-  - Otherwise, to upgrade eGSIM and OpenQuake (this operation should be done 
-    only in very specific cases, e.g. a big code refactoring or critical bug fixes):
-    
-    Open `setup.py` and **comment** the item of `install_requires` where OpenQuake
-    is installed (should be starting with `openquake.engine`). Then:
-    ```console
-    pip install -r "https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py311-macos_x86_64.txt"
-    # pip install -r "https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py311-linux64.txt"
-    pip install -Ue . && pip freeze >./requirements.lib.txt && pip install pytest
-    ```
-    (`pip install openquake` works but is not the recommended way)
+Upgrade OpenQuake (**optional**). The operation below should be performed in
+very specific cases only (important bugfixes or features) because
+**being OpenQuake often backward incompatible** it might require additional 
+code fixes and feedbacks from scientific experts or OpenQuake developers.
+First, **open `setup.py` and comment the line of `install_requires` where OpenQuake
+is installed** (should be starting with `openquake.engine`). Then 
+(`pip install openquake` works but is not the recommended way):
+```console
+pip install -r "https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py311-macos_x86_64.txt"
+# pip install -r "https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py311-linux64.txt"
+```
 
 
-Check that tests are running:
+Install eGSIM Python library, upgrading its dependencies:
+```console
+pip install -Ue . && pip freeze >./requirements.lib.txt && pip install pytest
+```
+
+Run tests:
 ```console
 pytest -vvv ./tests/smtk
 ```
 
-install eGSIM web app:
+Install eGSIM web app, upgrading its dependencies:
 ```console
 pip install -U --upgrade-strategy eager ".[web]"
 pip freeze > ./requirements.txt
@@ -239,10 +238,11 @@ Run tests:
 export DJANGO_SETTINGS_MODULE=egsim.settings_debug; pytest -xvvv ./tests/
 ```
 
+Change `setup.py` and set the current OpenQuake version in 
+`install_requires` (uncomment it if commented). Optionally,
+remove egsim from requirements.txt (it might interfere with Django web?*).
 
-Change `setup.py` and set the current OpenQuake version (*optional:
-remove egsim from requirements.txt (it might interfere with Django web?*),
-eventually **commit and push**
+Eventually, **commit and push**
 
 
 # Django
