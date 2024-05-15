@@ -210,7 +210,7 @@ very specific cases only (important bugfixes or features) because
 code fixes and feedbacks from scientific experts or OpenQuake developers.
 First, **open `setup.py` and comment the line of `install_requires` where OpenQuake
 is installed** (should be starting with `openquake.engine`). Then 
-(`pip install openquake` works but is not the recommended way):
+(note that `pip install openquake` works but is not the recommended way):
 ```console
 pip install -r "https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py311-macos_x86_64.txt"
 # pip install -r "https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py311-linux64.txt"
