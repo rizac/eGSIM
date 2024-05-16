@@ -10,11 +10,13 @@ import pytest
 from egsim.api.models import Gsim
 
 
-@pytest.mark.django_db(transaction=True)  # https://stackoverflow.com/a/54563945
+# @pytest.mark.django_db(transaction=True)  # https://stackoverflow.com/a/54563945
+@pytest.mark.django_db
 def test_models(capfd):
     """Test the models methods after egsim commands are run and the DB populated"""
 
     objects = sorted(Gsim.objects.all(), key=lambda _: _.name)
+    assert len(objects) > 0
     # assert we created an id attr and a name attr they are all unique:
     assert len({_.id for _ in objects}) == len(objects)
     assert len({_.name for _ in objects}) == len(objects)
