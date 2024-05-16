@@ -5,11 +5,15 @@ Django Forms for eGSIM model-to-data comparison (residuals computation)
 """
 import pandas as pd
 from django.forms import BooleanField
+from collections.abc import Collection
 
-from egsim.smtk import get_residuals
+from egsim.smtk import get_residuals, intensity_measures_defined_for, \
+    ground_motion_properties_required_by
 from egsim.api.forms import APIForm
 from egsim.api.forms import GsimImtForm
-from egsim.api.forms.flatfile import FlatfileForm, get_gsims_from_flatfile
+from egsim.api.forms.flatfile import FlatfileForm
+from egsim.smtk.flatfile import FlatfileMetadata
+from egsim.smtk.validators import sa_period
 
 
 class ResidualsForm(GsimImtForm, FlatfileForm, APIForm):
@@ -24,18 +28,37 @@ class ResidualsForm(GsimImtForm, FlatfileForm, APIForm):
 
     def clean(self):
         cleaned_data = super().clean()
-        if not self.has_error('flatfile'):
-            flatfile = cleaned_data['flatfile']
-            if 'gsim' in cleaned_data:
-                invalid_gsims = set(cleaned_data['gsim']) - \
-                                set(get_gsims_from_flatfile(flatfile.columns))
-                if invalid_gsims:
-                    # put sorted list of models to facilitate tests:
-                    self.add_error('flatfile', f'missing columns required by '
-                                               f'{", ".join(sorted(invalid_gsims))}')
-                    return cleaned_data
+        if not self.has_error('flatfile') and not self.has_error('gsim'):
+            # check missing required columns (this is done also later in smtk.residuals,
+            # but we want to quickly return in case of errors). Also note that potential
+            # duplicated column names - as well as all flatfile errors that do not
+            # depend on the given models - are already checked in the superclass
+            miss = self.check_missing_columns(
+                cleaned_data['flatfile'].columns, cleaned_data.get('gsim', []))
+            if miss:
+                self.add_error('flatfile',
+                               f'missing required column(s): '
+                               f'{", ".join(miss)}')
 
         return cleaned_data
+
+    @staticmethod
+    def check_missing_columns(
+            flatfile_columns: Collection[str], models: list[str]) -> list[str]:
+        """
+        Return a list of column names not present in `flatfile_columns` that should be
+        required by the given model(s) in `models`
+        """
+        errors = set()
+        ff_cols = set('SA' if sa_period(f) is not None else f for f in flatfile_columns)
+        for name in models:
+            imts = intensity_measures_defined_for(name)
+            if not imts.intersection(ff_cols):
+                errors.add(" or ".join(sorted(imts)))
+            for col in ground_motion_properties_required_by(name):
+                if not (set(FlatfileMetadata.get_aliases(col)) & ff_cols):
+                    errors.add(col)
+        return sorted(errors)
 
     def output(self) -> pd.DataFrame:
         """Compute and return the output from the input data (`self.cleaned_data`).

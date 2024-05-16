@@ -8,7 +8,7 @@ from django.forms import Form
 from django.forms.fields import CharField, FileField
 
 from egsim.smtk import (ground_motion_properties_required_by,
-                        intensity_measures_defined_for, registered_imts)
+                        intensity_measures_defined_for, registered_imts, FlatfileError)
 from egsim.smtk.flatfile import (read_flatfile, get_dtype_of, FlatfileMetadata,
                                  query as flatfile_query)
 from egsim.api import models
@@ -97,11 +97,13 @@ class FlatfileForm(EgsimBaseForm):
                 # (the former if file size > configurable threshold
                 # (https://stackoverflow.com/a/10758350):
                 dataframe = read_flatfile(u_flatfile)
-            except Exception as exc:
-                # Use 'flatfile' as error key: users can not be confused
-                # (see __init__), and also 'flatfile' is also the exposed key
-                # for the `files` argument in requests
-                self.add_error("flatfile", str(exc))
+            except FlatfileError as err:
+                # get error class name as message prefix, e.g.
+                # ColumnNamesConflictError -> "column names conflict"
+                prefix = err.__class__.__name__.removesuffix('Error')
+                prefix = ''.join(' ' + c.lower() if c != c.lower() else c
+                                 for c in prefix).strip()
+                self.add_error("flatfile", f'{prefix} {str(err)}')
                 return cleaned_data  # no need to further process
 
         # replace the flatfile parameter with the pandas dataframe:
@@ -117,20 +119,6 @@ class FlatfileForm(EgsimBaseForm):
                 self.add_error(key, str(exc))
 
         return cleaned_data
-
-
-def get_gsims_from_flatfile(flatfile_columns: Sequence[str]) -> Iterable[str]:
-    """Yield the GSIM names supported by the given flatfile"""
-    ff_cols = set('SA' if _.startswith('SA(') else _ for _ in flatfile_columns)
-    imt_cols = ff_cols & set(registered_imts)
-    ff_cols -= imt_cols
-    for name in models.Gsim.names():
-        imts = intensity_measures_defined_for(name)
-        if not imts.intersection(imt_cols):
-            continue
-        if all(set(FlatfileMetadata.get_aliases(p)) & ff_cols
-               for p in ground_motion_properties_required_by(name)):
-            yield name
 
 
 class FlatfileValidationForm(APIForm, FlatfileForm):

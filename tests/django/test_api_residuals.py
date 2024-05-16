@@ -49,7 +49,8 @@ class Test:
         with open(self.request_filepath) as _ :
             inputdic = yaml.safe_load(_)
 
-        # Uploaded flatfile, but not well formed:
+        # Uploaded flatfile, but not well-formed:
+        # 1 missing ground motion properties:
         csv = SimpleUploadedFile("file.csv", b"PGA,b,c,d\n1.1,,,", 
                                  content_type="text/csv")
         inputdic2 = dict(inputdic, flatfile=csv)
@@ -58,7 +59,29 @@ class Test:
         assert resp2.status_code == 400
         assert resp2.json()['message'] == \
                "data-query: name 'vs30' is not defined; " \
-               "flatfile: missing columns required by BindiEtAl2011, BindiEtAl2014Rjb"
+               "flatfile: missing required column(s): mag, rake, rjb, vs30"
+        # 2 missing compatible IMTs
+        csv = SimpleUploadedFile("file.csv", b"CAV,b,c,d\n1.1,,,",
+                                 content_type="text/csv")
+        inputdic2 = dict(inputdic, flatfile=csv)
+        # test wrong flatfile:
+        resp2 = client.post(self.url, data=inputdic2)
+        assert resp2.status_code == 400
+        assert resp2.json()['message'] == \
+               ("data-query: name 'vs30' is not defined; "
+                "flatfile: missing required column(s): "
+                "PGA or PGV or SA, mag, rake, rjb, vs30")
+        # 3 dupes:
+        csv = SimpleUploadedFile("file.csv", b"CAV,hypo_lat,evt_lat,d\n1.1,,,",
+                                 content_type="text/csv")
+        inputdic2 = dict(inputdic, flatfile=csv)
+        # test wrong flatfile:
+        resp2 = client.post(self.url, data=inputdic2)
+        assert resp2.status_code == 400
+        # account for different ordering in error columns:
+        assert resp2.json()['message'] in \
+               ("flatfile: column names conflict evt_lat, hypo_lat",
+                "flatfile: column names conflict hypo_lat, evt_lat")
 
         def fake_post(self, request):
             # Django testing class `client` expects every data in the `data` argument
