@@ -22,7 +22,7 @@ from openquake.hazardlib.scalerel import PeerMSR
 from .flatfile import (FlatfileError, MissingColumnError, FlatfileMetadata,
                        InvalidColumnDataError, ColumnNamesConflictError)
 from .validators import (validate_inputs, harmonize_input_gsims, sa_period,
-                          harmonize_input_imts, validate_imt_sa_limits)
+                         harmonize_input_imts, validate_imt_sa_limits)
 from .registry import (get_ground_motion_values, Clabel,
                        ground_motion_properties_required_by)
 from .converters import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
@@ -46,7 +46,7 @@ def get_residuals(
         of the ground motion properties required by the given models (param.
         `gsims`) and the observed intensity measures arranged in columns
     :param likelihood: boolean telling if also the likelihood of the residuals
-        (according to Equation 9 of Scherbaum et al (2004)) should be computed
+        (according to Equation 9 of Scherbaum et al. (2004)) should be computed
     :param normalise: boolean (default True) normalize the random effects residuals
         (calculated using the inter-event residual formula described in
          Abrahamson & Youngs (1992) Eq. 10)
@@ -154,7 +154,7 @@ def yield_event_contexts(flatfile: pd.DataFrame) -> Iterable[EventContext]:
 class EventContext(RuptureContext):
     """A RuptureContext accepting a flatfile (pandas DataFrame) as input"""
 
-    rupture_params:set[str] = None
+    rupture_params: set[str] = None
 
     def __init__(self, flatfile: pd.DataFrame):
         super().__init__()
@@ -236,7 +236,7 @@ def get_expected_motions(
 def get_residuals_from_expected_and_observed_motions(
         expected: pd.DataFrame,
         observed: pd.DataFrame,
-        normalise=True):
+        normalise=True) -> pd.DataFrame:
     """
     Calculate the residual terms, returning a new DataFrame
 
@@ -245,7 +245,7 @@ def get_residuals_from_expected_and_observed_motions(
         observed ground motion
     """
     residuals: pd.DataFrame = pd.DataFrame(index=expected.index)
-    mean_cols = expected.columns[expected.columns.get_level_values(1)==Clabel.mean]
+    mean_cols = expected.columns[expected.columns.get_level_values(1) == Clabel.mean]
     for (imtx, label, gsim) in mean_cols:
         obs = observed.get(imtx)
         if obs is None:
@@ -288,7 +288,7 @@ def _get_random_effects_residuals(obs, mean, inter, intra, normalise=True):
 def get_residuals_likelihood(residuals: pd.DataFrame) -> pd.DataFrame:
     """
     Return the likelihood values for the residuals column found in `residuals`
-    (e.g. Total, inter- intra-event) according to Equation 9 of Scherbaum et al (2004)
+    (e.g. Total, inter- intra-event) according to Equation 9 of Scherbaum et al. (2004)
 
     :param residuals: a pandas DataFrame resulting from :ref:`get_residuals`
     """
@@ -309,8 +309,8 @@ def get_residuals_likelihood(residuals: pd.DataFrame) -> pd.DataFrame:
 
 def get_likelihood(values: Union[np.ndarray, pd.Series]) -> Union[np.ndarray, pd.Series]:
     """
-    Returns the likelihood of the given values according to Equation 9 of
-    Scherbaum et al (2004)
+    Return the likelihood of the given values according to Equation 9 of
+    Scherbaum et al. (2004)
     """
     zvals = np.fabs(values)
     return 1.0 - erf(zvals / sqrt(2.))
@@ -368,7 +368,7 @@ def get_flatfile_for_residual_analysis(
     # Note: dat validation (e.g. check that all models are defined for the given
     # imts) is assumed to be already performed
 
-    # concat all new dataframes in this list, then return a ne one from it:
+    # concat all new dataframes in this list, then return a new one from it:
     new_dataframes = []
     # prepare the flatfile for the required imts:
     imts_flatfile = get_required_imts(flatfile, imts)
@@ -390,7 +390,7 @@ def get_required_imts(flatfile: pd.DataFrame, imts: Collection[str]) -> pd.DataF
     for the given intensity measures (`imts`) given with
     periods, when needed (e.g. "SA(0.2)")
     """
-    # concat all new dataframes in this list, then return a ne one from it:
+    # concat all new dataframes in this list, then return a new one from it:
     new_dataframes = []
     imts = set(imts)
     non_sa_imts = {_ for _ in imts if sa_period(_) is None}
@@ -421,47 +421,45 @@ def get_required_sa(flatfile: pd.DataFrame, sa_imts: Iterable[str]) -> pd.DataFr
     :param sa_imts: Iterable of strings denoting SA (e.g. "SA(0.2)")
     Return the newly created Sa columns, as tuple of strings
     """
-    src_sa = []
+    new_flatfile = pd.DataFrame(index=flatfile.index)
+
+    source_periods: dict[float, str] = {}  # period [float] -> IMT name (str)
     for c in flatfile.columns:
         p = sa_period(c)
         if p is not None:
-            src_sa.append((p, c))
-    # source_sa: period [float] -> mapped to the relative column:
-    source_sa: dict[float, str] = {p: c for p, c in sorted(src_sa, key=lambda t: t[0])}
+            source_periods[p] = c
 
-    tgt_sa = []
+    target_periods: dict[float, str] = {}  # period [float] -> IMT name (str)
     invalid_sa = []
     for i in sa_imts:
         p = sa_period(i)
         if p is None:
             invalid_sa.append(i)
             continue
-        if p not in source_sa:
-            tgt_sa.append((p, i))
+        if p not in source_periods:
+            target_periods[p] = i
+        else:
+            new_flatfile[i] = flatfile[source_periods[p]]
     if invalid_sa:
         raise InvalidColumnDataError(*invalid_sa)
 
-    # source_sa: period [float] -> mapped to the relative column:
-    target_sa: dict[float, str] = {p: c for p, c in sorted(tgt_sa, key=lambda t: t[0])}
+    if target_periods:  # need to find some SA by interpolation (row-wise)
+        # sort source periods:
+        source_periods = {p: source_periods[p] for p in sorted(source_periods.keys())}
+        # Take the log10 of all SA in the source flatfile:
+        source_spectrum = np.log10(flatfile[list(source_periods.values())])
+        # build the interpolation function:
+        interp = interp1d(list(source_periods), source_spectrum, axis=1)
+        # sort target periods
+        target_periods = {p: target_periods[p] for p in sorted(target_periods.keys())}
+        # interpolate using the created function `interp`:
+        values = 10 ** interp(list(target_periods))
+        # values is a matrix where each column represents the values of the
+        # target period. Add it to the dataframe:
+        new_flatfile[list(target_periods.values())] = values
 
-    source_sa_flatfile = flatfile[list(source_sa.values())]
-
-    if not target_sa:
-        return source_sa_flatfile
-
-    # Take the log10 of all SA:
-    source_spectrum = np.log10(source_sa_flatfile)
-    # we need to interpolate row wise
-    # build the interpolation function:
-    interp = interp1d(list(source_sa), source_spectrum, axis=1)
-    # and interpolate:
-    values = 10 ** interp(list(target_sa))
-    # values is a matrix where each column represents the values of the target period.
-    # Add it to the dataframe:
-    new_flatfile = pd.DataFrame(index=flatfile.index)
-    new_flatfile[list(target_sa.values())] = values
-
-    return new_flatfile
+    # return dataframe with sorted periods (for safety):
+    return new_flatfile[sorted(new_flatfile.columns, key=sa_period)]
 
 
 def get_required_ground_motion_properties(
@@ -557,7 +555,7 @@ def get_ground_motion_property_values(
 
 
 def fill_na(
-        flatfile:pd.DataFrame,
+        flatfile: pd.DataFrame,
         src_col: str,
         dest: Union[None, np.ndarray, pd.Series]) -> Union[None, np.ndarray, pd.Series]:
     """Fill NAs (NaNs/Nulls) of `dest` with relative values from `src`.

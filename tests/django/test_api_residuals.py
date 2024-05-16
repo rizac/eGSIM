@@ -40,9 +40,6 @@ class Test:
     with open(join(data_dir, 'test_flatfile.csv'), 'rb') as _:
         flatfile_tk_content = _.read()
 
-    
-        
-    
     def querystring(self, data):
         return f'{self.url}?{as_querystring(data)}'
 
@@ -126,6 +123,19 @@ class Test:
         assert resp2.status_code == 200
         resp_json = resp2.json()
         assert "PGA" in resp_json
+
+    def test_notebook_example(self, client):
+        csv = SimpleUploadedFile("file.csv",
+                                 self.flatfile_tk_content,
+                                 content_type="text/csv")
+        inputdic2 = {
+            'model': ['BindiEtAl2014Rjb', 'BooreEtAl2014'],
+            'imt': ['PGA', 'SA(1.0)'],
+            'flatfile': csv,
+        }
+        resp2 = client.post(self.url, data=inputdic2)
+        assert resp2.status_code == 200
+        assert "SA(1.0)" in resp2.json()
 
     def test_residuals_service_err(self,
                                    # pytest fixtures:
