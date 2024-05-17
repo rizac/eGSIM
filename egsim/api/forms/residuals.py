@@ -37,8 +37,7 @@ class ResidualsForm(GsimImtForm, FlatfileForm, APIForm):
                 cleaned_data['flatfile'].columns, cleaned_data.get('gsim', []))
             if miss:
                 self.add_error('flatfile',
-                               f'missing required column(s): '
-                               f'{", ".join(miss)}')
+                               f'missing required column(s): {", ".join(miss)}')
 
         return cleaned_data
 

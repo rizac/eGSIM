@@ -150,9 +150,10 @@ def array2json(
     all NA (NaN, Null, +-Inf, NaT) into None (null in JSON)
 
     :param values: the values (pandas Series/ DataFrame or nd array)
-    :param na_vals: the NA/+-inf values, a bool array the same shape of `values`
-        USed to properly convert any NA value to None. If False, skip check, as
-        `values` is supposed to have non-na values, if None/True, infer na_values
+    :param na_vals: True, False or boolean array (the same shape of `values`)
+        indicating which element is NA or +-inf. if None/True (the default)
+        the array will be inferred from `values`. If False, no check for NA or +-inf
+        will be performed, meaning that `values` is known to have only finite values
     """
     values = np.asarray(values)  # in case of pd.Series S, returns S.values by ref.
     if na_vals is not False:

@@ -1,14 +1,13 @@
 """
 Base Form for to model-to-data operations i.e. flatfile handling
 """
-from typing import Iterable, Sequence, Optional, Any
+from typing import Optional, Any
 import pandas as pd
 
 from django.forms import Form
 from django.forms.fields import CharField, FileField
 
-from egsim.smtk import (ground_motion_properties_required_by,
-                        intensity_measures_defined_for, registered_imts, FlatfileError)
+from egsim.smtk import (ground_motion_properties_required_by, FlatfileError)
 from egsim.smtk.flatfile import (read_flatfile, get_dtype_of, FlatfileMetadata,
                                  query as flatfile_query)
 from egsim.api import models
@@ -135,11 +134,10 @@ class FlatfileValidationForm(APIForm, FlatfileForm):
         dataframe = cleaned_data['flatfile']
         columns = []
         for col in sorted(dataframe.columns):
-            # return the flatfile metadata from the column values (pass
-            # dataframe[col] as 2nd argument) which is more compact and suitable for
-            # combo boxes and similar components. Note that if `col` is a registered
-            # column, all metadata matches the registered one (otherwise we are not
-            # here as the Form is invalid, see FlatfileForm and smtk/flatfile.py)
+            # return human-readable column metadata from its values (dataframe[col]).
+            # Note that if `col` is a registered column, then all metadata match the
+            # registered one (otherwise we should never be here because `self.is_valid`
+            # is False. See FlatfileForm and smtk/flatfile.py)
             columns.append(get_hr_flatfile_column_meta(col, dataframe[col]))
 
         return {'columns': columns}
@@ -199,9 +197,9 @@ def get_hr_flatfile_column_meta(name: str, values: Optional[pd.Series] = None) -
     }
 
     :param name: the flatfile column name
-    :param values: if provided, return meta info from the values. Otherwise, from the
-        default flatfile column with the given name (if no column is registered with
-        that name or alias, then return a dict with empty values)
+    :param values: if provided, return metadata from the values. Otherwise, return
+        metadata registered for the flatfile column with the given name (if no column
+        is registered with that name or alias, then return a dict with empty values)
     """
     if values is not None:
         try:

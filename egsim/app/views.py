@@ -336,7 +336,7 @@ def plots_image(request) -> HttpResponseBase:
         try:
             content_type = getattr(MimeType, img_format)
         except AttributeError:
-            return error_response('Invalid format "{img_format}"', 400)
+            return error_response(f'Invalid format "{img_format}"', 400)
         jsondata = json.loads(request.body.decode('utf-8'))
         data, layout, width, height = (jsondata['data'],
                                        jsondata['layout'],
