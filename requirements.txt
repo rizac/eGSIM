@@ -53,4 +53,4 @@ tenacity==8.2.3
 toml==0.10.2
 tomlkit==0.12.4
 tzdata==2024.1
-urllib3==2.2.1
+urllib3==2.2.2
