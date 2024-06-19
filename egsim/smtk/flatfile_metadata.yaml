@@ -10,8 +10,7 @@
 #             not be valid unless you supply a default (usually 0 / false)
 #   type:     The column type. Supported values are: rupture, site, distance, intensity
 #             (rupture parameter, site parameter, distance measure, intensity measure).
-#             Required only if the column denotes an OpenQuake parameter or measure,
-#             optional otherwise
+#             Required only if the column denotes an OpenQuake parameter or measure
 #   alias:    The column alias(es), as string or list of strings. If you want to rename
 #             an OpenQuake parameter or distance, set the OpenQuake name as alias.
 #             Note: intensity measure columns (e.g. PGA, SA, PGV) cannot have aliases

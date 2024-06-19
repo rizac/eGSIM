@@ -88,7 +88,7 @@ def read_flatfile(
 
         kwargs = dict(_csv_default_args) | kwargs
         if csv_sep is None:
-            kwargs['sep'] =  _infer_csv_sep(filepath_or_buffer, **kwargs)
+            kwargs['sep'] = _infer_csv_sep(filepath_or_buffer, **kwargs)
         else:
             kwargs['sep'] = csv_sep
 
@@ -135,7 +135,7 @@ def _read_csv_get_header(filepath_or_buffer: IOBase, sep=None, **kwargs) -> list
     if isinstance(filepath_or_buffer, IOBase):
         _pos = filepath_or_buffer.tell()
     # use only args necessary to parse columns, we might raise unnecessary errors
-    # otherwise (these errors might be fixed afterwards before reading the whole csv):
+    # otherwise (these errors might be fixed afterward before reading the whole csv):
     args = ['header', 'names', 'skip_blank_lines', 'skipinitialspace', 'engine',
             'lineterminator', 'quotechar', 'quoting', 'doublequote', 'escapechar',
             'comment', 'dialect', 'delim_whitespace']
@@ -152,7 +152,7 @@ def validate_flatfile_dataframe(
         dfr: pd.DataFrame,
         extra_dtypes: dict[str, Union[str, ColumnDtype, pd.CategoricalDtype, list]] = None,  # noqa
         extra_defaults: dict[str, Any] = None,
-        mixed_dtype_categorical = 'raise'):
+        mixed_dtype_categorical='raise'):
     """Validate the flatfile dataframe checking data types, conflicting column names,
     or missing mandatory columns (e.g. IMT related columns). This method raises
     or returns None on success
@@ -161,7 +161,7 @@ def validate_flatfile_dataframe(
     :param extra_dtypes: dict of column names mapped to the desired data type.
         Standard flatfile columns should not to be present (unless for some reason
         their dtype must be overwritten)
-    :param extra_dtypes: dict of column names mapped to the desired default value
+    :param extra_defaults: dict of column names mapped to the desired default value
         to replace missing data. Standard flatfile columns do not need to be present
         (unless for some reason their dtype must be overwritten)
     :param mixed_dtype_categorical: what to do when `dtype=ColumnDtype.category`, i.e.,
@@ -246,7 +246,7 @@ def query(flatfile: pd.DataFrame, query_expression: str,
         'local_dict': {
             'datetime': lambda a: datetime.fromisoformat(a)
         },
-        'global_dict': {},  # 'pd': pd, 'np': np }
+        'global_dict': {},  # 'pd': pd, 'np': np
         # add support for bools lower case (why doesn't work if set in local_dict?):
         'resolvers': [{'true': True, 'false': False}]
     }
@@ -457,7 +457,7 @@ class InvalidColumnDataError(FlatfileError, ValueError, TypeError):
 # registered columns:
 
 class FlatfileMetadata:
-    """Container class to access registered flatfile columns properties defined
+    """Container class to access flatfile metadata defined
     in the associated YAML file
     """
 
@@ -479,12 +479,14 @@ class FlatfileMetadata:
 
     @staticmethod
     def get_type(column: str) -> Union[ColumnType, None]:
-        """Return the ColumnType of the given column name, or None"""
+        """Return the `ColumnType` enum item of the given column, or None"""
         return FlatfileMetadata._props_of(column).get('type', None)
 
     @staticmethod
     def get_default(column: str) -> Union[None, Any]:
-        """Return the Column data type of the given column name, or None"""
+        """Return the default of the given column name (used to fill missing data),
+        or None if no default is set
+        """
         return FlatfileMetadata._props_of(column).get('default', None)
 
     @staticmethod
@@ -503,11 +505,11 @@ class FlatfileMetadata:
 
     @staticmethod
     def get_dtype(column: str) -> Union[ColumnDtype, None]:
-        """Return the Column data type of the given column name, as ColumnDtype
-        enum, or None (=no data type set for the column). Note that
-        `ColumnDtype.category` is never returned: if the column dtype is categorical
-        (a finite limited set of possible values) this method returns the (unique)
-        dtype of all categories. To check if the data is categorical,
+        """Return the Column data type of the given column name, as `ColumnDtype`
+        enum item, or None (=no data type set for the column). Note:
+        if the column dtype is categorical (a finite limited set of possible values)
+        this method returns the (unique) dtype of all categories. As such,
+        `ColumnDtype.category` is never returned: to check if the data is categorical,
         check that `get_categories(column)` returns a non-empty list
         """
         dtype = FlatfileMetadata._get_dtype(column)
@@ -547,7 +549,7 @@ _flatfile_metadata: dict[str, dict[str, Any]] = None  # noqa
 
 
 def _load_flatfile_metadata(cache=True) -> dict[str, dict[str, Any]]:
-    """Loads the flatfile metadata from the associated YAML file into a Python dict
+    """Load the flatfile metadata from the associated YAML file into a Python dict
 
     :param cache: if True, a cache version will be returned (faster, but remember
         that any change to the cached version will persist permanently!). Otherwise,
@@ -568,8 +570,8 @@ def _load_flatfile_metadata(cache=True) -> dict[str, dict[str, Any]]:
     return _cols
 
 
-def _harmonize_col_props(name:str, props:dict):
-    """harmonize the values of a column property dict"""
+def _harmonize_col_props(name: str, props: dict):
+    """Harmonize the values of a column property dict"""
     aliases = props.get('alias', [])
     if isinstance(aliases, str):
         aliases = [aliases]

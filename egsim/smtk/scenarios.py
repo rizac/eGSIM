@@ -26,30 +26,30 @@ from .validators import (validate_inputs, harmonize_input_gsims,
 
 @dataclass
 class RuptureProperties:
-    dip:float = 90.
-    aspect:float = 1.0
-    tectonic_region:str = "Active Shallow Crust"
-    rake:float = 0.
-    ztor:float = 0.
-    strike:float = 0.
-    hypocenter_location:Optional[tuple[float, float]] = None
-    msr:BaseMSR = field(default_factory=WC1994)
+    dip: float = 90.
+    aspect: float = 1.0
+    tectonic_region: str = "Active Shallow Crust"
+    rake: float = 0.
+    ztor: float = 0.
+    strike: float = 0.
+    hypocenter_location: Optional[tuple[float, float]] = None
+    msr: BaseMSR = field(default_factory=WC1994)
     # set initial_point as a random location on Earth
-    initial_point:Point = field(default_factory=lambda: Point(45.18333, 9.15, 0.))
+    initial_point: Point = field(default_factory=lambda: Point(45.18333, 9.15, 0.))
 
 
 @dataclass
 class SiteProperties:
-    vs30:float = 760.0
-    line_azimuth:float = 90.0
-    distance_type:str = "rrup"
-    origin_point:tuple[float, float] = (0.5, 0.0)
-    vs30measured:bool = True
-    z1pt0:Optional[float] = None
-    z2pt5:Optional[float] = None
-    backarc:bool = False
-    xvf:float = 150.0
-    region:int = 0
+    vs30: float = 760.0
+    line_azimuth: float = 90.0
+    distance_type: str = "rrup"
+    origin_point: tuple[float, float] = (0.5, 0.0)
+    vs30measured: bool = True
+    z1pt0: Optional[float] = None
+    z2pt5: Optional[float] = None
+    backarc: bool = False
+    xvf: float = 150.0
+    region: int = 0
 
 
 def get_scenarios_predictions(
@@ -151,6 +151,8 @@ def build_contexts(
     :param gsims: dict of GSIM names mapped to a GSIM instance (class `GMPE`)
     :param magnitudes: the magnitudes
     :param distances: the distances
+    :param r_props: a `RuptureContext` object defining the Rupture properties
+    :param s_props: a `SiteProperties` object defining the Site properties
 
     :return: Context objects in the form of a single numpy recarray of length:
         len(magnitudes) * len(distances)
@@ -209,6 +211,7 @@ def create_planar_surface(
     :param dip: (float) Dip of rupture (degrees)
     :param area: Area of rupture (km^2)
     :param aspect: Aspect ratio of rupture
+    :param ztor: top of rupture depth, in km
 
     :return: Rupture as an instance of
         :class:`openquake.hazardlib.geo.surface.planar.PlanarSurface`

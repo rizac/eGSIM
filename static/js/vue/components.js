@@ -120,7 +120,7 @@ EGSIM.component('gsim-select', {
 		<div
 			class='d-flex flex-row align-items-baseline mb-2'
 			style='border-bottom:0 !important;border-bottom-left-radius:0 !important; border-bottom-right-radius:0 !important'>
-			<span style="flex: 1 1 auto;" class='text-start text-capitalize'>model ({{ selectedModels.length }} selected)</span>
+			<span style="flex: 1 1 auto;" class='text-start'>Model ({{ selectedModels.length }} selected)</span>
 			<span v-show='inputElementText' class='text-muted small'> [ESC]: clear text and hide popup</span>
 			<i
 				v-show="Object.keys(warnings).length && !inputElementText"
@@ -304,7 +304,7 @@ EGSIM.component('imt-select', {
 	},
 	template: `<div class='d-flex flex-column form-control'
 		title="Intensity measure type(s)">
-		<span class='mb-2 text-capitalize'>imt ({{ selectedImts.length }} selected)</span>
+		<span class='mb-2'>Imt ({{ selectedImts.length }} selected)</span>
 		<select
 			v-model="selectedImtClassNames"
 			multiple
