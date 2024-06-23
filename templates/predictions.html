@@ -34,10 +34,25 @@
 				</button>
 			</div>
 
-			<div :title="forms.misc.predictions.help['magnitude'] + ' (comma- or space-separated)' "
-				 class='d-flex align-items-baseline gap-1'>
+			<div :title="forms.misc.predictions.help['magnitude']"
+				 class='d-flex align-items-baseline gap-2'>
 				<span>magnitude</span>
-				<array-input v-model="forms.predictions.magnitude" class='form-control'></array-input>
+				<array-input v-model="forms.predictions.magnitude" class='form-control _d-toggle_'></array-input>
+				<evenly-spaced-array-input
+					initial-start="1" initial-stop="7"
+					@array-created="values => { forms.predictions.magnitude = values; }"
+					class='_d-toggle_ d-none'>
+				</evenly-spaced-array-input>
+				<button
+					type='button'
+					onclick="this.parentNode.querySelectorAll('._d-toggle_').forEach(e => e.classList.toggle('d-none')); var t = this.getAttribute('data-title-cache'); this.setAttribute('data-title-cache', this.title); this.title = t"
+					class='btn btn-outline-primary border-0 position-relative'
+					title='input evenly spaced numbers over a specified interval on a linear or log scale'
+					data-title-cache="restore default input"
+					>
+					<span class='_d-toggle_'>⏵</span>
+					<span class='_d-toggle_ d-none'>⏴</span>
+				</button>
 			</div>
 
 			<div id='rupture-controls' class="d-flex d-none gap-3 text-nowrap pb-1 small" style='overflow-x: scroll;'>
@@ -106,10 +121,25 @@
 				</button>
 			</div>
 
-			<div :title="forms.misc.predictions.help['distance'] + ' (comma- or space-separated)'"
-				 class="d-flex align-items-baseline gap-1">
+			<div :title="forms.misc.predictions.help['distance']"
+				 class="d-flex align-items-baseline gap-2">
 				<span>distance</span>
-				<array-input v-model="forms.predictions.distance" class='form-control'></array-input>
+				<array-input v-model="forms.predictions.distance" class='form-control _d-toggle_'></array-input>
+				<evenly-spaced-array-input
+					initial-start="1" initial-stop="100"
+					@array-created="values => { forms.predictions.distance = values; }"
+					class='_d-toggle_ d-none'>
+				</evenly-spaced-array-input>
+				<button
+					type='button'
+					onclick="this.parentNode.querySelectorAll('._d-toggle_').forEach(e => e.classList.toggle('d-none')); var t = this.getAttribute('data-title-cache'); this.setAttribute('data-title-cache', this.title); this.title = t"
+					class='btn btn-outline-primary border-0 position-relative'
+					title='input evenly spaced numbers over a specified interval on a linear or log scale'
+					data-title-cache="restore default input"
+					>
+					<span class='_d-toggle_'>⏵</span>
+					<span class='_d-toggle_ d-none'>⏴</span>
+				</button>
 			</div>
 
 			<div id='site-controls' class="d-flex d-none gap-3 text-nowrap pb-1 small" style='overflow-x: scroll;'>

@@ -625,3 +625,78 @@ EGSIM.component('flatfile-select', {
 		</button>
 	</div>`
 });
+
+
+EGSIM.component('evenly-spaced-array-input', {
+	props: {
+		initialStart: {type: [String, Number], default: null},
+		initialStop: {type: [String, Number], default: null},
+	},
+	data(){
+		return {
+			execCount: 0,
+			maxNum: 2000, // prevent performance problems
+			log: false,
+			start: parseFloat(this.initialStart),
+			stop: parseFloat(this.initialStop),
+			num: null
+		}
+	},
+	emits: ['array-created'],
+	template:`<div class='d-flex align-items-baseline text-nowrap gap-1'>
+		<input type='text' v-model="num" v-on:input="submit" class='form-control' :placeholder='"n (&le;" + maxNum + ")"' style='min-width:5.8rem !important'>
+		values from
+		<input type='text' v-model="start" v-on:input="submit" class='form-control'>
+		to
+		<input type='text' v-model="stop" v-on:input="submit" class='form-control'>
+		<label title='values will be spaced evenly on a log scale (default: linear scale)'><input type='checkbox' v-model='log' v-on:change="submit" class='me-1'>log</label>
+	</div>`,
+	methods: {
+		submit(){
+			// calc in separate thread and fire if meanwhile we did not change the inputs:
+			this.execCount += 1;
+			var count = this.execCount;
+			setTimeout(() => {
+				var arr = this.createArray();
+				if (this.execCount == count){
+					this.$emit('array-created', arr);
+				}
+			}, 25);
+		},
+		createArray(){
+			var num = parseInt(this.num);
+			if (!(num > 1) || !(num <= this.maxNum)){  // note: this checks for num not NaN, too
+				return [];
+			}
+			var start = parseFloat(this.start);
+			var stop = parseFloat(this.stop);
+			if (!(stop > start)){  // note: this checks for numbers not NaN, too
+				return [];
+			}
+			var values = Array.from(Array(num).keys());
+			if (this.log){
+				// map [0...N-1] onto  [0...1] using y = e ** x:
+				var E = Math.E;
+				var range = E ** ((num-1) / num) - 1;
+				values = values.map(i => (E ** (i/num) - 1)/ range);
+				// map [0...1] onto  [start...end]:
+				range = stop - start;
+				values = values.map(v =>  start + v * range);
+			}else{
+				var step = parseFloat((stop - start) / (num-1));
+				values = values.map(i => start + (i * step));
+			}
+			// Fix floating-point error and compute max decimal digits for better number visualization:
+			var d = 1;  // power of then used to round (default 10**0)
+			// start and stop can be rounded to log10(d) decimal digits without precision loss, and
+			// each value rounded to log10(d) digits should be lower than the next value
+			// (check values[1] - values[0] is sufficient, especially in log space)
+			while((start != Math.round(d * start) / d) ||
+				(stop != Math.round(d * stop) / d) ||
+				parseInt(d * (values[1] - values[0])) < 1){
+				d *= 10;
+			}
+			return values.map(v => Math.round(v * d) / d);
+		}
+	}
+});
