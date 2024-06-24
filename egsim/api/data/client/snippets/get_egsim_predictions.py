@@ -14,7 +14,7 @@ def get_egsim_predictions(
         rupture_params: Optional[dict] = None,
         site_params: Optional[dict] = None,
         data_format="hdf",
-        base_url="https://egsim.gfz-potsdam.de/query/predictions"
+        base_url="https://egsim.gfz-potsdam.de/api/query/predictions"
 ) -> pd.DataFrame:
     """Retrieve the ground motion predictions for the selected set of ground motion
     models and intensity measure types. Each prediction will be the result of a given

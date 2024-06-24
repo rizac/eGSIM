@@ -13,7 +13,7 @@ def get_egsim_residuals(
         query_string=None,
         likelihood=False,
         data_format="hdf",
-        base_url="https://egsim.gfz-potsdam.de/query/residuals"
+        base_url="https://egsim.gfz-potsdam.de/api/query/residuals"
 ) -> pd.DataFrame:
     """Retrieve the residuals for the flatfile and the selected
     set of ground motion models and intensity measure types. Examples:
