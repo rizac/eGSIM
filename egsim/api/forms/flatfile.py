@@ -1,8 +1,10 @@
 """
 Base Form for to model-to-data operations i.e. flatfile handling
 """
+from io import BytesIO
 from typing import Optional, Any
 import pandas as pd
+from django.core.files.uploadedfile import TemporaryUploadedFile
 
 from django.forms import Form
 from django.forms.fields import CharField, FileField
@@ -77,10 +79,17 @@ class FlatfileForm(EgsimBaseForm):
             if not u_form.is_valid():
                 self._errors = u_form._errors
                 return cleaned_data
-            # the files dict[str, UploadedFile] should have only one item
-            # in any case, get the first value:
-            u_flatfile = u_form.files[next(iter(u_form.files))]  # Django Uploaded file
-            u_flatfile = u_flatfile.file  # ByesIO or similar
+            # u_form.files is a MultiValueDict. Accessing the 'flatfile' key gives us
+            # a list of - or in this case, our only UploadedFile
+            # (https://docs.djangoproject.com/en/5.0/ref/files/uploads/):
+            u_flatfile = u_form.files['flatfile']
+            # If the uploaded file is too big, Django writes it to a Temporary file, and
+            # we need a workaround (read from disk) to get the whole file content:
+            if isinstance(u_flatfile, TemporaryUploadedFile):
+                with open(u_flatfile.temporary_file_path(), 'rb') as _:
+                    u_flatfile = BytesIO(_.read())
+            else:
+                u_flatfile = u_flatfile.file  # BytesIO object or alike
 
         if u_flatfile is None:  # predefined flatfile
             flatfile_db_obj = models.Flatfile.queryset('name', 'media_root_path').\

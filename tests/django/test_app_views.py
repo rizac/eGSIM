@@ -154,7 +154,8 @@ class Test:
                         os.remove(file_tmp_hdf)
 
     def test_flatfile_validate(self):
-        url  = URLS.FLATFILE_VALIDATE
+        url = URLS.FLATFILE_VALIDATE
+
         ff = SimpleUploadedFile('flatfile',
                                 self.flatfile_tk_content)
         data = {'flatfile': ff}
@@ -162,6 +163,22 @@ class Test:
         # to disable CSRF Token check
         response = client.post("/" + url, data=data)
         assert response.status_code == 200
+        cols1 = response.json()['columns']
+        assert len(cols1) == 150
+
+        # now try with a bigger flatfile (Django does not use a InMemory uploaded
+        # file, we want to check everything is read properly anyway):
+        # Build a "double sized" file content:
+        csv = (self.flatfile_tk_content +
+               b'\n'.join(self.flatfile_tk_content.split(b'\n')[1:]))
+        ff = SimpleUploadedFile('flatfile', csv)
+        data = {'flatfile': ff}
+        client = Client()  # do not use the fixture client as we want
+        # to disable CSRF Token check
+        response = client.post("/" + url, data=data)
+        assert response.status_code == 200
+        cols2 = response.json()['columns']
+        assert sorted(_['name'] for _ in cols1) == sorted(_['name'] for _ in cols2)
 
     def test_flatfile_visualize(self):
         url = URLS.FLATFILE_VISUALIZE
