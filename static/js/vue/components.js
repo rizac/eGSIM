@@ -118,49 +118,52 @@ EGSIM.component('gsim-select', {
 	},
 	template: `<div class='d-flex flex-column form-control' title="Ground motion model(s)">
 		<div
-			class='d-flex flex-row align-items-baseline mb-2'
+			class='d-flex flex-row align-items-center mb-2 gap-2'
 			style='border-bottom:0 !important;border-bottom-left-radius:0 !important; border-bottom-right-radius:0 !important'>
 			<span style="flex: 1 1 auto;" class='text-start'>Model ({{ selectedModels.length }} selected)</span>
 			<span v-show='inputElementText' class='text-muted small'> [ESC]: clear text and hide popup</span>
-			<i
+			<button type='button'
 				v-show="Object.keys(warnings).length && !inputElementText"
-				title="Remove models with warnings (for details, hover mouse on each model icon)"
-				class="fa fa-exclamation-triangle ms-2 text-warning"
-				style="cursor: pointer;"
+				title="Remove models with warnings (hover mouse on a model name for details)"
+				class="btn rounded-circle p-0 bg-image btn-warning"
+				style='background-image:var(--v-white-cross);'
 				@click="removeSelectedModelsWithWarnings()">
-			</i>
-			<i
+			</button>
+			<button type='button'
 				v-show="Object.keys(errors).length && !inputElementText"
-				title="Remove models with errors (for details, hover mouse on each model icon)"
-				class="fa fa-exclamation-triangle ms-2 text-danger"
-				style="cursor: pointer;"
+				title="Remove models with errors (hover mouse on a model name for details)"
+				class="btn rounded-circle p-0 bg-image btn-danger"
+				style='background-image:var(--v-white-cross);'
 				@click="removeSelectedModelsWithErrors()">
-			</i>
-			<i
+			</button>
+			<button type='button'
 				v-show="selectedModels.length && !inputElementText"
 				title="Remove all models from selection"
-				class="fa fa-times-circle ms-2"
-				style="cursor: pointer;"
+				class="btn rounded-circle p-0 bg-image btn-dark"
+				style='background-image:var(--v-white-cross);'
 				@click="removeSelectedModels()">
-			</i>
+			</button>
 		</div>
 		<div style='overflow: auto; flex: 1 1 auto'
 			class='rounded-bottom-0 flex-column form-control'
 			:class="selectedModels.length ? 'd-flex': 'd-none'">
-			<div class='d-flex flex-row'>
+			<div class='d-flex flex-row gap-1'>
 				<!-- div with cancel icons stacked vertically -->
-				<div class='d-flex flex-column'>
-					<div
-						v-for="model in selectedModels"
-						class='me-1'
-						:class="errors[model] ? 'text-danger' : warnings[model] ? 'text-warning' : ''"
-						title="Remove from selection"
-						@click="selectedModels.splice(selectedModels.indexOf(model), 1)">
-						<i class='fa fa-times-circle'></i>
+				<div class='d-flex flex-column gap-1'>
+					<div v-for="model in selectedModels"
+						class='d-flex flex-row align-items-center'>
+						<button type='button'
+							class="btn rounded-circle p-0 bg-image"
+							:class="errors[model] ? 'btn-danger' : warnings[model] ? 'btn-warning' : 'btn-dark'"
+							style='background-image:var(--v-white-cross);'
+							title="Remove model"
+							@click="selectedModels.splice(selectedModels.indexOf(model), 1)">
+						</button>
+						<span>&nbsp;</span>
 					</div>
 				</div>
 				<!-- div with selected model names stacked vertically -->
-				<div class='d-flex flex-column ms-1'>
+				<div class='d-flex flex-column gap-1'>
 					<div
 						v-for="model in selectedModels"
 						:title="(errors[model] || []).concat(warnings[model] || []).join('<br>')"
@@ -168,17 +171,6 @@ EGSIM.component('gsim-select', {
 						>
 						{{ model }}
 					</div>
-				</div>
-				<!-- div with warning icons stacked vertically -->
-				<div class='d-flex flex-column ms-1'>
-					<span
-						v-for="model in selectedModels"
-						:title="(errors[model] || []).concat(warnings[model] || []).join('<br>')"
-						:style='{visibility: errors[model] || warnings[model] ? "visible" : "hidden"}'
-						:class="errors[model] ? 'text-danger' : warnings[model] ? 'text-warning' : ''"
-						class='me-1'>
-						<i class='fa fa-exclamation-triangle'></i>
-					</span>
 				</div>
 			</div>
 		</div>

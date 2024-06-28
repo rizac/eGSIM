@@ -137,7 +137,7 @@ def _get_init_data_json(debug=False) -> dict:
     })
     if debug:
         predictions_form = PredictionsForm({
-            'gsim': ['CauzziEtAl2014', 'BindiEtAl2014Rjb'],
+            'gsim': ['CauzziEtAl2014', 'BindiEtAl2014Rjb', 'McVerry2006Asc', 'BoraEtAl2019'],  # noqa
             'imt': ['SA(0.05)', 'SA(0.075)'],  # default_imts,
             'magnitude': [4, 5, 6, 7],
             'distance': [1, 10, 100, 1000],

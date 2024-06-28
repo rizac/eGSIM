@@ -3,13 +3,13 @@
 	 style='z-index:2000;top: 50%; left: 50%; transform: translateX(-50%) translateY(-50%);border-width:1px;border-style:solid'>
 	<div class='p-3'
 		 style='max-height:50vh;max-width:max-width: min(50vw, 40rem);overflow:auto;'>
-		<i class="fa fa-exclamation-triangle me-1"></i>
-		{{ content }}
+		<span class='rounded-circle bg-danger text-white text-center me-1 d-inline-block fw-bold'
+			  style="width:1.5em;display">!</span> {{ content }}
 	</div>
 	<div class='text-center mt-2'>
-		<button class='btn btn-sm btn-danger' onclick='this.parentNode.parentNode.remove()' type='button'
-			style='width:100%'>
-			<i class="fa fa-times-circle ms-3" title='close'></i> close
+		<button class='btn btn-sm btn-danger bg-image' onclick='this.parentNode.parentNode.remove()' type='button'
+			style='width:100%;background-image: var(--v-white-cross);background-position: calc(50% - 2em) calc(50% + 0.1em);'>
+			close
 		</button>
 	</div>
 </div>
