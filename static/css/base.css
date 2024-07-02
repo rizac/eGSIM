@@ -128,13 +128,17 @@ div.form-control{
 	box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
 }
 
+/*
 .bg-image{
 	background-position: center center;
 	background-repeat: no-repeat;
 	background-size: 80% 80%;
+	font-size: 0px;
+	color: transparent;
 }
 
 button.rounded-circle.bg-image{
 	height: 0.9rem;
 	width: 0.9rem;
 }
+*/

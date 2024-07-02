@@ -125,23 +125,23 @@ EGSIM.component('gsim-select', {
 			<button type='button'
 				v-show="Object.keys(warnings).length && !inputElementText"
 				title="Remove models with warnings (hover mouse on a model name for details)"
-				class="btn rounded-circle p-0 bg-image btn-warning"
+				class="btn btn-sm btn-warning btn-multiplication-symbol"
 				style='background-image:var(--v-white-cross);'
-				@click="removeSelectedModelsWithWarnings()">
+				@click="removeSelectedModelsWithWarnings()">&times;
 			</button>
 			<button type='button'
 				v-show="Object.keys(errors).length && !inputElementText"
 				title="Remove models with errors (hover mouse on a model name for details)"
-				class="btn rounded-circle p-0 bg-image btn-danger"
+				class="btn btn-sm btn-danger btn-multiplication-symbol"
 				style='background-image:var(--v-white-cross);'
-				@click="removeSelectedModelsWithErrors()">
+				@click="removeSelectedModelsWithErrors()">&times;
 			</button>
 			<button type='button'
 				v-show="selectedModels.length && !inputElementText"
 				title="Remove all models from selection"
-				class="btn rounded-circle p-0 bg-image btn-dark"
+				class="btn btn-sm btn-dark btn-multiplication-symbol"
 				style='background-image:var(--v-white-cross);'
-				@click="removeSelectedModels()">
+				@click="removeSelectedModels()">&times;
 			</button>
 		</div>
 		<div style='overflow: auto; flex: 1 1 auto'
@@ -153,13 +153,12 @@ EGSIM.component('gsim-select', {
 					<div v-for="model in selectedModels"
 						class='d-flex flex-row align-items-center'>
 						<button type='button'
-							class="btn rounded-circle p-0 bg-image"
+							class="btn btn-sm btn-dark btn-multiplication-symbol"
 							:class="errors[model] ? 'btn-danger' : warnings[model] ? 'btn-warning' : 'btn-dark'"
-							style='background-image:var(--v-white-cross);'
 							title="Remove model"
 							@click="selectedModels.splice(selectedModels.indexOf(model), 1)">
+							&times;
 						</button>
-						<span>&nbsp;</span>
 					</div>
 				</div>
 				<!-- div with selected model names stacked vertically -->
@@ -313,14 +312,22 @@ EGSIM.component('imt-select', {
 				class='form-control border-top-0 rounded-top-0 rounded-end-0 border-end-0'
 				placeholder="SA periods (space- or comma-separated)"
 			 />
-			<button
-				@click="SAPeriods = Array.from(SAPeriods.length ? [] : defaultSAPeriods)"
-				type='button'
-				:title='SAPeriods.length ? "clear text" : "input a predefined list of SA periods"'
-				class='btn border-0 bg-white rounded-top-0 rounded-start-0 border-bottom border-end'>
-				<i class="fa fa-times-circle"
-					:class='SAPeriods.length ? "fa-times-circle" : "fa-arrow-circle-o-left"'></i>
+			<div class='border-0 rounded-top-0 rounded-start-0 border-bottom border-end'>
+			<button type='button' v-show="!SAPeriods.length"
+				@click="SAPeriods = Array.from(defaultSAPeriods)"
+				title="clear text"
+				class='btn btn-sm btn-left-arrow'
+				>
+				&larr;
 			</button>
+			<button type='button' v-show="SAPeriods.length"
+				@click="SAPeriods = []"
+				title="input a predefined list of SA periods"
+				class='btn btn-sm btn-multiplication-symbol'
+				>
+				&times;
+			</button>
+			</div>
 		</div>
 	</div>`,
 	methods: {
