@@ -1,16 +1,16 @@
 <nav class="nav bg-dark" style='padding:.25rem'>
 
-	<a class='nav-link' @click="currentPage = pages.home" href="#">
-		<i class="fa fa-home me-1"></i>
+	<a class='nav-link a-home' @click="currentPage = pages.home" href="#">
+		Home
 	</a>
 
-	<a class='nav-link' @click="currentPage = pages.predictions" href="#">
-		<i class="fa fa-area-chart me-1"></i> Model-to-Model comparison
+	<a class='nav-link icon-model-to-model' @click="currentPage = pages.predictions" href="#">
+		Model-to-Model comparison
 	</a>
 
 	<li class="nav-item dropdown">
-		<a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button">
-			<i class="fa fa-database me-1"></i> Data
+		<a class="nav-link dropdown-toggle icon-data" data-bs-toggle="dropdown" href="#" role="button">
+			Data
 		</a>
 		<ul class="dropdown-menu bg-dark rounded-top-0">
 			<li><a class="dropdown-item" href="#" @click="currentPage = pages.flatfile_meta_info">Intro</a></li>
@@ -19,8 +19,8 @@
 	</li>
 
 
-	<a class='nav-link' @click="currentPage = pages.residuals" href="#">
-		<i class="fa fa-bar-chart me-1"></i> Model-to-Data Comparison
+	<a class='nav-link icon-model-to-data' @click="currentPage = pages.residuals" href="#">
+		Model-to-Data Comparison
 	</a>
 
 	<div class='d-flex flex-row align-items-center'
@@ -32,10 +32,12 @@
 	</div>
 
 	<a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button">
-		<i class="fa fa-bars"></i>
+		&#8230;  <!-- horizontal ellipsis -->
 	</a>
 	<ul class="dropdown-menu bg-dark rounded-top-0">
-		<li><a class="dropdown-item" @click="currentPage = pages.ref_and_license" href="#"><i class="fa fa-address-card-o me-1"></i>References & License</a></li>
+		<li><a class="dropdown-item a-external-link" @click="currentPage = pages.ref_and_license" href="#">
+			&#8505; References & License</a>
+		</li>
 		<li><a class="dropdown-item" @click="currentPage = pages.imprint" href="#">Imprint</a></li>
 		<li><a class="dropdown-item" :href='pages.data_protection' target="_blank">Data Protection</a></li>
 	</ul>

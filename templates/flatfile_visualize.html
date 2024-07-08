@@ -35,7 +35,7 @@
 					v-if="forms.misc.flatfile_visualize.selected_flatfile_fields.length"
 					@click="var x = forms.flatfile_visualize.x; forms.flatfile_visualize.x =forms.flatfile_visualize.y; forms.flatfile_visualize.y = x"
 					class='btn btn-outline-primary border-0'>
-				<i class="fa fa-exchange"></i>
+				&#8644;  <!-- <=> -->
 			</button>
 
 			<div class='d-flex gap-1 align-items-baseline' :title='forms.misc.flatfile_visualize.help.x'>
@@ -52,9 +52,9 @@
 		<button type='button'
 				@click="var data = Object.assign({}, forms.flatfile_visualize, {format: 'json'}); post(urls.flatfile_visualize, data).then(r => r.json()).then(data => { responses.flatfile_visualize=data.plots; })"
 				:disabled='forms.flatfile_visualize.x == forms.flatfile_visualize.y'
-				class='btn btn-primary'
+				class='btn btn-primary btn-view'
 				title='Display flatfile data in an interactive plot'>
-			<i class='fa fa-bar-chart'></i>
+			View
 		</button>
 
 	</form>

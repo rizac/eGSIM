@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 
 {% block head %}
-{% with vue=False plotly=False leaflet=False fontawesome=True %}
+{% with vue=False plotly=False leaflet=False %}
 {{ block.super }}
 {% endwith %}
 {% endblock %}
@@ -39,11 +39,11 @@ a 2-dimensional labeled data structure with columns of different types
 	<b>Read/Write a downloaded HDF file</b>
 	<div style='flex:1 1 auto'></div>
 	<div>Pandas doc:</div>
-	<a class='mx-2'
+	<a class='mx-2 a-external-link'
 	   href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_hdf.html"
-	   target="_blank"><i class='fa fa-external-link'></i>Read HDF</a>
-	<a href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.to_hdf.html"
-	   target="_blank"><i class='fa fa-external-link'></i>Write HDF</a>
+	   target="_blank">Read HDF</a>
+	<a href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.to_hdf.html" class='a-external-link'
+	   target="_blank">Write HDF</a>
 </div>
 
 <i>Note: also requires pytables (pip install tables)</i>
@@ -63,11 +63,11 @@ dataframe.to_hdf(file_path, key=table_key, format="table")
 	<b>Read/Write a downloaded CSV file</b>
 	<div style='flex:1 1 auto'></div>
 	<div>Pandas doc:</div>
-	<a class='mx-2'
+	<a class='mx-2 a-external-link'
 	   href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_csv.html"
-	   target="_blank"><i class='fa fa-external-link'></i>Read CSV</i></a>
-	<a href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.to_csv.html"
-	   target="_blank"><i class='fa fa-external-link'></i>Read CSV</a>
+	   target="_blank">Read CSV</i></a>
+	<a href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.to_csv.html" class="a-external-link"
+	   target="_blank">Read CSV</a>
 </div>
 
 <i>
@@ -89,20 +89,20 @@ dataframe.to_csv(file_path)
 
 
 <div class='mt-4'>
-From here on, you can easily and
-efficiently manipulate the data in your DataFrame. For further reading, see this
-<a href="https://pandas.pydata.org/docs/user_guide/10min.html">
-	<i class='fa fa-external-link'></i>short intro
-</a>, or how to
-<a href="https://pandas.pydata.org/docs/user_guide/indexing.html">
-	<i class='fa fa-external-link'></i>index and select data
-</a> (also with a
-<a href="https://pandas.pydata.org/docs/user_guide/advanced.html">
-	<i class='fa fa-external-link'></i>multi-index row or column, the case at hand</a>
-), or
-<a href="https://pandas.pydata.org/docs/user_guide/visualization.html#visualization">
-	<i class='fa fa-external-link'></i>plot the data
-</a>.
+	From here on, you can easily and
+	efficiently manipulate the data in your DataFrame. For further reading, see this
+	<a href="https://pandas.pydata.org/docs/user_guide/10min.html" target="_blank" class="a-external-link">
+		short intro
+	</a>, or how to
+	<a href="https://pandas.pydata.org/docs/user_guide/indexing.html" target="_blank" class="a-external-link">
+		index and select data
+	</a> (also with a
+	<a href="https://pandas.pydata.org/docs/user_guide/advanced.html" target="_blank" class="a-external-link">
+		multi-index row or column, the case at hand</a>
+	), or
+	<a href="https://pandas.pydata.org/docs/user_guide/visualization.html#visualization" target="_blank" class="a-external-link">
+		plot the data
+	</a>.
 </div>
 
 </div>

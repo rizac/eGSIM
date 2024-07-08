@@ -125,21 +125,21 @@ EGSIM.component('gsim-select', {
 			<button type='button'
 				v-show="Object.keys(warnings).length && !inputElementText"
 				title="Remove models with warnings (hover mouse on a model name for details)"
-				class="btn btn-sm btn-warning btn-multiplication-symbol"
+				class="btn btn-sm btn-warning btn-x"
 				style='background-image:var(--v-white-cross);'
 				@click="removeSelectedModelsWithWarnings()">&times;
 			</button>
 			<button type='button'
 				v-show="Object.keys(errors).length && !inputElementText"
 				title="Remove models with errors (hover mouse on a model name for details)"
-				class="btn btn-sm btn-danger btn-multiplication-symbol"
+				class="btn btn-sm btn-danger btn-x"
 				style='background-image:var(--v-white-cross);'
 				@click="removeSelectedModelsWithErrors()">&times;
 			</button>
 			<button type='button'
 				v-show="selectedModels.length && !inputElementText"
 				title="Remove all models from selection"
-				class="btn btn-sm btn-dark btn-multiplication-symbol"
+				class="btn btn-sm btn-dark btn-x"
 				style='background-image:var(--v-white-cross);'
 				@click="removeSelectedModels()">&times;
 			</button>
@@ -147,27 +147,17 @@ EGSIM.component('gsim-select', {
 		<div style='overflow: auto; flex: 1 1 auto'
 			class='rounded-bottom-0 flex-column form-control'
 			:class="selectedModels.length ? 'd-flex': 'd-none'">
-			<div class='d-flex flex-row gap-1'>
-				<!-- div with cancel icons stacked vertically -->
-				<div class='d-flex flex-column gap-1'>
-					<div v-for="model in selectedModels"
-						class='d-flex flex-row align-items-center'>
-						<button type='button'
-							class="btn btn-sm btn-dark btn-multiplication-symbol"
-							:class="errors[model] ? 'btn-danger' : warnings[model] ? 'btn-warning' : 'btn-dark'"
-							title="Remove model"
-							@click="selectedModels.splice(selectedModels.indexOf(model), 1)">
-							&times;
-						</button>
-					</div>
-				</div>
-				<!-- div with selected model names stacked vertically -->
-				<div class='d-flex flex-column gap-1'>
-					<div
-						v-for="model in selectedModels"
-						:title="(errors[model] || []).concat(warnings[model] || []).join('<br>')"
-						:class="errors[model] ? 'text-danger' : warnings[model] ? 'text-warning' : ''"
-						>
+			<div class='d-flex flex-column gap-1'>
+				<div v-for="model in selectedModels" class='d-flex flex-row align-items-center gap-1'>
+					<button type='button'
+						class="btn btn-sm btn-dark btn-x"
+						:class="errors[model] ? 'btn-danger' : warnings[model] ? 'btn-warning' : 'btn-dark'"
+						title="Remove model"
+						@click="selectedModels.splice(selectedModels.indexOf(model), 1)">
+						&times;
+					</button>
+					<div :title="(errors[model] || []).concat(warnings[model] || []).join('<br>')"
+						 :class="errors[model] ? 'text-danger' : warnings[model] ? 'text-warning' : ''">
 						{{ model }}
 					</div>
 				</div>
@@ -186,7 +176,7 @@ EGSIM.component('gsim-select', {
 			class='position-relative'
 			style='overflow:visible'>
 			<select
-				title="Highlight models: Click or [&uarr;][&darr;] (with [Shift] or [Ctrl]: multi highlight)\nSelect highlighted models: Double click, [Return] or [Enter]\nClear text and hide popup: [ESC]"
+				title="Highlight models: Click or up/down arrow key (with [Shift] or [Ctrl]: multi highlight)\nSelect highlighted models: Double click, [Return] or [Enter]\nClear text and hide popup: [ESC]"
 				multiple
 				ref="selectElement"
 				v-show='!!selectableModels.length'
@@ -306,28 +296,26 @@ EGSIM.component('imt-select', {
 				{{ imt }}
 			</option>
 		</select>
-		<div v-show="selectedImtClassNames.includes('SA')" class='d-flex flex-row'>
+		<div v-show="selectedImtClassNames.includes('SA')"
+			 class='d-flex flex-row align-items-center form-control border-top-0 rounded-top-0 p-0'>
 			<array-input
-				v-model="SAPeriods"
-				class='form-control border-top-0 rounded-top-0 rounded-end-0 border-end-0'
+				v-model="SAPeriods" class='form-control border-0'
 				placeholder="SA periods (space- or comma-separated)"
 			 />
-			<div class='border-0 rounded-top-0 rounded-start-0 border-bottom border-end'>
 			<button type='button' v-show="!SAPeriods.length"
 				@click="SAPeriods = Array.from(defaultSAPeriods)"
-				title="clear text"
+				title="input a predefined list of SA periods"
 				class='btn btn-sm btn-left-arrow'
 				>
-				&larr;
+				&#9666;  <!-- left triangle -->
 			</button>
 			<button type='button' v-show="SAPeriods.length"
 				@click="SAPeriods = []"
-				title="input a predefined list of SA periods"
-				class='btn btn-sm btn-multiplication-symbol'
+				title="clear text"
+				class='btn btn-sm btn-x'
 				>
 				&times;
 			</button>
-			</div>
 		</div>
 	</div>`,
 	methods: {
@@ -391,26 +379,28 @@ EGSIM.component('gsim-map', {
 				var rowDivPrefix = "<div class='d-flex flex-row align-items-center text-nowrap'>";
 				// prevent click on anything on the div to propagate on the map:
 				L.DomEvent.disableClickPropagation(div);
-				var html = `<button class="border-0" type="button"
-								onclick='this.parentNode.querySelector("._panel").classList.toggle("d-none");this.querySelectorAll("._arrow").forEach(e => e.classList.toggle("d-none"))'
+				var html = `<button class="border-0 btn-down-arrow d-toggle" type="button"
+								onclick='this.parentNode.querySelectorAll(".d-toggle").forEach(e => e.classList.toggle("d-none"))'
 								style='width:100%; background-color:transparent'>
-								<span class='_arrow'>&#9207;</span>
-								<span class="_arrow d-none">&#9206;</span>
+								&#9662; <!-- down triangle -->
 							</button>
-							<div class='_panel d-none'>`;
+							<button class="border-0 btn-up-arrow d-toggle d-none" type="button"
+								onclick='this.parentNode.querySelectorAll(".d-toggle").forEach(e => e.classList.toggle("d-none"))'
+								style='width:100%; background-color:transparent'>
+								&#9652;  <!-- up triangle -->
+							</button>
+							<div class='d-toggle d-none'>`;
 				// Add title:
 				html += `<h6 class="mt-1">Map options</h6>
-					<div style='max-width:12rem' class='mb-2'>On mouse click, querying the models
-					selected in the following seismic hazard
+					<div style='max-width:12rem' class='mb-2'>On mouse click, fetch the models
+					selected for the given location querying the following seismic hazard
 					source regionalizations:
 					</div>`;
 				for (var regx of regionalizations){
 					var name = regx.name;
 					var ipt = `<label><input type='checkbox' data-regionalization-name='${name}' checked class='me-1' />${name}</label>`;
 					if (regx.url){
-						ipt += `<a class='ms-1' target="_blank" href="${regx.url}" title="ref (open link in new tab)">
-							<i class="fa fa-external-link"></i>
-						</a>`;
+						ipt += `<a class='ms-1 a-external-link' target="_blank" href="${regx.url}" title="ref (open link in new tab)">&#8505;</a>`;  // <!-- info char -->
 					}
 					html += `${rowDivPrefix}${ipt}</div>`;
 				}
@@ -610,17 +600,17 @@ EGSIM.component('flatfile-select', {
 				{{ v.innerHTML }}
 			</option>
 		</select>
-		<a title="data reference" target="_blank"
+		<a title="data reference" target="_blank" class='a-external-link'
 			v-if="selectedIndex >=0 && flatfiles[selectedIndex].url"
 			:href="flatfiles[selectedIndex].url">
-			<i class="fa fa-external-link"></i>
+			&#8505; <!-- info char -->
 		</a>
 		<input type="file" style='display:none' @change="uploadFlatfiles($event.target.files)"/>
 		<button
-			class="btn btn-outline-primary border-0" type="button"
+			class="btn btn-outline-primary border-0 btn-upload" type="button"
 			onclick="this.parentNode.querySelector('input[type=file]').click()"
 			title="upload user-defined flatfile in CSV or HDF format">
-			<i class='fa fa-upload'></i>
+			upload
 		</button>
 	</div>`
 });

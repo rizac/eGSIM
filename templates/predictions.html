@@ -27,10 +27,10 @@
 		<div class='d-flex flex-column form-control gap-2'>
 			<div class='d-flex'>
 				<span style='flex: 1 1 auto'>Rupture(s)</span>
-				<button class="btn btn-outline-primary btn-sm border-0" type="button"
+				<button class="btn btn-outline-primary btn-sm border-0 btn-plus" type="button"
 						title="advanced ruptures settings (applied to every magnitude-related Rupture)"
 						onclick="document.getElementById('rupture-controls').classList.toggle('d-none')">
-					<i class="fa fa-plus"></i>
+					+
 				</button>
 			</div>
 
@@ -114,10 +114,10 @@
 		<div class='d-flex flex-column form-control gap-2'>
 			<div class='d-flex'>
 				<span style='flex: 1 1 auto'>Site(s)</span>
-				<button class="btn btn-outline-primary btn-sm border-0" type='button'
+				<button class="btn btn-outline-primary btn-sm border-0 btn-plus" type='button'
 						title="advanced sites settings (applied to every distance-related Site)"
 						onclick="document.getElementById('site-controls').classList.toggle('d-none')">
-					<i class="fa fa-plus"></i>
+					+
 				</button>
 			</div>
 
@@ -218,10 +218,9 @@
 				<button
 					type='button'
 					@click="download(`${urls.predictions}.${forms.predictions.format}`, forms.predictions)"
-					class='btn btn-primary'
-					style='flex: 0 0 3.5rem'
+					class='btn btn-primary' style='flex: 0 0 3.5rem'
 					title='Download predictions'>
-						<i class='fa fa-download'></i>
+					Ok
 				</button>
 			</div>
 
@@ -232,10 +231,9 @@
 				</select>
 				<button type='button'
 						@click="var data = Object.assign({}, forms.predictions, forms.predictions_plot, {format: 'json'}); post(urls.predictions_visualize, data).then(r => r.json()).then(data => { responses.predictions_plots=data.plots; })"
-						class='btn btn-primary'
-						style='flex: 0 0 3.5rem'
+						class='btn btn-primary' style='flex: 0 0 3.5rem'
 						title='Visualize predictions via interactive plots'>
-					<i class='fa fa-bar-chart'></i>
+					Ok
 				</button>
 			</div>
 		</div>

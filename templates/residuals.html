@@ -63,16 +63,15 @@
 					<label class='text-nowrap'>
 						<input type='checkbox' v-model="forms.residuals.likelihood" class='me-1' />include likelihood
 					</label>
-					<a href="https://doi.org/10.1785/0120030147" target='_blank' class='ms-1'>
-						<i class='fa fa-external-link'></i>
+					<a href="https://doi.org/10.1785/0120030147" target='_blank' class='ms-1 a-external-link'>
+						&#8505;  <!-- info character -->
 					</a>
 
 					<button type='button'
 							@click="download(`${urls.residuals}.${forms.residuals.format}`, forms.residuals)"
-							class='btn btn-primary'
-							style='flex: 0 0 3.5rem'
+							class='btn btn-primary' style='flex: 0 0 3.5rem'
 							title='Download residuals'>
-							<i class='fa fa-download'></i>
+							Ok
 					</button>
 
 				</div>
@@ -91,10 +90,9 @@
 
 					<button type='button'
 							@click="var data = Object.assign({}, forms.residuals, forms.residuals_plot, {format: 'json'}); post(urls.residuals_visualize, data).then(r => r.json()).then(data => { responses.residuals_plots=data.plots; })"
-							class='btn btn-primary'
-							style='flex: 0 0 3.5rem'
+							class='btn btn-primary' style='flex: 0 0 3.5rem'
 							title='Visualize residuals via interactive plots'>
-						<i class='fa fa-bar-chart'></i>
+						Ok
 					</button>
 
 				</div>

@@ -14,7 +14,11 @@ EGSIM.component('plots-div', {
 			show: true,
 			// boolean visualizing a div while drawing (to prevent user clicking everywhere for long taks):
 			drawingPlots: false,
-			// an Array of [legendgroup:str, traceProperties:Object] elements:
+			// a Map where each legendgroup:str is associated to an Object representing the editor panel to style the trace(s)
+			// associated to the given legendgroup.
+			// The Object keys are:
+			// 'expanded': bool (whether the editor panel is expanded) and
+			// 'json':str (the editor panel content, as JSON formatted object)
 			legend: new Map(),
 			// An Array of Param Objects for laying out plots. Each param has at least the function indexOf(plot, idx, plots)
 			// and optionally a value:Array key and a name:str key. If the latter are provided, then the param
@@ -51,8 +55,8 @@ EGSIM.component('plots-div', {
 			// the wait bar while drawing plots
 			waitbar: {
 				msg: '',  // the message to be displayed, and below some defaults:
-				DRAWING: 'Drawing plots... <i class="fa fa-hourglass-o"></i>',
-				UPDATING: 'Updating plots... <i class="fa fa-hourglass-o"></i>'
+				DRAWING: 'Drawing plots... &#8987;', // hourglass char
+				UPDATING: 'Updating plots... &#8987;'
 			}
 		}
 	},
@@ -191,13 +195,9 @@ EGSIM.component('plots-div', {
 		<!-- RIGHT TOOLBAR (legend, buttons, controls) -->
 		<div class='d-flex flex-column ps-4 gap-3' style='max-height: 100%; overflow: hidden'>
 			<div class="btn-group">
-				<button v-if="closeButton" type='button' class='btn btn-primary border-0 text-nowrap'
-						@click="show = !show" title='close plots panel'>
-					<i class='fa fa-times-circle ms-2'></i>
-				</button>
 				<div class="btn-group" title="Download visible plots in different image formats" style='flex: 1 1 auto'>
-					<button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-						<i class='fa fa-download'></i>
+					<button class="btn btn-primary dropdown-toggle btn-download" type="button" data-bs-toggle="dropdown">
+						Download
 					</button>
 					<ul class="dropdown-menu">
 						<li v-for="url in downloadUrls">
@@ -207,33 +207,36 @@ EGSIM.component('plots-div', {
 						</li>
 					</ul>
 				</div>
+				<button v-if="closeButton" type='button' class='btn btn-primary border-0 text-nowrap btn-x'
+						@click="show = !show" title='close plots panel'>
+					&times;
+				</button>
 			</div>
 			<div v-show='legend.size' class='d-flex flex-column gap-2' style='flex:1 1 auto; overflow:auto'>
-				<div v-for="[legendgroup, jsonStyle] in legend"
+				<div v-for="[legendgroup, editorPanel] in legend"
 					 class='d-flex flex-column p-2 border bg-white gap-2'
-					 style='flex: 0 1 0px;'>
-					<div class='d-flex align-items-baseline gap-2 text-nowrap' :style="{color: getLegendColor(jsonStyle)}">
+					 :style='[ editorPanel.expanded ? {flex: "1 1 0px"} : {flex: "0 1 0px"} ]'>
+					<div class='d-flex align-items-baseline gap-2 text-nowrap' :style="{color: getLegendColor(editorPanel.json)}">
 						<input type='checkbox' title="Toggle plot trace(s) visibility"
 							   v-if="plots.some(p => p.data.length > 1)"
 							   :checked="true"
 							   @change="$evt => { setTraceStyle(legendgroup, JSON.stringify({ visible: !!$evt.target.checked })) }"
-							   :style="{'accent-color': getLegendColor(jsonStyle) + ' !important'}"
+							   :style="{'accent-color': getLegendColor(editorPanel.json) + ' !important'}"
 							   >
 						<span style='flex: 1 1 auto'>{{ legendgroup }}</span>
-						<button type='button' title="Style plot trace(s)" class='btn btn-sm border-0'
-							:style="{'color': getLegendColor(jsonStyle) + ' !important'}"
-							onclick='var root = this.parentNode.parentNode; root.style.flexGrow=parseInt(1-this.parentNode.parentNode.style.flexGrow); root.querySelector("._json_config").classList.toggle("d-none"); root.querySelectorAll("._arrow").forEach(s => s.classList.toggle("d-none"))'>
-							<span class='_arrow'>&#9207;</span> <!--arrow down -->
-							<span class='_arrow d-none'>&#9206;</span> <!-arrow up>
+						<button type='button' title="Style plot trace(s)" @click="editorPanel.expanded = !editorPanel.expanded"
+							class='btn btn-sm border-0'
+							:style="{'color': getLegendColor(editorPanel.json) + ' !important'}">
+							{{ editorPanel.expanded ? '&#9652;' :  '&#9662;' }} <!--triangle up, triangle down -->
 						</button>
 					</div>
-					<div class='_json_config d-none d-flex flex-column' style='flex:1 1 auto;'
-						:style="{color: getLegendColor(jsonStyle)}">
+					<div class='flex-column' style='flex:1 1 auto;' :class="editorPanel.expanded ? 'd-flex' : 'd-none' "
+						:style="{color: getLegendColor(editorPanel.json)}">
 						<textarea rows="2" class='form-control rounded-bottom-0 border-bottom-0 p-1' spellcheck="false"
 								  style='color: inherit !important; flex:1 1 auto; min-height:0px; resize: none; font-family:monospace; white-space: pre; overflow-wrap: normal; overflow: auto;'
-								  v-model="jsonStyle"/>
-						<button type="button" class='btn btn-sm rounded-top-0 border' :disabled="!jsonStyle"
-								@click="setTraceStyle(legendgroup, jsonStyle)"
+								  v-model="editorPanel.json"/>
+						<button type="button" class='btn btn-sm rounded-top-0 border' :disabled="!editorPanel.json"
+								@click="setTraceStyle(legendgroup, editorPanel.json)"
 								style="color: inherit; !important">
 								Apply
 						</button>
@@ -378,6 +381,10 @@ EGSIM.component('plots-div', {
 						values.sort((a, b) => b===null ? 1 : (a===null ? -1 : a - b));  // https://stackoverflow.com/a/1063027
 					}else{
 						values.sort();
+						// small hack in case of residuals: "Total" comes first, then "Inter/ Intra". So:
+						if (pname.toLowerCase().startsWith("residual")){
+							values.reverse();
+						}
 					}
 					params.push({
 						values: values,
@@ -401,8 +408,8 @@ EGSIM.component('plots-div', {
 
 			var gridlayouts = {};
 			var selectedgridlayout = '';
-			var varr = '&#8679;';  // vartical arrow character
-			var harr = '&#8680;';  // horiontal arrow character
+			var varr = '&#8593;';  // vertical arrow character (&uarr;)
+			var harr = '&#8594;';  // horizontal arrow character (&rarr;)
 			if (params.length == 0){
 				if (plots.length == 1){
 					// config this Vue Component with a 1x1 grid of plots non selectable and with no grid labels:
@@ -1051,19 +1058,19 @@ EGSIM.component('plots-div', {
 			for (var plot of this.plots){
 				for (var trace of plot.data){
 					if (trace.legendgroup && !this.legend.has(trace.legendgroup)){
-						this.setLegendItem(trace.legendgroup, trace);
+						this.setLegendItem(trace.legendgroup, trace, false);
 					}
 				}
 			}
 		},
-		setLegendItem(legendgroup, traceObject){
+		setLegendItem(legendgroup, traceObject, panelExpanded){
 			var editableData = {};
 			['marker', 'line', 'xbins', 'ybins'].forEach(k => {
 				if (k in traceObject){
 					editableData[k] = traceObject[k];
 				}
 			});
-			this.legend.set(legendgroup, JSON.stringify(editableData, null, '  '));
+			this.legend.set(legendgroup, {'json': JSON.stringify(editableData, null, '  '), 'expanded': panelExpanded});
 		},
 		getLegendColor(style){  // style => object as JSON string
 			try{
@@ -1093,9 +1100,10 @@ EGSIM.component('plots-div', {
 			}
 			// update legend data:
 			try{
-				var legenddata = JSON.parse(this.legend.get(legendgroup));
+				var editorPanel = this.legend.get(legendgroup);
+				var legenddata = JSON.parse(editorPanel.json);
 				legenddata = Object.assign(legenddata, styleObject);
-				this.setLegendItem(legendgroup, legenddata);
+				this.setLegendItem(legendgroup, legenddata, editorPanel.expanded);
 			}catch(error){  // also raises if style is empty string
 				return;
 			}
