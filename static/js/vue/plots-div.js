@@ -209,7 +209,7 @@ EGSIM.component('plots-div', {
 				</div>
 				<button v-if="closeButton" type='button' class='btn btn-primary border-0 text-nowrap btn-x'
 						@click="show = !show" title='close plots panel'>
-					&times;
+					&#10006; <!-- heavy "x" -->
 				</button>
 			</div>
 			<div v-show='legend.size' class='d-flex flex-column gap-2' style='flex:1 1 auto; overflow:auto'>

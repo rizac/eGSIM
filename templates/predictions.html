@@ -29,8 +29,8 @@
 				<span style='flex: 1 1 auto'>Rupture(s)</span>
 				<button class="btn btn-outline-primary btn-sm border-0 btn-plus" type="button"
 						title="advanced ruptures settings (applied to every magnitude-related Rupture)"
-						onclick="document.getElementById('rupture-controls').classList.toggle('d-none')">
-					+
+						onclick="document.getElementById('rupture-controls').classList.toggle('d-none'); this.querySelectorAll('span').forEach(e => e.classList.toggle('d-none'))">
+					<span>&#9660;</span><span class='d-none'>&#9650;</span>
 				</button>
 			</div>
 
@@ -46,12 +46,12 @@
 				<button
 					type='button'
 					onclick="this.parentNode.querySelectorAll('._d-toggle_').forEach(e => e.classList.toggle('d-none')); var t = this.getAttribute('data-title-cache'); this.setAttribute('data-title-cache', this.title); this.title = t"
-					class='btn btn-outline-primary border-0 position-relative'
+					class='btn btn-outline-primary border-0'
 					title='input evenly spaced numbers over a specified interval on a linear or log scale'
 					data-title-cache="restore default input"
 					>
-					<span class='_d-toggle_'>⏵</span>
-					<span class='_d-toggle_ d-none'>⏴</span>
+					<span class='_d-toggle_'>&#9998;</span>
+					<span class='_d-toggle_ d-none'>&times;</span>
 				</button>
 			</div>
 
@@ -116,8 +116,8 @@
 				<span style='flex: 1 1 auto'>Site(s)</span>
 				<button class="btn btn-outline-primary btn-sm border-0 btn-plus" type='button'
 						title="advanced sites settings (applied to every distance-related Site)"
-						onclick="document.getElementById('site-controls').classList.toggle('d-none')">
-					+
+						onclick="document.getElementById('site-controls').classList.toggle('d-none'); this.querySelectorAll('span').forEach(e => e.classList.toggle('d-none'))">
+					<span>&#9660;</span><span class='d-none'>&#9650;</span>
 				</button>
 			</div>
 
@@ -133,12 +133,12 @@
 				<button
 					type='button'
 					onclick="this.parentNode.querySelectorAll('._d-toggle_').forEach(e => e.classList.toggle('d-none')); var t = this.getAttribute('data-title-cache'); this.setAttribute('data-title-cache', this.title); this.title = t"
-					class='btn btn-outline-primary border-0 position-relative'
+					class='btn btn-outline-primary border-0'
 					title='input evenly spaced numbers over a specified interval on a linear or log scale'
 					data-title-cache="restore default input"
 					>
-					<span class='_d-toggle_'>⏵</span>
-					<span class='_d-toggle_ d-none'>⏴</span>
+					<span class='_d-toggle_'>&#9998;</span>
+					<span class='_d-toggle_ d-none'>&times;</span>
 				</button>
 			</div>
 
@@ -208,7 +208,7 @@
 				</button>
 			</div>
 
-			<div class='d-flex flex-row align-items-baseline gap-1'>
+			<div class='d-flex flex-row align-items-center gap-2'>
 				<div style='flex: 0 0 4.5rem'>Download</div>
 				<select v-model='forms.predictions.format' class='form-control' style='flex: 1 1 auto'>
 					<option v-for='format in forms.misc.download_formats' :value='format'>
@@ -224,7 +224,7 @@
 				</button>
 			</div>
 
-			<div class='d-flex flex-row align-items-baseline gap-1'>
+			<div class='d-flex flex-row align-items-center gap-2'>
 				<div style='flex: 0 0 4.5rem'>Visualize</div>
 				<select v-model='forms.predictions_plot.plot_type' class='form-control' style='flex: 1 1 auto'>
 					<option v-for="v in forms.misc.predictions_plot.plot_types" :value='v[0]' v-html='v[1]'></option>

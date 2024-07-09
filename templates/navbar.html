@@ -35,8 +35,10 @@
 		&#8230;  <!-- horizontal ellipsis -->
 	</a>
 	<ul class="dropdown-menu bg-dark rounded-top-0">
-		<li><a class="dropdown-item a-external-link" @click="currentPage = pages.ref_and_license" href="#">
-			&#8505; References & License</a>
+		<li>
+			<a class="dropdown-item" @click="currentPage = pages.ref_and_license" href="#">
+				References & License
+			</a>
 		</li>
 		<li><a class="dropdown-item" @click="currentPage = pages.imprint" href="#">Imprint</a></li>
 		<li><a class="dropdown-item" :href='pages.data_protection' target="_blank">Data Protection</a></li>
