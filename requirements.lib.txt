@@ -5,7 +5,7 @@ charset-normalizer==3.3.2
 contourpy==1.2.1
 cycler==0.12.1
 decorator==5.1.1
-Django==5.0.4
+Django==5.0.7
 docutils==0.21.1
 -e git+https://github.com/rizac/eGSIM.git@704f51b24afad75745c7985e9fdac00fad775c31#egg=egsim
 fonttools==4.51.0
