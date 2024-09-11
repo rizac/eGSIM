@@ -607,10 +607,11 @@ EGSIM.component('flatfile-select', {
 		</a>
 		<input type="file" style='display:none' @change="uploadFlatfiles($event.target.files)"/>
 		<button
-			class="btn btn-outline-primary border-0 btn-upload" type="button"
+			class="btn btn-outline-primary border-0 btn-upload text-nowrap" type="button"
 			onclick="this.parentNode.querySelector('input[type=file]').click()"
-			title="upload user-defined flatfile in CSV or HDF format">
-			upload
+			title="upload user-defined flatfile in CSV or HDF format"
+			style="transform:rotate(-90deg)">
+			&#10140;
 		</button>
 	</div>`
 });

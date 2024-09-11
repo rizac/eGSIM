@@ -69,9 +69,9 @@
 
 					<button type='button'
 							@click="download(`${urls.residuals}.${forms.residuals.format}`, forms.residuals)"
-							class='btn btn-primary' style='flex: 0 0 3.5rem'
+							class='btn btn-primary' style='flex: 0 0 3.5rem; transform: rotate(90deg)'
 							title='Download residuals'>
-							Ok
+							&#10140;
 					</button>
 
 				</div>
@@ -92,7 +92,7 @@
 							@click="var data = Object.assign({}, forms.residuals, forms.residuals_plot, {format: 'json'}); post(urls.residuals_visualize, data).then(r => r.json()).then(data => { responses.residuals_plots=data.plots; })"
 							class='btn btn-primary' style='flex: 0 0 3.5rem'
 							title='Visualize residuals via interactive plots'>
-						Ok
+						&#10140;
 					</button>
 
 				</div>

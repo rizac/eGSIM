@@ -218,9 +218,9 @@
 				<button
 					type='button'
 					@click="download(`${urls.predictions}.${forms.predictions.format}`, forms.predictions)"
-					class='btn btn-primary' style='flex: 0 0 3.5rem'
+					class='btn btn-primary' style='flex: 0 0 3.5rem; transform:rotate(90deg)'
 					title='Download predictions'>
-					Ok
+					&#10140;
 				</button>
 			</div>
 
@@ -233,7 +233,7 @@
 						@click="var data = Object.assign({}, forms.predictions, forms.predictions_plot, {format: 'json'}); post(urls.predictions_visualize, data).then(r => r.json()).then(data => { responses.predictions_plots=data.plots; })"
 						class='btn btn-primary' style='flex: 0 0 3.5rem'
 						title='Visualize predictions via interactive plots'>
-					Ok
+					&#10140;
 				</button>
 			</div>
 		</div>
