@@ -265,8 +265,9 @@ def post_process(flatfile: pd.DataFrame) -> pd.DataFrame:
         period = sa_sfx[2:].replace('_', '.')
         float(period)  # just a check
         # geometric mean:
-        sa_columns['SA(%s)' % period] = \
-            np.sqrt(imt_components[0] * imt_components[1])
+        sa_columns[f'SA({period})'] = convert_accel_units(
+            np.sqrt(imt_components[0] * imt_components[1]), "cm/s^2", "g"
+        )
     # concat (side by side "horizontally") `dfr` with the newly created SA dataframe:
     dfr = pd.concat((dfr, pd.DataFrame(sa_columns)), axis=1)
     return dfr

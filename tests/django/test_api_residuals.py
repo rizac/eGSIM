@@ -256,3 +256,30 @@ class Test:
         resp1 = client.get(self.url, data=inputdict,
                            content_type='application/json')
         assert resp1.status_code == 200
+
+    def test_booreetal_esm(self,
+                       # pytest fixtures:
+                       client):
+        """test a case where we got very strange between events (intra events)
+        Bug discovered in sept 2024
+        """
+        inputdict = {
+            "gsim": [
+                "BooreEtAl2014"
+            ],
+            "imt": [
+                "SA(0.1)"
+            ],
+            'flatfile': 'esm2018',
+            'flatfile-query': 'rjb < 200',
+            'format': 'hdf'
+        }
+        resp1 = client.get(self.url, data=inputdict,
+                           content_type='application/json')
+        assert resp1.status_code == 200
+        dfr = read_hdf_from_buffer(BytesIO(resp1.getvalue()))
+        inter_ev_values = dfr[('SA(0.1)', 'inter_event_residual', 'BooreEtAl2014')]
+        # this was before comnverting SA to g:
+        # assert 13 < inter_ev_values.median() < 14
+        # now it should be:
+        assert -2 < inter_ev_values.median() < -1
