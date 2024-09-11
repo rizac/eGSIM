@@ -239,9 +239,20 @@ server installation, scroll down
 
 <h2>Common operations</h2>
 
+<b>
+	Note: in any command below you need to restart the service(s)
+	$DJANGO_PROJECT and nginx. If you want to check their functioning
+	after restart, type:
+</b>
+
+<pre><code class="language-bash">
+service $DJANGO_PROJECT restart && systemctl status $DJANGO_PROJECT
+service nginx restart && nginx -t
+</code></pre>
+
 <h3>Update the package</h3>
 
-<b>Warning: this assumes there are: NO changes to
+<b>this assumes there are: NO changes to
 (=migrations to be performed on) the eGSIM database, NO Python libraries
 to be updated or newly installed, NO static files
 (e.g., images, css, javascript) to be updated</b>
@@ -257,7 +268,7 @@ service nginx restart
 
 <h3>Update the package and the static files</h3>
 
-<b>Warning: this assumes there are: NO changes to
+<b>this assumes there are: NO changes to
 (=migrations to be performed on) the eGSIM database, NO Python libraries
 to be updated or newly installed</b>
 
@@ -273,13 +284,15 @@ deactivate
 </code></pre>
 
 
-<h3>Update the db schema</h3>
-This assumes that we created a new migration file with Django `makemigration`.
-Note: we usually just throw away the old migrations and re-create a new migration file, usually
-`api/migrations/0001_initial.py` or something similar. this means that we also delete
-the old database for safety.
+<h3>Update egsim DB data or media files</h3>
 
-<p>IMPORTANT: Execute these command as <code>$DJANGO_USER</code>, thus FIRST type:</p>
+(For details on how to change the DB schema, see README file)
+
+<p>IMPORTANT: Execute these command as <code>$DJANGO_USER</code>
+<b>otherwise database and media files will not be accessible and you'll get a cryptic
+"500 error" by the server</b>
+</p>
+<p>Thus FIRST type:</p>
 <pre><code class="language-bash">
 su $DJANGO_USER
 </code></pre>
@@ -288,17 +301,18 @@ su $DJANGO_USER
 source $VENV_ACTIVATE
 </code></pre>
 
-Now update the package,
-remove the db (see note above),
-(re)create the database (`migrate`) and populate it with eGSIM data (`egsim_init`):
+Now type:
 <pre><code class="language-bash">
 (cd $EGSIM_CWD && git pull)
 rm $EGSIM_DATA_DIR/egsim.db
+# create the db and populate it with Django stuff (this is necessary only when changing the DB schema, but for safety):
 (cd $EGSIM_CWD; export PYTHONPATH=$EGSIM_CONFIG_DIR DJANGO_SETTINGS_MODULE=settings; python manage.py migrate)
+# populate the DB with egsim stuff
 (cd $EGSIM_CWD; export PYTHONPATH=$EGSIM_CONFIG_DIR DJANGO_SETTINGS_MODULE=settings; python manage.py egsim_init)
 service $DJANGO_PROJECT restart
 service nginx restart
 </code></pre>
+
 
 <h3>Install system fonts (to produce and download the same plots visible on the browser)</h3>
 
