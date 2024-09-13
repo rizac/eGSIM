@@ -111,6 +111,7 @@ class RESTAPIView(View):
             if not issubclass(self.formclass, FlatfileForm):
                 return error_response("The given URL does not support "
                                       "uploaded files", self.CLIENT_ERR_CODE)
+            # requests.FILE: https://docs.djangoproject.com/en/dev/ref/request-response/#django.http.HttpRequest.FILES  # noqa
             return self.response(data=self.parse_query_dict(request.POST),
                                  files=request.FILES)
         else:

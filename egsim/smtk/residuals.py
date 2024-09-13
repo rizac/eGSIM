@@ -144,7 +144,8 @@ def yield_event_contexts(flatfile: pd.DataFrame) -> Iterable[EventContext]:
     # no ID found, event spatio-temporal coordinates (_EVENT_COLUMNS[1:])
     ev_id_cols = get_event_id_column_names(flatfile)
     ev_sub_flatfiles = flatfile.groupby(  # https://stackoverflow.com/a/75478319
-        ev_id_cols[0] if len(ev_id_cols) == 1 else ev_id_cols
+        ev_id_cols[0] if len(ev_id_cols) == 1 else ev_id_cols,
+        observed=False
     )
     for ev_id, dfr in ev_sub_flatfiles:
         if not dfr.empty:  # for safety ...

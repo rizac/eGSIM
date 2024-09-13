@@ -262,6 +262,7 @@ class Test:
                        client):
         """test a case where we got very strange between events (intra events)
         Bug discovered in sept 2024
+        Tests also normalize parameter
         """
         inputdict = {
             "gsim": [
@@ -282,4 +283,14 @@ class Test:
         # this was before comnverting SA to g:
         # assert 13 < inter_ev_values.median() < 14
         # now it should be:
-        assert -2 < inter_ev_values.median() < -1
+        q1, m, q9 = inter_ev_values.quantile([.1, .5, .9])
+        assert -1.5 < m < -1
+
+        # now with no norm:
+        resp1 = client.get(self.url, data=inputdict | {'normalize': False},
+                           content_type='application/json')
+        assert resp1.status_code == 200
+        dfr = read_hdf_from_buffer(BytesIO(resp1.getvalue()))
+        inter_ev_values = dfr[('SA(0.1)', 'inter_event_residual', 'BooreEtAl2014')]
+        q1_nonorm, m_nonomr, q9_nonorm =  inter_ev_values.quantile([.1, .5, .9])
+        assert -1 < m_nonomr < -.5

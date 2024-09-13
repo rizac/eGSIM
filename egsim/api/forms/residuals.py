@@ -23,6 +23,11 @@ class ResidualsForm(GsimImtForm, FlatfileForm, APIForm):
                               help_text='compute the residuals likelihood '
                                         'according to Scherbaum et al. 2004 '
                                         '(https://doi.org/10.1785/0120030147)')
+    normalize = BooleanField(initial=True, required=False,
+                             help_text=('normalize the random effects residuals '
+                                        '(calculated using the inter-event '
+                                        'residual formula described in '
+                                        'Abrahamson & Youngs (1992) Eq. 10)'))
     # Custom API param names (see doc of `EgsimBaseForm._field2params` for details):
     _field2params = {}
 
@@ -69,4 +74,5 @@ class ResidualsForm(GsimImtForm, FlatfileForm, APIForm):
         return get_residuals(cleaned_data["gsim"],
                              cleaned_data["imt"],
                              cleaned_data['flatfile'],
-                             cleaned_data['likelihood'])
+                             cleaned_data['likelihood'],
+                             cleaned_data['normalize'])

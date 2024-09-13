@@ -288,7 +288,7 @@ class ResidualsVisualizeForm(ResidualsForm):
                         line_trace(
                             color=color,
                             x=x_,
-                            y=norm_dist(x_, mean, std),
+                            y=normal_dist(x_, mean, std),
                             name=" ".join(col) + ' normal distribution',
                             legendgroup=model + ' normal distribution',
                         )
@@ -298,7 +298,7 @@ class ResidualsVisualizeForm(ResidualsForm):
                             color="rgba(120, 120, 120, 1)",
                             dash='dot',
                             x=x_,
-                            y=norm_dist(x_),
+                            y=normal_dist(x_),
                             name='Normal distribution',
                             legendgroup='Normal distribution (m=0, s=1)',
                         )
@@ -335,10 +335,10 @@ class ResidualsVisualizeForm(ResidualsForm):
         return {'plots': plots}
 
 
-def norm_dist(x, mean=0, sigma=1):
+def normal_dist(x, mean=0, sigma=1):
     from scipy.constants import pi
     sigma_square_times_two = 2 * (sigma ** 2)
-    norm = 1. / np.sqrt(2 * pi * sigma_square_times_two)
+    norm = 1. / np.sqrt(pi * sigma_square_times_two)
     return norm * np.exp(-((x - mean) ** 2) / sigma_square_times_two)
 
 

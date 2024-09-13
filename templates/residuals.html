@@ -43,6 +43,9 @@
 
 			<div class="d-flex align-items-baseline gap-1">
 				<span style='flex: 1 1 auto'>Residuals</span>
+				<label class='text-nowrap' :title="forms.misc.residuals.help.normalize">
+					<input type='checkbox' v-model="forms.residuals.normalize" class='me-1' />normalize
+				</label>
 				<button type='button' class='btn btn-outline-primary btn-sm border-0'
 						onclick='var elm=document.getElementById("residuals_tutorial"); elm.src=elm.getAttribute("data-src");elm.classList.toggle("d-none")'>
 					<img style="height:1.5rem" src="{% static 'img/logos/jupyter.svg' %}" />
@@ -60,8 +63,8 @@
 						</option>
 					</select>
 
-					<label class='text-nowrap'>
-						<input type='checkbox' v-model="forms.residuals.likelihood" class='me-1' />include likelihood
+					<label class='text-nowrap' :title="forms.misc.residuals.help.likelihood">
+						<input type='checkbox' v-model="forms.residuals.likelihood" class='me-1' />likelihood
 					</label>
 					<a href="https://doi.org/10.1785/0120030147" target='_blank' class='ms-1'>
 						<i class='fa fa-external-link'></i>

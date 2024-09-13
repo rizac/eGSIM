@@ -79,10 +79,18 @@ class FlatfileForm(EgsimBaseForm):
             if not u_form.is_valid():
                 self._errors = u_form._errors
                 return cleaned_data
-            # u_form.files is a MultiValueDict. Accessing the 'flatfile' key gives us
-            # a list of - or in this case, our only UploadedFile
+            # u_form.files is a MultiValueDict or a dict (I guss the latter when
+            # we do provide a flatfile). We do not care about the keys as long as
+            # there is just one key:
+            ff_keys = list(u_form.files.keys())
+            if len(ff_keys) != 1:
+                self.add_error("flatfile", f"only one flatfile should be uploaded "
+                                           f"(found {len(ff_keys)})")
+                return cleaned_data
+            # Accessing the only key of u_form.files us a list of - or in this case,
+            # our only UploadedFile
             # (https://docs.djangoproject.com/en/5.0/ref/files/uploads/):
-            u_flatfile = u_form.files['flatfile']
+            u_flatfile = u_form.files[ff_keys[0]]
             # If the uploaded file is too big, Django writes it to a Temporary file, and
             # we need a workaround (read from disk) to get the whole file content:
             if isinstance(u_flatfile, TemporaryUploadedFile):
