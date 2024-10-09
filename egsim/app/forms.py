@@ -1,6 +1,9 @@
 """Forms handling data (flatfiles)"""
+from typing import Union
+
 import numpy as np
 import pandas as pd
+from scipy.stats import linregress
 
 from egsim.api.forms import APIForm
 from egsim.api.forms.flatfile import FlatfileForm
@@ -13,6 +16,7 @@ from egsim.smtk.registry import Clabel
 from egsim.smtk.validators import sa_period
 from .plotly import (colors_cycle, axis_type, axis_range, scatter_trace,
                      bar_trace, line_trace, histogram_trace, AxisType)
+from ..smtk.converters import datetime2float
 
 
 class PredictionsVisualizeForm(PredictionsForm):
@@ -228,7 +232,7 @@ class ResidualsVisualizeForm(ResidualsForm):
             else:
 
                 def x_label(imt_):
-                    return f'Likelihood ({str(imt_)})'
+                    return f'LH ({str(imt_)})'
 
                 def y_label(imt_):  # noqa
                     return 'Frequency'
@@ -306,14 +310,27 @@ class ResidualsVisualizeForm(ResidualsForm):
             else:
                 x = self.cleaned_data['flatfile'][col_x]
                 y = dataframe[col]
-                trace = scatter_trace(
+                data = [scatter_trace(
                     color=color_transparent,
                     x=x,
                     y=y,
                     name=" ".join(col),
                     legendgroup=model
-                )
-                data = [trace]
+                )]
+                linreg = lin_regr(x, y)
+                if linreg:
+                    data.append(
+                        line_trace(
+                            color="rgba(120, 120, 120, 1)",
+                            dash='dot',
+                            width=3,
+                            x=linreg["x"],
+                            y=linreg["y"],
+                            name=f'Slope: {linreg["slope"]:.2f}<br>'
+                                 f'P-value: {linreg["pvalue"]:.2f} ',
+                            legendgroup='Linear regression',
+                        )
+                    )
 
             # config layout axis based on the displayed values:
             for values, axis in ((x, layout['xaxis']), (y, layout['yaxis'])):
@@ -335,11 +352,41 @@ class ResidualsVisualizeForm(ResidualsForm):
         return {'plots': plots}
 
 
-def normal_dist(x, mean=0, sigma=1):
+def normal_dist(x, mean=0, sigma=1) -> np.ndarray:
     from scipy.constants import pi
     sigma_square_times_two = 2 * (sigma ** 2)
     norm = 1. / np.sqrt(pi * sigma_square_times_two)
     return norm * np.exp(-((x - mean) ** 2) / sigma_square_times_two)
+
+
+def lin_regr(x, y, n_pts=10) -> dict:
+    if len(x) < 2 or len(y) < 2:
+        return {}
+    x_type = axis_type(x)
+    y_type = axis_type(y)
+    x_ok = x_type in (AxisType.linear, AxisType.date)
+    y_ok = y_type in (AxisType.linear, AxisType.date)
+    if not y_ok or not x_ok:
+        return {}
+    x_ = datetime2float(x) if x_type == AxisType.date else x
+    y_ = datetime2float(y) if y_type == AxisType.date else y
+    finite = np.isfinite(x_) & np.isfinite(y_)
+    if finite.sum() < 2:
+        return {}
+    result = linregress(x_[finite], y_[finite])
+    xs = np.linspace(np.nanmin(x_), np.nanmax(x_), n_pts, endpoint=True)
+    ys = [result.intercept + result.slope * x for x in xs]
+    if x_type == AxisType.date:
+        xs = pd.to_datetime(xs, unit='s')
+    if y_type == AxisType.date:
+        ys = pd.to_datetime(ys, unit='s')
+    return {
+        'slope': result.slope,
+        'intercept': result.intercept,
+        'x': xs,
+        'y': ys,
+        'pvalue': result.pvalue
+    }
 
 
 class FlatfileVisualizeForm(APIForm, FlatfileForm):

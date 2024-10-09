@@ -85,6 +85,9 @@ EGSIM.component('plots-div', {
 				showgrid: true,
 				gridwidth: 1,
 				gridcolor: "#eee",
+			},
+			hoverlabel:{
+				namelength: -1  // show all tooltip text (no cut with ellipsis)
 			}
 		};
 		// options of the side panel to configure mouse interactions on the plots:

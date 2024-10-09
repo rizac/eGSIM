@@ -1,11 +1,14 @@
 """
 """
+from io import StringIO
+
 import pytest
 
 import numpy as np
 import pandas as pd
 
-from egsim.smtk.converters import convert_accel_units, dataframe2dict
+from egsim.smtk.converters import convert_accel_units, dataframe2dict, datetime2str, \
+    datetime2float
 
 
 def test_dataframe2dict():
@@ -70,3 +73,42 @@ def test_convert_accel_units():
     assert convert_accel_units(1, "g", "g") == 1
     with pytest.raises(ValueError):
         assert convert_accel_units(1, "gf", "gf") == 1
+
+
+def test_convert_datetimes():
+    csv_str = "\n".join(['time', '', '2006', '2006-01-01', '2006-01-01T00:00:00',
+                         '2006-01-01T00:00:00.0', '2006-01-01T00:00:00.001'])
+    series = pd.read_csv(
+        StringIO(csv_str),
+        skip_blank_lines=False,
+        parse_dates=['time'],
+        date_format='ISO8601')['time']
+    vals = datetime2str(series)
+    # default format is seconds, micro/milliseconds are rounded/removed:
+    assert all(_ == '2006-01-01T00:00:00' for _ in vals[1:])
+    assert pd.isna(vals[0])
+    # same test with numpy arrays:
+    vals = datetime2str(series.values)
+    assert all(_ == '2006-01-01T00:00:00' for _ in vals[1:])
+    assert pd.isna(vals[0])
+
+    # test a different format (default format is s):
+    vals = datetime2str(series, '%Y-%m-%dT%H:%M:%S.%f')
+    assert all(_ == '2006-01-01T00:00:00.000000' for _ in vals[1:-1])
+    assert pd.isna(vals[0])
+    # this time last value differs:
+    assert vals[-1] == '2006-01-01T00:00:00.001000'
+
+    vals = datetime2float(series)
+    assert all(isinstance(_, float) for _ in vals[1:-1])
+    assert pd.isna(vals[0])
+    # check that the last values is 0.001 more than the next-to-last
+    # (take into account rounding problems):
+    assert np.isclose(vals[-1] - vals[-2], 0.001, rtol=1e-4, atol=0)
+    # same test with numpy arrays:
+    vals = datetime2float(series.values)
+    assert pd.isna(vals[0])
+    assert all(isinstance(_, float) for _ in vals[1:-1])
+    # check that the last values is 0.001 more than the next-to-last
+    # (take into account rounding problems):
+    assert np.isclose(vals[-1] - vals[-2], 0.001, rtol=1e-4, atol=0)

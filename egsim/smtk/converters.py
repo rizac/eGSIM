@@ -163,3 +163,38 @@ def array2json(
             values = values.astype(object)
             values[na_vals] = None
     return values.tolist()  # noqa
+
+
+def datetime2str(
+        values: Union[np.ndarray, pd.Series],
+        dformat='%Y-%m-%dT%H:%M:%S'
+) -> np.ndarray:
+    """
+    Convert `values` to a numpy array of date-time strings
+
+    :param values: A sequence of date-time-like values (e.g. numpy array, pandas Series,
+        list. See pandas `to_datetime` for details)
+    :param dformat: the string format of the resulting strings, defaults to
+        '%Y-%m-%dT%H:%M:%S' (for millisecond resolution, use  '%Y-%m-%dT%H:%M:%S.%f')
+    """
+    if isinstance(values, pd.Series):
+        values = values.values
+        # Note: pd.to_datetime(series) > series,
+        # pd.to_datetime(ndarray or list) > DatetimeIndex.
+        # In the latter case we can use `strftime`, which will also preserves
+        # NAs (so `pd.isna` will work on it):
+    return pd.to_datetime(values).strftime(dformat).values  # noqa
+
+
+def datetime2float(values: Union[np.ndarray, pd.Series]) -> np.ndarray:
+    """
+    Convert `values` to a numpy array of date-time floats (unit: second)
+
+    :param values: A sequence of date-time-like values (e.g. numpy array, pandas Series,
+        list. See pandas `to_datetime` for details)
+    """
+    values = pd.to_datetime(values)
+    ret = np.full_like(values, np.nan, dtype=float)
+    flt = np.isfinite(values)
+    ret[flt] = values[flt].astype(int) / 10 ** 9
+    return ret

@@ -7,7 +7,7 @@ import numpy as np
 from typing import Optional, Union
 from collections.abc import Iterable, Iterator
 
-from egsim.smtk.converters import array2json as smtk_array2json
+from egsim.smtk.converters import array2json, datetime2str
 from egsim.smtk.flatfile import ColumnDtype, get_dtype_of
 
 
@@ -58,17 +58,11 @@ def colors_cycle(hex_colors: Optional[Iterable[str]] = None) -> Iterator[str]:
     return cycle(values)
 
 
-def array2json(values: Union[np.ndarray, pd.Series]) -> list:
+def values2json(values: Union[np.ndarray, pd.Series]) -> list:
     """Converter from numpy/pandas array to plotly compatible list"""
     if axis_type(values) == AxisType.date:  # plotly wants ISO strings
-        if isinstance(values, pd.Series):
-            values = values.values
-        # Note: to_datetime(series) > series,
-        # to_datetime(ndarray or list) > DatetimeIndex.
-        # In the latter case we can use strftime (which will also preserve
-        # NAs, so pd.isna will work on it):
-        values = pd.to_datetime(values).strftime('%Y-%m-%dT%H:%M:%S')
-    return smtk_array2json(values)
+        values = datetime2str(values, '%Y-%m-%dT%H:%M:%S')
+    return array2json(values)
 
 
 def axis_range(
@@ -103,7 +97,7 @@ def axis_range(
             max_ += margin
     if min_ >= max_:
         return None
-    return array2json(pd.Series([min_, max_], dtype=values.dtype))
+    return values2json(pd.Series([min_, max_], dtype=values.dtype))
 
 
 def scatter_trace(
@@ -113,13 +107,13 @@ def scatter_trace(
         symbol='circle',
         line_color=None,
         line_width=0,
-        line_dash='solid',
+        # line_dash='solid',
         **kwargs) -> dict:
     """Return the properties and style for a trace of type scatter"""
     if 'x' in kwargs:
-        kwargs['x'] = array2json(kwargs['x'])
+        kwargs['x'] = values2json(kwargs['x'])
     if 'y' in kwargs:
-        kwargs['y'] = array2json(kwargs['y'])
+        kwargs['y'] = values2json(kwargs['y'])
     return {
         'type': 'scatter',
         'mode': 'markers',
@@ -139,9 +133,9 @@ def scatter_trace(
 def line_trace(*, color: str, width=2, dash='solid', **kwargs) -> dict:
     """Return the properties and style for a trace of type scatter (lines only)"""
     if 'x' in kwargs:
-        kwargs['x'] = array2json(kwargs['x'])
+        kwargs['x'] = values2json(kwargs['x'])
     if 'y' in kwargs:
-        kwargs['y'] = array2json(kwargs['y'])
+        kwargs['y'] = values2json(kwargs['y'])
     return {
         'type': 'scatter',
         'mode': 'lines',
@@ -185,9 +179,9 @@ def _bar_like_trace(
         line_color=None,
         **kwargs) -> dict:
     if 'x' in kwargs:
-        kwargs['x'] = array2json(kwargs['x'])
+        kwargs['x'] = values2json(kwargs['x'])
     if 'y' in kwargs:
-        kwargs['y'] = array2json(kwargs['y'])
+        kwargs['y'] = values2json(kwargs['y'])
     return {
         'type': typ,
         'marker': {
