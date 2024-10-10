@@ -212,144 +212,191 @@ class ResidualsVisualizeForm(ResidualsForm):
         # - to enable the xaxis sameRange checkbox: layout.xaxis.range must be defined
         # as 2-element list (same for yaxis)
         # Plotly.get_layout (see below) handles this automatically
-        df_labels = {
-            Clabel.total_res: 'Total',
-            Clabel.intra_ev_res: 'Intra event',
-            Clabel.inter_ev_res: 'Inter event'
-        }
+
         dataframe = super().output()
-        col_x = self.cleaned_data.get('x', None)
+        col_x = self.cleaned_data.get('x', "")
         likelihood = self.cleaned_data.get('likelihood', False)
-        if not col_x:
-            if not likelihood:
-
-                def x_label(imt_):
-                    return f'Z ({str(imt_)})'
-
-                def y_label(imt_):  # noqa
-                    return 'Frequency'
-
-            else:
-
-                def x_label(imt_):
-                    return f'LH ({str(imt_)})'
-
-                def y_label(imt_):  # noqa
-                    return 'Frequency'
-
-                df_labels = {
-                    Clabel.total_lh: 'Total',
-                    Clabel.intra_ev_lh: 'Intra event',
-                    Clabel.inter_ev_lh: 'Inter event'
-                }
-
-        else:
-
-            def x_label(imt_):  # noqa
-                return self.cleaned_data['x']
-
-            def y_label(imt_):
-                return f'Z ({str(imt_)})'
-
-        plots = []
         c_cycle = colors_cycle()
         colors = {}
-        for col in [c for c in dataframe.columns if c[1] in df_labels]:
+
+        plots = {}  # will be returned as list (taking the dict values)
+
+        total_res, intra_res, inter_res = \
+            (Clabel.total_res, Clabel.intra_ev_res, Clabel.inter_ev_res)
+        if likelihood:
+            total_res, intra_res, inter_res = \
+                (Clabel.total_lh, Clabel.intra_ev_lh, Clabel.inter_ev_lh)
+        res_columns = {total_res, intra_res, inter_res}
+        residual_label = {
+            total_res: 'Total',
+            intra_res: 'Intra event',
+            inter_res: 'Inter event'
+        }
+
+        for col in dataframe.columns:
+            if col[1] not in res_columns:
+                continue
             imt, res_type, model = col
-            color = colors.setdefault(model, next(c_cycle))
-            color_transparent = color.replace(', 1)', ', 0.5)')
-            layout = {
-                'xaxis': {
-                    'title': x_label(imt)
-                },
-                'yaxis': {
-                    'title': y_label(imt)
-                }
-            }
 
-            if not col_x:  # residuals hist or likelihood hist
+            if not col_x:  # histogram (residuals or LH):
                 x = dataframe[col]
-                if not likelihood:
-                    step = 0.5
-                else:
-                    step = 0.1
-                bins = np.arange(x.min(), x.max() + step, step)
-                y = np.histogram(x, bins, density=True)[0]
-                trace = bar_trace(
-                    color=color_transparent,
-                    line_color=color,
-                    x=bins[:-1],
-                    y=y,
-                    name=" ".join(col),
-                    legendgroup=model
-                )
-                data = [trace]
-
-                if not likelihood:
-                    mean, std = x.mean(), x.std(ddof=0)
-                    x_ = np.arange(mean - 3 * std, mean + 3 * std, step / 10)
-                    data.append(
-                        line_trace(
-                            color=color,
-                            x=x_,
-                            y=normal_dist(x_, mean, std),
-                            name=" ".join(col) + ' normal distribution',
-                            legendgroup=model + ' normal distribution',
-                        )
-                    )
-                    data.append(
-                        line_trace(
-                            color="rgba(120, 120, 120, 1)",
-                            dash='dot',
-                            x=x_,
-                            y=normal_dist(x_),
-                            name='Normal distribution',
-                            legendgroup='Normal distribution (m=0, s=1)',
-                        )
-                    )
+                y = None
             else:
                 x = self.cleaned_data['flatfile'][col_x]
                 y = dataframe[col]
-                data = [scatter_trace(
-                    color=color_transparent,
-                    x=x,
-                    y=y,
-                    name=" ".join(col),
-                    legendgroup=model
-                )]
-                linreg = lin_regr(x, y)
-                if linreg:
-                    data.append(
-                        line_trace(
-                            color="rgba(120, 120, 120, 1)",
-                            dash='dot',
-                            width=3,
-                            x=linreg["x"],
-                            y=linreg["y"],
-                            name=f'Slope: {linreg["slope"]:.2f}<br>'
-                                 f'P-value: {linreg["pvalue"]:.2f} ',
-                            legendgroup='Linear regression',
-                        )
-                    )
 
-            # config layout axis based on the displayed values:
-            for values, axis in ((x, layout['xaxis']), (y, layout['yaxis'])):
-                axis['type'] = axis_type(values)
-                rng = axis_range(values)
-                if rng is not None:
-                    axis['range'] = rng
+            color = colors.setdefault(model, next(c_cycle))
+            data, layout = get_plotly_data_and_layout(
+                model, imt, x, y, likelihood, col_x, color)
 
-            plots.append({
+            # provide a key that is comparable for sorting the plots. Note that imt
+            # is separated into name and period (so that "SA(9)" < "SA(10)") and that
+            # "Total" residual is set as "" to appear in front of all other residuals:
+            key = [
+                imt if sa_period(imt) is None else 'SA',  # imt name
+                sa_period(imt) or -1,  # SA period (or -1 for all others)
+                model,  # model name
+                '' if res_type == total_res else res_type  # resid. type ("Total"="")
+            ]
+            plots[tuple(key)] = {
                 'data': data,
                 'params': {
                     'model': model,
                     'imt': imt,
-                    'residual type': df_labels[res_type]
+                    'residual type': residual_label[res_type]
                 },
                 'layout': layout
-            })
+            }
 
-        return {'plots': plots}
+            # if we are processing total residuals, also set intra and inter
+            # defaults as empty plot. If intra and inter were already (or will be )
+            # processed, the  skip this
+            if res_type == total_res:
+                for r_type in (intra_res, inter_res):
+                    key[-1] = r_type
+                    plots.setdefault(tuple(key), {
+                        'data': [{}],
+                        'params': {
+                            'model': model,
+                            'imt': imt,
+                            'residual type': residual_label[r_type]
+                        },
+                        'layout': dict(layout)
+                    })
+
+        # return keys sorted so that the frontend displays them accordingly:
+        return {'plots': [plots[key] for key in sorted(plots.keys())]}
+
+
+def get_plotly_data_and_layout(
+        model: str, imt: str, x, y=None, likelihood=False, xlabel='',
+        color='rgba(0, 0, 255, 1)') -> tuple[list[dict], dict]:
+    if y is None:  # hist (residuals or LH)
+        if not likelihood:
+
+            def x_label(imt_):
+                return f'Z ({str(imt_)})'
+
+            def y_label(imt_):  # noqa
+                return 'Frequency'
+
+        else:
+
+            def x_label(imt_):
+                return f'LH ({str(imt_)})'
+
+            def y_label(imt_):  # noqa
+                return 'Frequency'
+
+    else:
+        def x_label(imt_):  # noqa
+            return xlabel
+
+        def y_label(imt_):
+            return f'Z ({str(imt_)})'
+
+    # c_cycle = colors_cycle()
+    # colors = {}
+    # color = colors.setdefault(model, next(c_cycle))
+    color_transparent = color.replace(', 1)', ', 0.5)')
+    layout = {
+        'xaxis': {
+            'title': x_label(imt)
+        },
+        'yaxis': {
+            'title': y_label(imt)
+        }
+    }
+    trace_name = f'{imt} {model}'
+    if y is None:  # residuals hist or likelihood hist
+        if not likelihood:
+            step = 0.5
+        else:
+            step = 0.1
+        bins = np.arange(x.min(), x.max() + step, step)
+        y = np.histogram(x, bins, density=True)[0]
+        data = [bar_trace(
+            color=color_transparent,
+            line_color=color,
+            x=bins[:-1],
+            y=y,
+            name=trace_name,
+            legendgroup=model
+        )]
+
+        if not likelihood:
+            mean, std = x.mean(), x.std(ddof=0)
+            x_ = np.arange(mean - 3 * std, mean + 3 * std, step / 10)
+            data.append(
+                line_trace(
+                    color=color,
+                    x=x_,
+                    y=normal_dist(x_, mean, std),
+                    name=f'{trace_name} normal distribution',
+                    legendgroup=f'{model} normal distribution',
+                )
+            )
+            data.append(
+                line_trace(
+                    color="rgba(120, 120, 120, 1)",
+                    dash='dot',
+                    x=x_,
+                    y=normal_dist(x_),
+                    name='Standard normal distribution (m=0, s=1)',
+                    legendgroup='Standard normal distribution',
+                )
+            )
+    else:
+        data = [scatter_trace(
+            color=color_transparent,
+            x=x,
+            y=y,
+            name=trace_name,
+            legendgroup=model
+        )]
+        linreg = lin_regr(x, y)
+        if linreg:
+            data.append(
+                line_trace(
+                    color="rgba(120, 120, 120, 1)",
+                    dash='dot',
+                    width=3,
+                    x=linreg["x"],
+                    y=linreg["y"],
+                    name=f'Slope: {linreg["slope"]:.2f}<br>'
+                         f'P-value: {linreg["pvalue"]:.2f} ',
+                    legendgroup='Linear regression',
+                )
+            )
+
+    # config layout axis based on the displayed values:
+    for values, axis in ((x, layout['xaxis']), (y, layout['yaxis'])):
+        axis['type'] = axis_type(values)
+        rng = axis_range(values)
+        if rng is not None:
+            axis['range'] = rng
+
+    return data, layout
 
 
 def normal_dist(x, mean=0, sigma=1) -> np.ndarray:

@@ -74,7 +74,8 @@ EGSIM.component('plots-div', {
 				mirror: true,
 				showgrid: true,
 				gridwidth: 1,
-				gridcolor: "#eee"
+				gridcolor: "#eee",
+				tickangle: 0
 			},
 			yaxis: {
 				zeroline: false,
@@ -85,6 +86,7 @@ EGSIM.component('plots-div', {
 				showgrid: true,
 				gridwidth: 1,
 				gridcolor: "#eee",
+				tickangle: 0
 			},
 			hoverlabel:{
 				namelength: -1  // show all tooltip text (no cut with ellipsis)
@@ -362,26 +364,25 @@ EGSIM.component('plots-div', {
 			var plots = this.plots;
 			// sets up the params implemented on each plot. Params are used to select
 			// specific plots to show, or to layout plots on a XY grid
-			var paramvalues = new Map();
+			var paramvalues = new Map();  // preserves insertion order
 			plots.forEach(plot => {
 				var plotParams = plot.params || {};
 				for (var paramName of Object.keys(plotParams)){
-					if(!paramvalues.has(paramName)){
-						paramvalues.set(paramName, new Set());
+					if (!paramvalues.has(paramName)){
+						paramvalues.set(paramName, []);
 					}
-					paramvalues.get(paramName).add(plotParams[paramName]);
+					var pvalues = paramvalues.get(paramName);
+					var pvalue = plotParams[paramName];
+					if (!pvalues.includes(pvalue)){
+						pvalues.push(pvalue);
+					}
 				}
 			});
 			// create an Array of params object (params mapped to a single value are discarded):
 			var params = [];
 			paramvalues.forEach((pvalues, pname) => {
-				if(pvalues.size > 1){
+				if(pvalues.length > 1){
 					var values = Array.from(pvalues);
-					if (values.some(v => v!==null) && values.every(v => v === null || typeof v === 'number')){
-						values.sort((a, b) => b===null ? 1 : (a===null ? -1 : a - b));  // https://stackoverflow.com/a/1063027
-					}else{
-						values.sort();
-					}
 					params.push({
 						values: values,
 						label: pname,
@@ -505,9 +506,12 @@ EGSIM.component('plots-div', {
 				control.sameRange.range = null;
 				control.sameRange.disabled = true;
 				control.sameRange.value = false;
-				if (this.plots.length > 1 && axis.every(a => Array.isArray(a.range))){
-					var mins = axis.map(a => a.range[0]);
-					var maxs = axis.map(a => a.range[1]);
+				// consider only plots with data:
+				var plotz = this.plots.filter(p => (p.data.length > 0) && Object.keys(p.data[0]).length > 0);
+				var axiz = plotz.map(p => (p.layout || {})[layoutkey] || {});
+				if (axiz.length > 1 && axiz.every(a => Array.isArray(a.range))){
+					var mins = axiz.map(a => a.range[0]);
+					var maxs = axiz.map(a => a.range[1]);
 					// sort and get endpoints (Math.min and Math.max work for numeric data only)
 					mins.sort((a, b) => a > b ? 1 : (b > a ? -1 : 0));
 					maxs.sort((a, b) => a > b ? 1 : (b > a ? -1 : 0));
@@ -515,14 +519,14 @@ EGSIM.component('plots-div', {
 					var axisMax = maxs[maxs.length-1];
 					var invalid = [null, undefined, NaN];
 					if (!invalid.includes(axisMin) && !invalid.includes(axisMax) && (axisMin < axisMax)){
-						if (axis.every(a => !('autorange' in a) || a.autorange === true)){ // autorange set for all plots
+						if (axiz.every(a => !('autorange' in a) || a.autorange === true)){ // autorange set for all plots
 							control.sameRange.range = [axisMin, axisMax];
 							control.sameRange.disabled = false;
 							control.sameRange.value = false;
 							// plotly gives priority to range vs autorange, we want the latter to take effect
 							// initially, and the former to be set via the checkbox, so remove each axis range:
-							axis.forEach(a => { delete a.range; });
-						}else if (axis.every(a => a.autorange === false)){  // autorange false for all plots
+							axiz.forEach(a => { delete a.range; });
+						}else if (axiz.every(a => a.autorange === false)){  // autorange false for all plots
 							control.sameRange.value = true;
 						}
 					}
