@@ -65,39 +65,30 @@ def values2json(values: Union[np.ndarray, pd.Series]) -> list:
     return array2json(values)
 
 
-def axis_range(
-        values: Union[np.ndarray, pd.Series],
-        margin=0.1) -> Union[list, None]:
+def axis_range(values: Union[np.ndarray, pd.Series]) -> Union[list, None]:
     """Compute the optimal axis range for the given values
 
     :param values: the numpy array / pandas Series whose values should be
         displayed on the given axis
-    :param margin: optional margin to slightly expand computed min and max for
-        better visualization of data, in [0, 1] which is a sort of fraction of
-        the data range
     """
-    min_, max_ = np.inf, -np.inf
     atype = axis_type(values)
-    if atype not in (AxisType.linear, AxisType.log, AxisType.date):
+    if atype not in (AxisType.linear, AxisType.log, AxisType.date) or not len(values):
         return None
-    if len(values):
-        # use nanmin/max if available (numpy), and min otherwise (pandas):
-        min_ = getattr(values, 'nanmin', getattr(values, 'min'))()
-        max_ = getattr(values, 'nanmax', getattr(values, 'max'))()
-        if margin > 0:
-            if atype == AxisType.date:
-                margin *= (max_ - min_)/2.0
-            else:
-                # avoid crossing the 0-axis which might lead to problems in log display:
-                if np.abs(min_) < np.abs(max_):  # min is closest to zero
-                    margin *= min_
-                else:  # max is closest to zero:
-                    margin *= max_
-            min_ -= margin
-            max_ += margin
-    if min_ >= max_:
-        return None
-    return values2json(pd.Series([min_, max_], dtype=values.dtype))
+    margin_ratio = 0.025  # margin to be applied in both endpoints (as % of data range)
+    # use nanmin/max if available (numpy), and min otherwise (pandas):
+    min_ = getattr(values, 'nanmin', getattr(values, 'min'))()
+    max_ = getattr(values, 'nanmax', getattr(values, 'max'))()
+    margin = np.abs(max_ - min_) * margin_ratio
+    new_min = min_ - margin
+    new_max = max_ + margin
+    if atype != AxisType.date:
+        # avoid crossing 0 after re-setting new_min and new_max:
+        if max_ <= 0 < new_max:
+            new_max = max_ + np.abs(max_ / 2)
+        if min_ >= 0 > new_min:
+            new_min = min_ - np.abs(min_ / 2)
+
+    return values2json(pd.Series([new_min, new_max], dtype=values.dtype))
 
 
 def scatter_trace(

@@ -1,6 +1,4 @@
 """Forms handling data (flatfiles)"""
-from typing import Union
-
 import numpy as np
 import pandas as pd
 from scipy.stats import linregress
@@ -117,71 +115,97 @@ class PredictionsVisualizeForm(PredictionsForm):
                     yield p, x_values, data
 
         c_cycle = colors_cycle()
-        colors = {}
+        colors = {m: next(c_cycle) for m in sorted(set(models))}
         plots = []
         for params, x_values, plot_data in groupby(dataframe):
-            traces = []
-            ys = []
-            for model, [medians, sigmas] in plot_data.items():
-                color = colors.setdefault(model, next(c_cycle))
-                color_transparent = color.replace(', 1)', ', 0.2)')
-                legendgroup = model
-                # first add all values to list so that we can compute ranges later
-                # TODO add Graeme if this is ok (np.exp I mean, legacy code from smtk)
-                ys.append(np.exp(medians))
-                ys.append(np.exp(medians + sigmas))
-                ys.append(np.exp(medians - sigmas))
-                # now add those values to plotly traces:
-                traces.extend([
-                    line_trace(
-                        color=color,
-                        x=x_values,
-                        y=ys[-3],
-                        name=model,
-                        legendgroup=legendgroup
-                    ),
-                    line_trace(
-                        width=0,
-                        color=color_transparent,
-                        fillcolor=color_transparent,
-                        x=x_values,
-                        y=ys[-2],
-                        name=model + ' stddev',
-                        legendgroup=legendgroup + ' stddev'
-                    ),
-                    line_trace(
-                        width=0,
-                        color=color_transparent,
-                        fillcolor=color_transparent,
-                        fill='tonexty',
-                        # https://plotly.com/javascript/reference/scatter/#scatter-fill  # noqa
-                        x=x_values,
-                        y=ys[-1],
-                        name=model + ' stddev',
-                        legendgroup=legendgroup + ' stddev'
-                    )]
-                )
-
+            traces, layout = self.get_plot_traces_and_layout(
+                x_values, plot_data, x_label, y_label(params[imt_label]),
+                colors)
             plots.append({
                 'data': traces,
                 'params': params,
-                'layout': {
-                    'xaxis': {
-                        'title': x_label,
-                        'type': 'linear',
-                        # 'autorange': True,
-                        # 'range': axis_range(x_values)
-                    },
-                    'yaxis': {
-                        'title': y_label(params[imt_label]),
-                        'type': 'log',
-                        # 'autorange': True,
-                        'range': axis_range(np.concatenate(ys).ravel()),
-                    }
-                }
+                'layout': layout
             })
 
         return {'plots': plots}
+
+    @staticmethod
+    def get_plot_traces_and_layout(x, y: dict[str, tuple], x_label, y_label,
+                                   colors: dict[str, str]) -> tuple[list[dict], dict]:
+        """
+        Return the traces and layout for displaying prediction plots (using the
+        JavaScript Plotly library). Traces is a list, where each Trace is a dict
+        holding the data points and other data info (e.g. legend name, data name),
+        layout is a dict of layout configuration, such as plot title, x- or y-axis
+        range and type (log/linear)
+
+        :param x: the x values (common to all traces)
+        :param y: the y values, as dict. Each dict key is a model name (str) and it's
+            mapped to the model y values, as tuple of two elements: (medians, stddev),
+            where medians and stddev are numeric arrays of the same length as `x`
+        :param x_label: the x label (str)
+        :param y_label: the y label (str)
+        :param colors: a dict of model names mapped to their rgba color (str). Each
+            color must be a str in the form "rgba(<r>, <g>, <b>, 1)"
+            (as returned e.g. by `plotly.colors_cycle`)
+        """
+        traces = []
+        ys = []
+        for model, [medians, sigmas] in y.items():
+            color = colors[model]
+            color_transparent = color.replace(', 1)', ', 0.2)')
+            legendgroup = model
+            # first add all values to list so that we can compute ranges later
+            # TODO add Graeme if this is ok (np.exp I mean, legacy code from smtk)
+            ys.append(np.exp(medians))
+            ys.append(np.exp(medians + sigmas))
+            ys.append(np.exp(medians - sigmas))
+            # now add those values to plotly traces:
+            traces.extend([
+                line_trace(
+                    color=color,
+                    x=x,
+                    y=ys[-3],
+                    name=model,
+                    legendgroup=legendgroup
+                ),
+                line_trace(
+                    width=0,
+                    color=color_transparent,
+                    fillcolor=color_transparent,
+                    x=x,
+                    y=ys[-2],
+                    name=model + ' stddev',
+                    legendgroup=legendgroup + ' stddev'
+                ),
+                line_trace(
+                    width=0,
+                    color=color_transparent,
+                    fillcolor=color_transparent,
+                    fill='tonexty',
+                    # https://plotly.com/javascript/reference/scatter/#scatter-fill  # noqa
+                    x=x,
+                    y=ys[-1],
+                    name=model + ' stddev',
+                    legendgroup=legendgroup + ' stddev'
+                )]
+            )
+
+        layout = {
+            'xaxis': {
+                'title': x_label,
+                'type': 'linear',
+                'autorange': True
+            },
+            'yaxis': {
+                'title': y_label,
+                'type': 'log',
+                'autorange': True,
+                'range': axis_range(np.concatenate(ys).ravel()),
+            }
+        }
+
+        return traces, layout
 
 
 class ResidualsVisualizeForm(ResidualsForm):
@@ -246,8 +270,8 @@ class ResidualsVisualizeForm(ResidualsForm):
                 y = dataframe[col]
 
             color = colors.setdefault(model, next(c_cycle))
-            data, layout = get_plotly_data_and_layout(
-                model, imt, x, y, likelihood, col_x, color)
+            data, layout = self.get_plot_traces_and_layout(model, imt, x, y,
+                                                           likelihood, col_x, color)
 
             # provide a key that is comparable for sorting the plots. Note that imt
             # is separated into name and period (so that "SA(9)" < "SA(10)") and that
@@ -287,116 +311,136 @@ class ResidualsVisualizeForm(ResidualsForm):
         # return keys sorted so that the frontend displays them accordingly:
         return {'plots': [plots[key] for key in sorted(plots.keys())]}
 
+    @staticmethod
+    def get_plot_traces_and_layout(model: str, imt: str, x, y, likelihood:bool,
+                                   xlabel:str, color:str) -> tuple[list[dict], dict]:
+        """
+        Return the traces and layout for displaying prediction plots (using the
+        JavaScript Plotly library). Traces is a list, where each Trace is a dict
+        holding the data points and other data info (e.g. legend name, data name),
+        layout is a dict of layout configuration, such as plot title,
+        x- y-axis range and type (log/linear)
 
-def get_plotly_data_and_layout(
-        model: str, imt: str, x, y=None, likelihood=False, xlabel='',
-        color='rgba(0, 0, 255, 1)') -> tuple[list[dict], dict]:
-    if y is None:  # hist (residuals or LH)
-        if not likelihood:
+        :param model: the ground motion model name (str)
+        :param imt: the intensity measure type (str)
+        :param x: the x values
+        :param y: the y values. If none, the plot type will be a histogram (display data
+            distribution as bars). Otherwise, data will be displayed as scatter plot (a
+            point for each (x, y) pair)
+        :param likelihood: boolean denoting the histogram type:  likelihood (True) or
+            standard residuals (False, the default)
+        :param xlabel: the x-axis label (str). Only used for scatter plots
+        :param color: a color (str) in the form "rgba(<r>, <g>, <b>, 1)"
+            (as returned e.g. by `plotly.colors_cycle`)
+        """
+        if y is None:  # hist (residuals or LH)
+            if not likelihood:
 
-            def x_label(imt_):
+                def x_label(imt_):
+                    return f'Z ({str(imt_)})'
+
+                def y_label(imt_):  # noqa
+                    return 'Frequency'
+
+            else:
+
+                def x_label(imt_):
+                    return f'LH ({str(imt_)})'
+
+                def y_label(imt_):  # noqa
+                    return 'Frequency'
+
+        else:
+            def x_label(imt_):  # noqa
+                return xlabel
+
+            def y_label(imt_):
                 return f'Z ({str(imt_)})'
 
-            def y_label(imt_):  # noqa
-                return 'Frequency'
-
-        else:
-
-            def x_label(imt_):
-                return f'LH ({str(imt_)})'
-
-            def y_label(imt_):  # noqa
-                return 'Frequency'
-
-    else:
-        def x_label(imt_):  # noqa
-            return xlabel
-
-        def y_label(imt_):
-            return f'Z ({str(imt_)})'
-
-    # c_cycle = colors_cycle()
-    # colors = {}
-    # color = colors.setdefault(model, next(c_cycle))
-    color_transparent = color.replace(', 1)', ', 0.5)')
-    layout = {
-        'xaxis': {
-            'title': x_label(imt)
-        },
-        'yaxis': {
-            'title': y_label(imt)
+        # c_cycle = colors_cycle()
+        # colors = {}
+        # color = colors.setdefault(model, next(c_cycle))
+        color_transparent = color.replace(', 1)', ', 0.5)')
+        layout = {
+            'xaxis': {
+                'title': x_label(imt),
+                'autorange': True
+            },
+            'yaxis': {
+                'title': y_label(imt),
+                'autorange': True
+            }
         }
-    }
-    trace_name = f'{imt} {model}'
-    if y is None:  # residuals hist or likelihood hist
-        if not likelihood:
-            step = 0.5
+        trace_name = f'{imt} {model}'
+        if y is None:  # residuals hist or likelihood hist
+            if not likelihood:
+                step = 0.5
+            else:
+                step = 0.1
+            bins = np.arange(x.min(), x.max() + step, step)
+            y = np.histogram(x, bins, density=True)[0]
+            data = [bar_trace(
+                color=color_transparent,
+                line_color=color,
+                x=bins[:-1],
+                y=y,
+                name=trace_name,
+                legendgroup=model
+            )]
+
+            if not likelihood:
+                mean, std = x.mean(), x.std(ddof=0)
+                x_ = np.arange(mean - 3 * std, mean + 3 * std, step / 10)
+                data.append(
+                    line_trace(
+                        color=color,
+                        x=x_,
+                        y=normal_dist(x_, mean, std),
+                        name=f'{trace_name} normal distribution',
+                        legendgroup=f'{model} normal distribution',
+                    )
+                )
+                data.append(
+                    line_trace(
+                        color="rgba(120, 120, 120, 1)",
+                        dash='dot',
+                        x=x_,
+                        y=normal_dist(x_),
+                        name='Standard normal distribution (m=0, s=1)',
+                        legendgroup='Standard normal distribution',
+                    )
+                )
         else:
-            step = 0.1
-        bins = np.arange(x.min(), x.max() + step, step)
-        y = np.histogram(x, bins, density=True)[0]
-        data = [bar_trace(
-            color=color_transparent,
-            line_color=color,
-            x=bins[:-1],
-            y=y,
-            name=trace_name,
-            legendgroup=model
-        )]
-
-        if not likelihood:
-            mean, std = x.mean(), x.std(ddof=0)
-            x_ = np.arange(mean - 3 * std, mean + 3 * std, step / 10)
-            data.append(
-                line_trace(
-                    color=color,
-                    x=x_,
-                    y=normal_dist(x_, mean, std),
-                    name=f'{trace_name} normal distribution',
-                    legendgroup=f'{model} normal distribution',
+            data = [scatter_trace(
+                color=color_transparent,
+                x=x,
+                y=y,
+                name=trace_name,
+                legendgroup=model
+            )]
+            linreg = lin_regr(x, y)
+            if linreg:
+                data.append(
+                    line_trace(
+                        color="rgba(120, 120, 120, 1)",
+                        dash='dot',
+                        width=3,
+                        x=linreg["x"],
+                        y=linreg["y"],
+                        name=f'Slope: {linreg["slope"]:.2f}<br>'
+                             f'P-value: {linreg["pvalue"]:.2f} ',
+                        legendgroup='Linear regression',
+                    )
                 )
-            )
-            data.append(
-                line_trace(
-                    color="rgba(120, 120, 120, 1)",
-                    dash='dot',
-                    x=x_,
-                    y=normal_dist(x_),
-                    name='Standard normal distribution (m=0, s=1)',
-                    legendgroup='Standard normal distribution',
-                )
-            )
-    else:
-        data = [scatter_trace(
-            color=color_transparent,
-            x=x,
-            y=y,
-            name=trace_name,
-            legendgroup=model
-        )]
-        linreg = lin_regr(x, y)
-        if linreg:
-            data.append(
-                line_trace(
-                    color="rgba(120, 120, 120, 1)",
-                    dash='dot',
-                    width=3,
-                    x=linreg["x"],
-                    y=linreg["y"],
-                    name=f'Slope: {linreg["slope"]:.2f}<br>'
-                         f'P-value: {linreg["pvalue"]:.2f} ',
-                    legendgroup='Linear regression',
-                )
-            )
 
-    # config layout axis based on the displayed values:
-    for values, axis in ((x, layout['xaxis']), (y, layout['yaxis'])):
-        axis['type'] = axis_type(values)
-        rng = axis_range(values)
-        if rng is not None:
-            axis['range'] = rng
+        # config layout axis based on the displayed values:
+        for values, axis in ((x, layout['xaxis']), (y, layout['yaxis'])):
+            axis['type'] = axis_type(values)
+            rng = axis_range(values)
+            if rng is not None:
+                axis['range'] = rng
 
-    return data, layout
+        return data, layout
 
 
 def normal_dist(x, mean=0, sigma=1) -> np.ndarray:
@@ -468,84 +512,105 @@ class FlatfileVisualizeForm(APIForm, FlatfileForm):
         cleaned_data = self.cleaned_data
         dataframe = cleaned_data['flatfile']
         x_label, y_label = cleaned_data.get('x', None), cleaned_data.get('y', None)
-        c = next(colors_cycle())
-        c_transparent = c.replace(', 1)', ', 0.5)')
-        if x_label and y_label:  # scatter plot
-            x = dataframe[x_label]
-            y = dataframe[y_label]
-            plot = {
-                'data': [
-                    scatter_trace(
-                        color=c_transparent,
-                        x=x,
-                        y=y,
-                        legendgroup=f'{y_label} vs. {x_label}',
-                        name=f'{y_label} vs. {x_label}'
-                    )
-                ],
-                'params': {},
-                'layout': {
-                    'xaxis': {
-                        'title': x_label,
-                        'type': axis_type(x)
-                    },
-                    'yaxis': {
-                        'title': y_label,
-                        'type': axis_type(y)
-                    }
+
+        data, layout = self.get_plot_traces_and_layout(
+            dataframe[x_label] if x_label else None,
+            dataframe[y_label] if y_label else None,
+            x_label, y_label, next(colors_cycle())
+        )
+        plot = {
+            'data': data,
+            'params': {},
+            'layout': layout
+        }
+
+        return {'plots': [plot]}
+
+    @staticmethod
+    def get_plot_traces_and_layout(x, y, x_label: str, y_label: str,
+                                   color:str) -> tuple[list[dict], dict]:
+        """
+        Return the traces and layout for displaying prediction plots (using the
+        JavaScript Plotly library). Traces is a list, where each Trace is a dict
+        holding the data points and other data info (e.g. legend name, data name),
+        layout is a dict of layout configuration, such as plot title,
+        x- y-axis range and type (log/linear)
+
+        :param x: the x values. If None, the plot type will be a histogram (display data
+            distribution as bars on the y-axis, i.e. horizontal bars). Otherwise,
+            data will be displayed as scatter plot (a point for each (x, y) pair)
+        :param x: the x values. If None, the plot type will be a histogram (display data
+            distribution as bars on the x-axis, i.e. vertical bars). Otherwise,
+            data will be displayed as scatter plot (a point for each (x, y) pair)
+        :param x_label: the x-axis label (str). Unused if x is None
+        :param y_label: the y-axis label (str). Unused if y is None
+        :param color: a color (str) in the form "rgba(<r>, <g>, <b>, 1)"
+            (as returned e.g. by `plotly.colors_cycle`)
+        """
+        c_transparent = color.replace(', 1)', ', 0.5)')
+        if x is not None and y is not None:  # scatter plot
+            traces = [
+                scatter_trace(
+                    color=c_transparent,
+                    x=x,
+                    y=y,
+                    legendgroup=f'{y_label} vs. {x_label}',
+                    name=f'{y_label} vs. {x_label}'
+                )
+            ]
+            layout = {
+                'xaxis': {
+                    'title': x_label,
+                    'type': axis_type(x)
+                },
+                'yaxis': {
+                    'title': y_label,
+                    'type': axis_type(y)
                 }
             }
-        elif x_label:
-            x = dataframe[x_label]
-            plot = {
-                'data': [
-                    histogram_trace(
-                        color=c_transparent,
-                        line_color=c,
-                        x=x,
-                        legendgroup=x_label,
-                        name=x_label
-                    )
-                ],
-                'params': {},
-                'layout': {
-                    'xaxis': {
-                        'title': x_label,
-                        # 'type': axis_type(x)  # let plotly infer the axis type.
-                        # Also, no explicit type disables the log scale checkbox in the
-                        # frontend, which does not work as expected with histograms
-                    },
-                    'yaxis': {
-                        'title': 'Frequency',
-                        'type': AxisType.linear
-                    }
+        elif y is None:
+            traces = [
+                histogram_trace(
+                    color=c_transparent,
+                    line_color=color,
+                    x=x,
+                    legendgroup=x_label,
+                    name=x_label
+                )
+            ]
+            layout = {
+                'xaxis': {
+                    'title': x_label,
+                    # 'type': axis_type(x)  # let plotly infer the axis type.
+                    # Also, no explicit type disables the log scale checkbox in the
+                    # frontend, which does not work as expected with histograms
+                },
+                'yaxis': {
+                    'title': 'Frequency',
+                    'type': AxisType.linear
                 }
             }
         else:  # y only provided
-            y = dataframe[y_label]
-            plot = {
-                'data': [
-                    histogram_trace(
-                        color=c_transparent,
-                        line_color=c,
-                        y=y,
-                        legendgroup=y_label,
-                        name=y_label
-                    )
-                ],
-                'params': {},
-                'layout': {
-                    'xaxis': {
-                        'title': 'Frequency',
-                        'type': AxisType.linear
-                    },
-                    'yaxis': {
-                        'title': y_label,
-                        # 'type': axis_type(x)  # let plotly infer the axis type.
-                        # Also, no explicit type disables the log scale checkbox in the
-                        # frontend, which does not work as expected with histograms
-                    }
+            traces = [
+                histogram_trace(
+                    color=c_transparent,
+                    line_color=color,
+                    y=y,
+                    legendgroup=y_label,
+                    name=y_label
+                )
+            ]
+            layout = {
+                'xaxis': {
+                    'title': 'Frequency',
+                    'type': AxisType.linear
+                },
+                'yaxis': {
+                    'title': y_label,
+                    # 'type': axis_type(x)  # let plotly infer the axis type.
+                    # Also, no explicit type disables the log scale checkbox in the
+                    # frontend, which does not work as expected with histograms
                 }
             }
 
-        return {'plots': [plot]}
+        return traces, layout
