@@ -11,11 +11,10 @@
 		 class='text-center'>
 
 		<p>
-			eGSIM is a web application programming interface (API)
-			implemented along the lines of popular seismological web services (e.g., FDSN), where
+			eGSIM is a web application programming interface (API) where
 			users can perform queries in their code via configurable
-			URLs in order to retrieve model predictions of ground motions from either observed
-			or hypothetical earthquake scenarios.
+			URLs in order to compute and retrieve model predictions of ground motions
+			from either observed or hypothetical earthquake scenarios.
 		</p>
 
 		<p>
@@ -26,8 +25,7 @@
 
 			<div class='form-control shadow'>
 				<p>
-				Get model predictions of ground motions
-				from hypothetical earthquake scenarios
+				Get ground motion model predictions from hypothetical earthquake scenarios
 				</p>
 				<p>
 				<button class='btn btn-primary text-nowrap' @click="currentPage = pages.predictions">
@@ -38,8 +36,7 @@
 
 			<div class='form-control shadow mx-4'>
 				<p>
-				Utilities to compile, inspect or upload user-defined data of
-				observed earthquake scenarios
+				Find out how to compile, inspect and upload observed (or synthetic) ground motion data
 				</p>
 				<p>
 				<button class='btn btn-primary text-nowrap' @click="currentPage = pages. currentPage = pages.flatfile_meta_info">
@@ -55,9 +52,7 @@
 
 			<div class='form-control shadow'>
 				<p>
-				Get residuals between
-				model predictions of ground motions
-				and observed earthquake scenarios
+				Get residuals between ground motion model predictions and observed (or synthetic) ground motion data
 				</p>
 				<p>
 				<button class='btn btn-primary text-nowrap' @click="currentPage = pages.residuals">
