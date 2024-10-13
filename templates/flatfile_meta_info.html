@@ -44,25 +44,62 @@
 	</div>
 
 
-	<div class='position-absolute top-0 bottom-0 end-0 start-0 m-5 d-flex flex-column'>
+	<div class='position-absolute top-0 bottom-0 end-0 start-0 m-5 d-flex flex-column gap-5'>
 
-		<div class='text-justify'>
-		The data required in Model-to-data comparison must be uploaded in eGSIM in form of
-		flatfile. A flatfile is a zipped or uncompressed CSV file where each
-		row represents an observed seismic waveform consisting of one or more fields
-		(the waveform data and metadata) separated by commas. The CSV header (1st row)
-		must be composed of the field names.
-		</div>
-		<div class='text-center my-2'>
-			<button type='button' class='btn btn-primary'
-					@click='forms.misc.flatfile_meta_info.show_dialog=true'>
-				Compose and visualize flatfile fields
-			</button>
+		<div class='text-justify d-flex flex-row gap-5 align-items-stretch mx-5'>
+			<div class='d-flex flex-column' style="text-align: justify;line-height: 1.75rem; max-width: 80em">
+				<p>
+				Observed (or synthetic) ground motion data are commonly arranged and stored
+				in a tabular data file called Flatfile.
+				In eGSIM, flatfiles are used to compare observed ground motions
+				with the model predictions implemented in OpenQuake. To do so, the fields of
+				each record must include the observed ground motions (intensity measures such as PGA)
+				and the input data required by the selected models to compute their predictions.
+				</p>
+				<p>
+				To facilitate the flatfile compilation, eGSIM offers here the
+				ability to see all information (fields name, description and data type)
+				that should be provided in a flatfile to work with
+				your custom selection of models and intensity measures.
+				Once compiled, flatfiles can be uploaded in HDF (recommended) or CSV format
+				and used throughout the application
+				(Data visual inspection and Model-to-data comparison)
+				</p>
+				<button type='button' class='btn btn-sm btn-primary'
+						@click='forms.misc.flatfile_meta_info.show_dialog=true'>
+					Select models and intensity measures
+				</button>
+			</div>
+			<div class='d-flex flex-column gap-3'>
+				<div class='d-flex flex-row gap-2'>
+					<div class='d-flex flex-column justify-content-around text-nowrap text-right'>
+						<div>Header row (field names) &rarr;</div>
+						<div>Record #1 data  &rarr;</div>
+						<div>Record #2 data  &rarr;</div>
+						<div>&ctdot;</div>
+					</div>
+					<table class='table table-bordered mb-0'>
+						<tr>
+							<td>mag</td><td>rhypo</td><td>PGA</td><td>SA(0.1)</td><td>&ctdot;</td>
+						</tr>
+						<tr>
+							<td>&ctdot;</td><td>&ctdot;</td><td>&ctdot;</td><td>&ctdot;</td><td>&ctdot;</td>
+						</tr>
+						<tr>
+							<td>&ctdot;</td><td>&ctdot;</td><td>&ctdot;</td><td>&ctdot;</td><td>&ctdot;</td>
+						</tr>
+						<tr>
+							<td>&ctdot;</td><td>&ctdot;</td><td>&ctdot;</td><td>&ctdot;</td><td>&ctdot;</td>
+						</tr>
+					</table>
+				</div>
+				<div class='text-center'>Flatfile example sketch</div>
+			</div>
 		</div>
 
 		<div v-if="Object.keys(responses.flatfile_meta_info || {}).length"
-			 style='flex:1 1 0px;' class='p-2 d-flex flex-column'>
-			<div style='flex:1 1 0px; overflow:auto'>
+			 style='flex:1 1 0px;' class='d-flex flex-column gap-2'>
+			<div style='flex:1 1 0px; overflow:auto' class='border'>
 				<table class='table table-striped-columns' style='height:100%'>
 					<thead class='table-dark'>
 						<tr>
@@ -75,9 +112,9 @@
 
 					<tbody>
 						<tr v-for="col in responses.flatfile_meta_info.columns">
-							<td v-html="col.name"></td>
-							<td v-html="col.type"></td>
-							<td v-html="col.dtype"></td>
+							<td v-html="col.name" class="text-nowrap"></td>
+							<td v-html="col.type" class="text-nowrap"></td>
+							<td v-html="col.dtype" class="text-nowrap"></td>
 							<td v-html="col.help"></td>
 						</tr>
 					</tbody>
@@ -85,7 +122,7 @@
 			</div>
 
 			<div class='mt-2'>
-				<span>CSV (header)</span>
+				<span>Flatfile header (CSV format)</span>
 				<input class='form-control' :value='responses.flatfile_meta_info.columns.map(c => c.name).join(",")' />
 			</div>
 		</div>
