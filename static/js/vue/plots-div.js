@@ -31,16 +31,16 @@ EGSIM.component('plots-div', {
 			plotoptions: {
 				axis: {
 					x: {
-						log: {disabled: false, value: undefined},
-						sameRange: {disabled: false, value: undefined, range: null},
-						grid: {disabled: false, value: undefined},  // plot x tick lines, not to be confused with this.grid
-						title: {disabled: false, value: undefined, title: ''}
+						log: {disabled: false, checked: undefined},
+						sameRange: {disabled: false, checked: undefined, range: null},
+						grid: {disabled: false, checked: undefined},  // plot x tick lines, not to be confused with this.grid
+						title: {disabled: false, checked: undefined, title: ''}
 					} ,
 					y: {
-						log: {disabled: false, value: undefined},
-						sameRange: {disabled: false, value: undefined, range: null},
-						grid: {disabled: false, value: undefined},  // plot y tick lines, not to be confused with this.grid
-						title: {disabled: false, value: undefined, title: ''}
+						log: {disabled: false, checked: undefined},
+						sameRange: {disabled: false, checked: undefined, range: null},
+						grid: {disabled: false, checked: undefined},  // plot y tick lines, not to be confused with this.grid
+						title: {disabled: false, checked: undefined, title: ''}
 					}
 				},
 				mouse: {
@@ -264,7 +264,8 @@ EGSIM.component('plots-div', {
 				</div>
 			</div>
 			<div class='d-flex flex-column border p-2 bg-white'>
-				<div class="d-flex align-items-baseline gap-2">
+				<div class="d-flex align-items-baseline gap-2"
+					style="border-bottom: 1px solid var(--bs-primary) !important">
 					<span style='flex: 1 1 auto'>Plots options</span>
 					<ul class="nav nav-pills">
 						<button type='button' class="nav-link active rounded-bottom-0"
@@ -277,19 +278,21 @@ EGSIM.component('plots-div', {
 						</button>
 					</ul>
 				</div>
-				<table class='_panel axis table table-sm mb-0 border-top' style='border-top-color:var(--bs-primary) !important'>
+				<table class='_panel table table-sm table-borderless mb-0'>
 					<thead><tr>
-						<td v-for="key in ['', 'sameRange', 'log', 'grid', 'title']">{{ key }}</td>
+						<td v-for="key in ['', 'same range', 'log', 'grid', 'title']" class='text-nowrap text-end'>
+							{{ key }}
+						</td>
 					</tr></thead>
 					<tbody><tr v-for="ax in ['x', 'y']">
-						<td class='text-nowrap'>{{ ax }}</td>
-						<td v-for="key in ['sameRange', 'log', 'grid', 'title']" class='text-nowrap m-0 ms-2'>
-							<input type='checkbox' v-model='plotoptions.axis[ax][key].value'
+						<td class='text-nowrap text-end'>{{ ax }}</td>
+						<td v-for="key in ['sameRange', 'log', 'grid', 'title']" class='text-nowrap text-end'>
+							<input type='checkbox' v-model='plotoptions.axis[ax][key].checked'
 								   :disabled="plotoptions.axis[ax][key].disabled">
 						</td>
 					</tr></tbody>
 				</table>
-				<table class='_panel d-none table border-top mb-0' style='border-top-color:var(--bs-primary) !important'>
+				<table class='_panel table table-sm table-borderless mb-0 d-none'>
 					<tbody><tr>
 						<td>on hover</td>
 						<td><select v-model="plotoptions.mouse.hovermode"
@@ -466,13 +469,13 @@ EGSIM.component('plots-div', {
 				// get the axis HTMl control:
 				var control = layoutkey == 'xaxis' ? this.plotoptions.axis.x : this.plotoptions.axis.y;
 				// title:
-				control.title.value = axis.every(a => a.title !== undefined);
+				control.title.checked = axis.every(a => a.title !== undefined);
 				// grid:
-				control.grid.value = axis.every(a => a.showgrid || a.showgrid === undefined);
+				control.grid.checked = axis.every(a => a.showgrid || a.showgrid === undefined);
 				// axis type (log / linear): enable only for specific plotly axis types:
-				control.log.value = axis.every(a => a.type === 'log');
+				control.log.checked = axis.every(a => a.type === 'log');
 				// same range is simply initialized to false by default
-				control.sameRange.value = false;
+				control.sameRange.checked = false;
 			}
 		},
 		newPlot(){  // redraw completely the plots
@@ -1015,24 +1018,24 @@ EGSIM.component('plots-div', {
 				// Note that we should call newPlot because we should recompute spaces
 				// but that's too complex for the moment
 				if (!control.title.disabled){
-					var text = control.title.value ? control.title.text : "";
+					var text = control.title.checked ? control.title.text : "";
 					axis.forEach(a => newLayout[`${a}.title.text`] = text);
 				}
 				// set data from control:
 				if (!control.grid.disabled){
-					axis.forEach(a => newLayout[`${a}.showgrid`] = !!control.grid.value);
+					axis.forEach(a => newLayout[`${a}.showgrid`] = !!control.grid.checked);
 				}
 				if (!control.log.disabled){
-					axis.forEach(a => newLayout[`${a}.type`] = control.log.value ? 'log': 'linear');
+					axis.forEach(a => newLayout[`${a}.type`] = control.log.checked ? 'log': 'linear');
 				}
 				// set data from control:
 				if(!control.sameRange.disabled){
-					if(!control.sameRange.value){
+					if(!control.sameRange.checked){
 						axis.forEach(a => newLayout[`${a}.range`] = undefined);
 						axis.forEach(a => newLayout[`${a}.autorange`] = true);
 					}else{
 						var range = control.sameRange.range;
-						range = control.log.value ? [Math.log10(range[0]), Math.log10(range[1])] : Array.from(range);
+						range = control.log.checked ? [Math.log10(range[0]), Math.log10(range[1])] : Array.from(range);
 						axis.forEach(a => newLayout[`${a}.range`] = range);
 						axis.forEach(a => newLayout[`${a}.autorange`] = false);
 					}
