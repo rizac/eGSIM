@@ -49,18 +49,17 @@
 		<div class='text-justify d-flex flex-row gap-5 align-items-stretch mx-5'>
 			<div class='d-flex flex-column' style="text-align: justify;line-height: 1.75rem; max-width: 80em">
 				<p>
-				Observed (or synthetic) ground motion data are commonly arranged and stored
+				Observed (or synthetic) ground motion data are commonly stored
 				in a tabular data file called Flatfile.
 				In eGSIM, flatfiles are used to compare observed ground motions
-				with the model predictions implemented in OpenQuake. To do so, the fields of
-				each record must include the observed ground motions (intensity measures such as PGA)
-				and the input data required by the selected models to compute their predictions.
+				with the model predictions implemented in OpenQuake. To do so, each flatfile record
+				must include the observed ground motions (intensity measures such as PGA)
+				and the input data required by the models to compute their predictions (e.g., magnitude).
 				</p>
 				<p>
-				To facilitate the flatfile compilation, eGSIM offers here the
-				ability to see all information (fields name, description and data type)
-				that should be provided in a flatfile to work with
-				your custom selection of models and intensity measures.
+				To facilitate the flatfile compilation, eGSIM offers here detailed
+				information about the fields that should be provided to work with
+				your selection of models and intensity measures.
 				Once compiled, flatfiles can be uploaded in HDF (recommended) or CSV format
 				and used throughout the application
 				(Data visual inspection and Model-to-data comparison)
@@ -74,8 +73,8 @@
 				<div class='d-flex flex-row gap-2'>
 					<div class='d-flex flex-column justify-content-around text-nowrap text-right'>
 						<div>Header row (field names) &rarr;</div>
-						<div>Record #1 data  &rarr;</div>
-						<div>Record #2 data  &rarr;</div>
+						<div>Record #1  &rarr;</div>
+						<div>Record #2  &rarr;</div>
 						<div>&ctdot;</div>
 					</div>
 					<table class='table table-bordered mb-0'>
@@ -113,8 +112,8 @@
 					<tbody>
 						<tr v-for="col in responses.flatfile_meta_info.columns">
 							<td v-html="col.name" class="text-nowrap"></td>
-							<td v-html="col.type" class="text-nowrap"></td>
-							<td v-html="col.dtype" class="text-nowrap"></td>
+							<td v-html="col.type.replaceAll('_', ' ')" class="text-nowrap"></td>
+							<td v-html="col.dtype" style="max-width: 10rem"></td>
 							<td v-html="col.help"></td>
 						</tr>
 					</tbody>
