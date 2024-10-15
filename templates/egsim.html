@@ -100,7 +100,7 @@ window.fetch = function() {
 				response.clone().json().then(
 					data => showFetchError(data.message)
 				).catch(
-					error => showFetchError(`${response.statusText}{response.status ? " (" + response.status +")" : ""}`)
+					error => showFetchError(`${response.statusText}${response.status ? " (" + response.status +")" : ""}`)
 				);
 				reject(response);
 			}else{
