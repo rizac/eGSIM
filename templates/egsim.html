@@ -97,7 +97,11 @@ window.fetch = function() {
 		origFetch.apply(this, args).then((response) => {
 			if (!response.ok){
 				// status code 4xx or 5xx: show msg and then treat it like an error (fetch doesn't by default)
-				response.clone().json().then(data => showFetchError(data.message));
+				response.clone().json().then(
+					data => showFetchError(data.message)
+				).catch(
+					error => showFetchError(`${response.statusText}{response.status ? " (" + response.status +")" : ""}`)
+				);
 				reject(response);
 			}else{
 				resolve(response);
