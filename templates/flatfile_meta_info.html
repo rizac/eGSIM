@@ -49,17 +49,16 @@
 		<div class='text-justify d-flex flex-row gap-5 align-items-stretch mx-5'>
 			<div class='d-flex flex-column' style="text-align: justify;line-height: 1.75rem; max-width: 80em">
 				<p>
-				Observed (or synthetic) ground motion data are commonly stored
-				in a tabular data file called Flatfile.
-				In eGSIM, flatfiles are used to compare observed ground motions
+				Ground motion data are commonly stored in a tabular data file called Flatfile.
+				In eGSIM, flatfiles are used to compare observed or synthetic ground motions
 				with the model predictions implemented in OpenQuake. To do so, each flatfile record
 				must include the observed ground motions (intensity measures such as PGA)
-				and the input data required by the models to compute their predictions (e.g., magnitude).
+				and the input data (e.g., magnitude) required by the models.
 				</p>
 				<p>
-				To facilitate the flatfile compilation, eGSIM offers here detailed
-				information about the fields that should be provided to work with
-				your selection of models and intensity measures.
+				As such, the data to provide in a flatfile is use-case dependent. Here
+				you can obtain detailed information about the flatfile fields that should
+				be provided to work with your selection of models and intensity measures.
 				Once compiled, flatfiles can be uploaded in HDF (recommended) or CSV format
 				and used throughout the application
 				(Data visual inspection and Model-to-data comparison)

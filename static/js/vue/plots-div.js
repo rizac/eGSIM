@@ -220,8 +220,8 @@ EGSIM.component('plots-div', {
 					<div class='d-flex align-items-baseline gap-2 text-nowrap' :style="{color: getLegendColor(jsonStyle)}">
 						<input type='checkbox' title="Toggle plot trace(s) visibility"
 							   v-if="plots.some(p => p.data.length > 1)"
-							   :checked="true"
-							   @change="$evt => { setTraceStyle(legendgroup, JSON.stringify({ visible: !!$evt.target.checked })) }"
+							   v-model="jsonStyle.visible"
+							   @change="event => { setTraceStyle(legendgroup, {visible: jsonStyle.visible}) }"
 							   :style="{'accent-color': getLegendColor(jsonStyle) + ' !important'}"
 							   >
 						<span style='flex: 1 1 auto'>{{ legendgroup }}</span>
@@ -229,16 +229,20 @@ EGSIM.component('plots-div', {
 							:style="{'color': getLegendColor(jsonStyle) + ' !important'}"
 							onclick='var root = this.parentNode.parentNode; root.style.flexGrow=parseInt(1-this.parentNode.parentNode.style.flexGrow); root.querySelector("._json_config").classList.toggle("d-none"); root.querySelectorAll("._arrow").forEach(s => s.classList.toggle("d-none"))'>
 							<span class='_arrow'>&#9207;</span> <!--arrow down -->
-							<span class='_arrow d-none'>&#9206;</span> <!-arrow up>
+							<span class='_arrow d-none'>&#9206;</span> <!-- arrow up -->
 						</button>
 					</div>
 					<div class='_json_config d-none d-flex flex-column' style='flex:1 1 auto;'
 						:style="{color: getLegendColor(jsonStyle)}">
 						<textarea rows="2" class='form-control rounded-bottom-0 border-bottom-0 p-1' spellcheck="false"
 								  style='color: inherit !important; flex:1 1 auto; min-height:0px; resize: none; font-family:monospace; white-space: pre; overflow-wrap: normal; overflow: auto;'
+								  :value="JSON.stringify(jsonStyle, (k, v) => k == 'visible' ? undefined : v, '  ')"
+								  @input="event => { var textarea = event.target; var v = textarea.value; var btn = textarea.parentNode.querySelector('button'); try{ JSON.parse(v); btn.setAttribute('data-json', v); btn.disabled=false; }catch(err){ btn.disabled=true; } }"
 								  v-model="jsonStyle"/>
-						<button type="button" class='btn btn-sm rounded-top-0 border' :disabled="!jsonStyle"
-								@click="setTraceStyle(legendgroup, jsonStyle)"
+						<!-- these attrs data-json and disabled are controlled by the textarea @input above -->
+						<button type="button" class='btn btn-sm rounded-top-0 border'
+								data-json="" disabled
+								@click="event => {setTraceStyle(legendgroup, JSON.parse(event.target.getAttribute('data-json'))) }"
 								style="color: inherit; !important">
 								Apply
 						</button>
@@ -1055,19 +1059,15 @@ EGSIM.component('plots-div', {
 		},
 		setLegendItem(legendgroup, traceObject){
 			var editableData = {};
-			['marker', 'line', 'xbins', 'ybins'].forEach(k => {
+			['marker', 'line', 'xbins', 'ybins', 'visible', 'fillcolor'].forEach(k => {
 				if (k in traceObject){
 					editableData[k] = traceObject[k];
 				}
 			});
-			this.legend.set(legendgroup, JSON.stringify(editableData, null, '  '));
+			'visible' in editableData || (editableData.visible = true);  // set default visibility (true)
+			this.legend.set(legendgroup, editableData);
 		},
-		getLegendColor(style){  // style => object as JSON string
-			try{
-				var styleObj = JSON.parse(style);
-			}catch(error){  // also raises if style is empty string
-				styleObj = {};
-			}
+		getLegendColor(styleObj){
 			var color = '#000000';
 			if (styleObj.marker && styleObj.marker.color){
 				color = styleObj.marker.color + "";
@@ -1082,16 +1082,9 @@ EGSIM.component('plots-div', {
 			}
 			return color;
 		},
-		setTraceStyle(legendgroup, style){  // style => Object as JSON string
+		setTraceStyle(legendgroup, styleObject){
 			try{
-				var styleObject = JSON.parse(style);
-			}catch(error){  // also raises if style is empty string
-				return;
-			}
-			// update legend data:
-			try{
-				var legenddata = JSON.parse(this.legend.get(legendgroup));
-				legenddata = Object.assign(legenddata, styleObject);
+				var legenddata = Object.assign(this.legend.get(legendgroup), styleObject);
 				this.setLegendItem(legendgroup, legenddata);
 			}catch(error){  // also raises if style is empty string
 				return;

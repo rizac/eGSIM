@@ -153,7 +153,7 @@ class PredictionsVisualizeForm(PredictionsForm):
         ys = []
         for model, [medians, sigmas] in y.items():
             color = colors[model]
-            color_transparent = color.replace(', 1)', ', 0.2)')
+            color_transparent = color.replace(', 1)', ', 0.1)')
             legendgroup = model
             # first add all values to list so that we can compute ranges later
             # TODO add Graeme if this is ok (np.exp I mean, legacy code from smtk)
