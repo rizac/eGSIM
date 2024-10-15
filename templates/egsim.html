@@ -96,10 +96,12 @@ window.fetch = function() {
 	return new Promise((resolve, reject) => {  // https://stackoverflow.com/a/53448336
 		origFetch.apply(this, args).then((response) => {
 			if (!response.ok){
-				// status code 4xx or 5xx: show msg and then treat it like an error (fetch doesn't by default)
+				// HTTP error (status code 4xx or 5xx):
 				response.clone().json().then(
+					// eGSIM error (JSON serializable, show the error message):
 					data => showFetchError(data.message)
 				).catch(
+					// standard HTTP error (non JSON serializable, show statusText and code):
 					error => showFetchError(`${response.statusText}${response.status ? " (error code: " + response.status +")" : ""}`)
 				);
 				reject(response);

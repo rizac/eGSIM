@@ -249,7 +249,8 @@ EGSIM.component('plots-div', {
 					</div>
 				</div>
 			</div>
-			<div v-show="Object.keys(grid.layouts).length > 1" class='border p-2 bg-white d-flex flex-column gap-2'>
+			<div :class="Object.keys(grid.layouts).length > 1 ? 'd-flex': 'd-none'"
+				class='border p-2 bg-white flex-column gap-2'>
 				<div>Subplots layout</div>
 				<select v-model='grid.selectedLayout' class='form-control'>
 					<option v-for='key in Object.keys(grid.layouts)' :value="key" v-html="key">
