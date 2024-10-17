@@ -1,13 +1,98 @@
 <div class='position-relative d-flex flex-row' style="flex: 1 1 auto;">
 
-	<div class='border my-5 start-50 position-absolute top-0 bottom-0 d-flex flex-column shadow bg-white'
-			style='z-index:1000;transform: translateX(-50%); width:75vw' v-if="forms.misc.flatfile_meta_info.show_dialog">
+<!--	<div class='border my-5 start-50 position-absolute top-0 bottom-0 d-flex flex-column shadow bg-white'-->
+<!--			style='z-index:1000;transform: translateX(-50%); width:75vw' v-if="forms.misc.flatfile_meta_info.show_dialog">-->
 
-		<div class='p-3'>
-			<div>Select your models and intensity measure types of interest</div>
-			<div class='small text-muted'>(no model selected = all models selected)</div>
+<!--		<div class='p-3'>-->
+<!--			<div>Select your models and intensity measure types of interest</div>-->
+<!--			<div class='small text-muted'>(no model selected = all models selected)</div>-->
+<!--		</div>-->
+
+
+<!--	</div>-->
+
+
+	<div class='p-4 d-flex flex-column gap-4 align-items-stretch' style='max-width:33vw; line-height: 1.75rem;'>
+
+		<div class='text-justify'>
+			Ground motion data are commonly stored in a tabular data file called Flatfile.
+			In eGSIM, flatfiles are used to compare observed or synthetic ground motions
+			with the model predictions implemented in OpenQuake. To do so, each flatfile
+			record must include the ground motions (intensity measures such as PGA)
+			alongside the input parameters (e.g., magnitude) required by the models.
+		</div>
+		<div class='d-flex flex-column gap-3'>
+			<div class='d-flex flex-row gap-2'>
+				<div class='d-flex flex-column justify-content-around text-nowrap text-right'>
+					<div>Header (Fields) &rarr;</div>
+					<div>Record #1  &rarr;</div>
+					<div>Record #2  &rarr;</div>
+					<div>&ctdot;</div>
+				</div>
+				<table class='table table-bordered mb-0'>
+					<tr>
+						<td>mag</td><td>rhypo</td><td>PGA</td><td>SA(0.1)</td><td>&ctdot;</td>
+					</tr>
+					<tr>
+						<td>&ctdot;</td><td>&ctdot;</td><td>&ctdot;</td><td>&ctdot;</td><td>&ctdot;</td>
+					</tr>
+					<tr>
+						<td>&ctdot;</td><td>&ctdot;</td><td>&ctdot;</td><td>&ctdot;</td><td>&ctdot;</td>
+					</tr>
+					<tr>
+						<td>&ctdot;</td><td>&ctdot;</td><td>&ctdot;</td><td>&ctdot;</td><td>&ctdot;</td>
+					</tr>
+				</table>
+			</div>
+			<div class='text-center'>Flatfile example sketch</div>
+		</div>
+		<div class=text-justify'>
+			As such, the data to supply in an eGSIM flatfile depend on the models to compare
+			and the intensity measures to use. In
+			order to help the nontrivial compilation
+			of a flatfile, often from heterogeneous external sources, you can
+			select here the models and intensity measures of interest and dynamically generate
+			a comprehensive documentation of the required flatfile
+			fields. Once compiled, flatfiles can be
+			uploaded in HDF (recommended) or CSV format and used throughout the
+			application (Data visual inspection and Model-to-data comparison)
+		</div>
+	</div>
+
+	<div v-if="Object.keys(responses.flatfile_meta_info || {}).length"
+		 style='flex:1 1 0px;' class='d-flex flex-column gap-2'>
+		<div style='flex:1 1 0px; overflow:auto' class='border'>
+			<table class='table table-striped-columns' style='height:100%'>
+				<thead class='table-dark'>
+					<tr>
+						<td>Field (Column)</td>
+						<td>Type</td>
+						<td>Data type</td>
+						<td>Description</td>
+					</tr>
+				</thead>
+
+				<tbody>
+					<tr v-for="col in responses.flatfile_meta_info.columns">
+						<td v-html="col.name" class="text-nowrap"></td>
+						<td v-html="col.type.replaceAll('_', ' ')" class="text-nowrap"></td>
+						<td v-html="col.dtype" style="max-width: 10rem"></td>
+						<td v-html="col.help"></td>
+					</tr>
+				</tbody>
+			</table>
 		</div>
 
+		<div class='mt-2'>
+			<span>Flatfile header (CSV format)</span>
+			<input class='form-control' :value='responses.flatfile_meta_info.columns.map(c => c.name).join(",")' />
+		</div>
+	</div>
+
+	<div v-else style='d-flex flex-column flex: 1 1 auto'>
+		<div>
+		Select models and intensity measures
+		</div>
 		<div style='flex: 1 1 auto' class='position-relative border-top border-bottom'>
 			<gsim-map @gsim-selected="(gs) => { forms.flatfile_meta_info.gsim = Array.from(new Set(forms.flatfile_meta_info.gsim.concat(gs))) }"
 					  @gsim-unselected="(gs) => { forms.flatfile_meta_info.gsim = forms.flatfile_meta_info.gsim.filter(g => !gs.includes(g)); }"
@@ -29,100 +114,20 @@
 
 			</form>
 		</div>
-
-		<div class="p-3 text-center">
-			<button class='btn btn-primary me-2' type='button'
-					@click='post(urls.flatfile_meta_info, forms.flatfile_meta_info).then(r => r.json()).then(data => { responses.flatfile_meta_info = data; }); forms.misc.flatfile_meta_info.show_dialog=false'>
-				Fetch required flatfile fields
-			</button>
-			<button class='btn btn-primary' type='button'
-					@click='forms.misc.flatfile_meta_info.show_dialog=false'>
-				Close
-			</button>
-		</div>
-
+	</div>
+	<div>
+		<button class='btn btn-primary me-2' type='button'
+				@click='post(urls.flatfile_meta_info, forms.flatfile_meta_info).then(r => r.json()).then(data => { responses.flatfile_meta_info = data; }); forms.misc.flatfile_meta_info.show_dialog=false'>
+			Fetch required flatfile fields
+		</button>
 	</div>
 
+<!--	<div class="p-3 text-center">-->
+<!--		-->
+<!--		<button class='btn btn-primary' type='button'-->
+<!--				@click='forms.misc.flatfile_meta_info.show_dialog=false'>-->
+<!--			Close-->
+<!--		</button>-->
+<!--	</div>-->
 
-	<div class='position-absolute top-0 bottom-0 end-0 start-0 m-5 d-flex flex-column gap-5'>
-
-		<div class='text-justify d-flex flex-row gap-5 align-items-stretch mx-5'>
-			<div class='d-flex flex-column' style="text-align: justify;line-height: 1.75rem; max-width: 80em">
-				<p>
-				Ground motion data are commonly stored in a tabular data file called Flatfile.
-				In eGSIM, flatfiles are used to compare observed or synthetic ground motions
-				with the model predictions implemented in OpenQuake. To do so, each flatfile record
-				must include the observed ground motions (intensity measures such as PGA)
-				and the input data (e.g., magnitude) required by the models.
-				</p>
-				<p>
-				As such, the data to provide in a flatfile is use-case dependent. Here
-				you can obtain detailed information about the flatfile fields that should
-				be provided to work with your selection of models and intensity measures.
-				Once compiled, flatfiles can be uploaded in HDF (recommended) or CSV format
-				and used throughout the application
-				(Data visual inspection and Model-to-data comparison)
-				</p>
-				<button type='button' class='btn btn-sm btn-primary'
-						@click='forms.misc.flatfile_meta_info.show_dialog=true'>
-					Select models and intensity measures
-				</button>
-			</div>
-			<div class='d-flex flex-column gap-3'>
-				<div class='d-flex flex-row gap-2'>
-					<div class='d-flex flex-column justify-content-around text-nowrap text-right'>
-						<div>Header row (field names) &rarr;</div>
-						<div>Record #1  &rarr;</div>
-						<div>Record #2  &rarr;</div>
-						<div>&ctdot;</div>
-					</div>
-					<table class='table table-bordered mb-0'>
-						<tr>
-							<td>mag</td><td>rhypo</td><td>PGA</td><td>SA(0.1)</td><td>&ctdot;</td>
-						</tr>
-						<tr>
-							<td>&ctdot;</td><td>&ctdot;</td><td>&ctdot;</td><td>&ctdot;</td><td>&ctdot;</td>
-						</tr>
-						<tr>
-							<td>&ctdot;</td><td>&ctdot;</td><td>&ctdot;</td><td>&ctdot;</td><td>&ctdot;</td>
-						</tr>
-						<tr>
-							<td>&ctdot;</td><td>&ctdot;</td><td>&ctdot;</td><td>&ctdot;</td><td>&ctdot;</td>
-						</tr>
-					</table>
-				</div>
-				<div class='text-center'>Flatfile example sketch</div>
-			</div>
-		</div>
-
-		<div v-if="Object.keys(responses.flatfile_meta_info || {}).length"
-			 style='flex:1 1 0px;' class='d-flex flex-column gap-2'>
-			<div style='flex:1 1 0px; overflow:auto' class='border'>
-				<table class='table table-striped-columns' style='height:100%'>
-					<thead class='table-dark'>
-						<tr>
-							<td>Field (Column)</td>
-							<td>Type</td>
-							<td>Data type</td>
-							<td>Description</td>
-						</tr>
-					</thead>
-
-					<tbody>
-						<tr v-for="col in responses.flatfile_meta_info.columns">
-							<td v-html="col.name" class="text-nowrap"></td>
-							<td v-html="col.type.replaceAll('_', ' ')" class="text-nowrap"></td>
-							<td v-html="col.dtype" style="max-width: 10rem"></td>
-							<td v-html="col.help"></td>
-						</tr>
-					</tbody>
-				</table>
-			</div>
-
-			<div class='mt-2'>
-				<span>Flatfile header (CSV format)</span>
-				<input class='form-control' :value='responses.flatfile_meta_info.columns.map(c => c.name).join(",")' />
-			</div>
-		</div>
-	</div>
 </div>
