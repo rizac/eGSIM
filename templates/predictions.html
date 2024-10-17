@@ -209,7 +209,9 @@
 			</div>
 
 			<div class='d-flex flex-row align-items-baseline gap-1'>
-				<div style='flex: 0 0 4.5rem'>Download</div>
+				<div style='flex: 0 0 4.5rem' title='Download predictions (log(predicted values))'>
+					Download
+				</div>
 				<select v-model='forms.predictions.format' class='form-control' style='flex: 1 1 auto'>
 					<option v-for='format in forms.misc.download_formats' :value='format'>
 						{% verbatim %}{{ format }}{% endverbatim %}
@@ -219,22 +221,22 @@
 					type='button'
 					@click="download(`${urls.predictions}.${forms.predictions.format}`, forms.predictions)"
 					class='btn btn-primary'
-					style='flex: 0 0 3.5rem'
-					title='Download predictions'>
+					style='flex: 0 0 3.5rem'>
 						<i class='fa fa-download'></i>
 				</button>
 			</div>
 
 			<div class='d-flex flex-row align-items-baseline gap-1'>
-				<div style='flex: 0 0 4.5rem'>Visualize</div>
+				<div style='flex: 0 0 4.5rem' title='Visualize predictions in interactive plots'>
+					Visualize
+				</div>
 				<select v-model='forms.predictions_plot.plot_type' class='form-control' style='flex: 1 1 auto'>
 					<option v-for="v in forms.misc.predictions_plot.plot_types" :value='v[0]' v-html='v[1]'></option>
 				</select>
 				<button type='button'
 						@click="var data = Object.assign({}, forms.predictions, forms.predictions_plot, {format: 'json'}); post(urls.predictions_visualize, data).then(r => r.json()).then(data => { responses.predictions_plots=data.plots; })"
 						class='btn btn-primary'
-						style='flex: 0 0 3.5rem'
-						title='Visualize predictions via interactive plots'>
+						style='flex: 0 0 3.5rem'>
 					<i class='fa fa-bar-chart'></i>
 				</button>
 			</div>
