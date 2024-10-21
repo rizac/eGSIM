@@ -87,10 +87,10 @@ class Test:
                 np.allclose(result_csv[col], result_json_col,
                             rtol=1.e-12, atol=0, equal_nan=True)
 
-    def test_ok_request(self,
-                        # pytest fixtures:
-                        client):
-        """Test ok request"""
+    def test_400_invalid_param_names(self,
+            # pytest fixtures:
+            client):
+        """Test invalid param names in request"""
         data = {
             'aspect': 1,
             'backarc': False,
@@ -149,11 +149,22 @@ class Test:
         assert resp1.json() == resp2.json()
         assert resp1.json()['message'] == 'gsim: invalid model(s) AkkarEtAl2013'
 
+    @patch('egsim.api.views.PredictionsForm.output', side_effect=ValueError())
+    def test_500_err(self, mocked_output_method, client):
+        with open(self.request_filepath) as _:
+            inputdic = dict(yaml.safe_load(_))
+        resp1 = client.post(self.url, data=inputdic,
+                            content_type='application/json')
+        assert resp1.status_code == 500
+        msg = resp1.json()['message']
+        assert 'ValueError' in msg
+
     def test_empty_gsim(self,
                         # pytest fixtures:
                         client):
-        """tests a special case whereby a GSIM is empty (this case raised
-        before a PR to smtk repository)
+        """tests a special case where a Model has a bug in OpenQuake.
+         WARNING: THE BUG MIGHT BE FIXED IN FUTURE OPENQUAKE VERSIONS. As such this test
+         could make no sense
         """
         inputdic = {
             "gsim": [
@@ -188,6 +199,7 @@ class Test:
         resp2 = client.post(self.url, data=inputdic,
                             content_type='application/json')
         result = resp1.json()
+        # WARNING THIS SHOULD BE A BUG FIXED IN FUTURE OPENQUAKE VERSIONS:
         assert resp1.status_code == 500
         assert 'AkkarBommer2010SWISS01' in resp2.json()['message']
 

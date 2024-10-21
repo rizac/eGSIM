@@ -10,13 +10,11 @@ from urllib.parse import quote as urlquote
 
 import yaml
 import pandas as pd
-from django.core.exceptions import ValidationError
 from django.http import (JsonResponse, HttpRequest, QueryDict, FileResponse)
 from django.http.response import HttpResponse
 from django.views.generic.base import View
 from django.forms.fields import MultipleChoiceField
 
-from ..smtk import FlatfileError
 from ..smtk.converters import dataframe2dict
 from .forms import APIForm, EgsimBaseForm
 from .forms.scenarios import PredictionsForm, ArrayField
@@ -144,9 +142,10 @@ class RESTAPIView(View):
             return error_response(form.errors_json_data(), self.CLIENT_ERR_CODE)
         except Exception as server_err:
             msg = (
-                'Server error: if you sense a potential bug, '
-                'please contact the site administrators. Original error message: '
-                f'({server_err.__class__.__name__}): {str(server_err)}'
+                f'Server error ({server_err.__class__.__name__})' +
+                ("" if not str(server_err) else str(server_err)) +
+                f'. Please contact the server administrator '
+                f'if you think this error is due to a code bug'
             )
             return error_response(msg, self.SERVER_ERR_CODE)
 
