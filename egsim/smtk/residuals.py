@@ -20,7 +20,7 @@ from openquake.hazardlib.contexts import RuptureContext, ContextMaker
 from openquake.hazardlib.scalerel import PeerMSR
 
 from .flatfile import (FlatfileError, MissingColumnError, FlatfileMetadata,
-                       InvalidColumnDataError, ColumnNamesConflictError)
+                       ColumnDataError, IncompatibleColumnError)
 from .validators import (validate_inputs, harmonize_input_gsims, sa_period,
                          harmonize_input_imts, validate_imt_sa_limits)
 from .registry import (get_ground_motion_values, Clabel,
@@ -322,12 +322,12 @@ def get_likelihood(values: Union[np.ndarray, pd.Series]) -> Union[np.ndarray, pd
 def get_column_name(flatfile: pd.DataFrame, column: str) -> Union[str, None]:
     """Return the flatfile column matching `column`. This could be `column`
      itself, or any of its aliases (see `columns` module and YAML file)
-     Returns None if no column is found, raise `ConflictingColumns` if more than
+     Returns None if no column is found, raise `IncompatibleColumnError` if more than
      a matching column is found"""
     ff_cols = set(flatfile.columns)
     cols = set(FlatfileMetadata.get_aliases(column)) & ff_cols
     if len(cols) > 1:
-        raise ColumnNamesConflictError(*cols)
+        raise IncompatibleColumnError(*cols)
     elif len(cols) == 0:
         return None
     else:
@@ -442,7 +442,7 @@ def get_required_sa(flatfile: pd.DataFrame, sa_imts: Iterable[str]) -> pd.DataFr
         else:
             new_flatfile[i] = flatfile[source_periods[p]]
     if invalid_sa:
-        raise InvalidColumnDataError(*invalid_sa)
+        raise ColumnDataError(*invalid_sa)
 
     if target_periods:  # need to find some SA by interpolation (row-wise)
         # sort source periods:

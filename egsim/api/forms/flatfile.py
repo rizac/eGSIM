@@ -67,7 +67,7 @@ class FlatfileForm(EgsimBaseForm):
                                        'not both')
         elif u_form is None and not self.data.get('flatfile', None):
             # note: with no selection from the web GUI we have data['flatfile'] = None
-            self.add_error("flatfile",  self.ErrCode.required)
+            self.add_error("flatfile",  self.ErrMsg.required)
 
         cleaned_data = super().clean()
 
@@ -104,7 +104,7 @@ class FlatfileForm(EgsimBaseForm):
             flatfile_db_obj = models.Flatfile.queryset('name', 'media_root_path').\
                 filter(name=cleaned_data['flatfile']).first()
             if flatfile_db_obj is None:
-                self.add_error("flatfile", self.ErrCode.invalid_choice)
+                self.add_error("flatfile", self.ErrMsg.invalid_choice)
                 return cleaned_data
             # cleaned_data["flatfile"] is a models.Flatfile instance:
             dataframe = flatfile_db_obj.read_from_filepath()
@@ -131,13 +131,6 @@ class FlatfileForm(EgsimBaseForm):
                 self.add_error(key, str(exc))
 
         return cleaned_data
-
-    @contextmanager
-    def catch_flatfile_errors(self):
-        try:
-            yield
-        except FlatfileError as ferr:
-            self.add_error('flatfile', str(ferr))
 
 
 class FlatfileValidationForm(APIForm, FlatfileForm):

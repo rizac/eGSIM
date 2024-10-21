@@ -131,11 +131,11 @@ class EgsimBaseForm(Form):
             return False
         return super().has_error(field, code)
 
-    class ErrCode(StrEnum):
-        """Custom error code and msg replacing Django defaults and simplifying
-        how to raise field errors. Usage:
-            raise ValidationError(self.ErrCode.invalid)
-            self.add_error(field, self.ErrCode.invalid)
+    class ErrMsg(StrEnum):
+        """Custom error message enum: maps common Django ValueError's codes
+        to a standardized message string. Usage:
+            raise ValidationError(self.ErrMsg.invalid)
+            self.add_error(field, self.ErrMsg.required)
         """
         required = "missing parameter is required"
         invalid = "invalid value"
@@ -158,8 +158,12 @@ class EgsimBaseForm(Form):
         for field_name, errs in self.errors.get_json_data().items():
             param = self.param_name_of(field_name)
             for err in errs:
+                # Use as error message:
+                # 1. err['code'], and convert it to the relative message, if found
+                # 2. if the above failed, use err['message']
+                # 3. if the above failed, use the string "unknown error"
                 try:
-                    msg = self.ErrCode[err['code']]
+                    msg = self.ErrMsg[err['code']].value
                 except KeyError:
                     msg = err.get('message', 'unknown error')
                 errors.setdefault(msg, set()).add(param)
@@ -266,7 +270,7 @@ class GsimImtForm(SHSRForm):
         key = 'gsim'
         value = self.cleaned_data.get(key, None)
         if not value:
-            self.add_error(key, self.ErrCode.required)
+            self.add_error(key, self.ErrMsg.required)
             return {}
         if type(value) not in (list, tuple):
             value = [value]
@@ -289,7 +293,7 @@ class GsimImtForm(SHSRForm):
         key = 'imt'
         value = self.cleaned_data.get(key, None)
         if not value:
-            self.add_error(key, self.ErrCode.required)
+            self.add_error(key, self.ErrMsg.required)
             return {}
         if type(value) not in (list, tuple):
             value = [value]

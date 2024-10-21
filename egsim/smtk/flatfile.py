@@ -96,7 +96,7 @@ def read_flatfile(
             dfr = pd.read_csv(filepath_or_buffer, **kwargs)
         except ValueError as exc:
             # invalid_columns = _read_csv_inspect_failure(filepath_or_buffer, **kwargs)
-            raise InvalidColumnDataError(str(exc)) from None
+            raise ColumnDataError(str(exc)) from None
 
     if rename:
         dfr.rename(columns=rename, inplace=True)
@@ -213,7 +213,7 @@ def validate_flatfile_dataframe(
             continue
 
     if invalid_columns:
-        raise InvalidColumnDataError(*invalid_columns)
+        raise ColumnDataError(*invalid_columns)
 
     # check no dupes:
     ff_cols = set(dfr.columns)
@@ -221,7 +221,7 @@ def validate_flatfile_dataframe(
     for c in dfr.columns:
         aliases = set(FlatfileMetadata.get_aliases(c))
         if len(aliases & ff_cols) > 1:
-            raise ColumnNamesConflictError(*list(aliases & ff_cols))
+            raise IncompatibleColumnError(*list(aliases & ff_cols))
         if not has_imt and FlatfileMetadata.get_type(c) == ColumnType.intensity:
             has_imt = True
 
@@ -452,12 +452,12 @@ class MissingColumnError(FlatfileError, AttributeError, KeyError):
     msg_prefix = 'missing column(s)'
 
 
-class ColumnNamesConflictError(FlatfileError):
+class IncompatibleColumnError(FlatfileError):
 
     msg_prefix = 'column names conflict'
 
 
-class InvalidColumnDataError(FlatfileError, ValueError, TypeError):
+class ColumnDataError(FlatfileError, ValueError, TypeError):
 
     msg_prefix = 'invalid data for'
 

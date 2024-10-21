@@ -16,13 +16,12 @@ from django.http.response import HttpResponse
 from django.views.generic.base import View
 from django.forms.fields import MultipleChoiceField
 
-from ..smtk import FlatfileError, InputError
+from ..smtk import FlatfileError
 from ..smtk.converters import dataframe2dict
-from .forms import APIForm, EgsimBaseForm, GsimImtForm
+from .forms import APIForm, EgsimBaseForm
 from .forms.scenarios import PredictionsForm, ArrayField
 from .forms.flatfile import FlatfileForm
 from .forms.residuals import ResidualsForm
-from ..smtk.validators import ModelError, ModelUndefinedForImtError, ImtError
 
 
 class MimeType:  # noqa
@@ -99,7 +98,7 @@ class RESTAPIView(View):
         return re.split(r"\s*,\s*|\s+", _string)
 
     def get(self, request: HttpRequest):
-        """Process a GET request.
+        """Process a GET request and return a Django Response.
         All parameters that accept multiple values can be input by either
         specifying the parameter more than once, or by typing commas or spaces as value
         separator. All parameter values are returned as string except the string
@@ -108,7 +107,7 @@ class RESTAPIView(View):
         return self.response(data=self.parse_query_dict(request.GET))
 
     def post(self, request: HttpRequest):
-        """Process a POST request"""
+        """Process a POST request and return a Django Response"""
         if request.FILES:
             if not issubclass(self.formclass, FlatfileForm):
                 return error_response("The given URL does not support "
@@ -121,8 +120,9 @@ class RESTAPIView(View):
             return self.response(data=yaml.safe_load(stream))
 
     def response(self, **form_kwargs):
-        """process an input Response by calling `self.process` if the input is
-        valid according to this class Form (`cls.formclass`). On error, return
+        """Return a Django Response from the given arguments. This method first creates
+        a APIForm (from `self.formclass`) and puts the Form `output` into the
+        returned Response body (or Response.content). On error, return
         an appropriate JSON response
 
         :param form_kwargs: keyword arguments to be passed to this class Form
@@ -133,14 +133,14 @@ class RESTAPIView(View):
                 response_function = self.supported_formats()[rformat]
             except KeyError:
                 return error_response(
-                    f'format: {EgsimBaseForm.ErrCode["invalid"]}',
+                    f'format: {EgsimBaseForm.ErrMsg.invalid.value}',
                     self.CLIENT_ERR_CODE
                 )
             form = self.formclass(**form_kwargs)
             if form.is_valid():
                 obj = form.output()
                 if form.is_valid():
-                    return response_function(self, obj, form)
+                    return response_function(self, obj, form)  # noqa
             return error_response(form.errors_json_data(), self.CLIENT_ERR_CODE)
         except Exception as server_err:
             msg = (
@@ -216,31 +216,21 @@ class ResidualsView(SmtkView):
 def error_response(error: Union[str, Exception, dict],
                    status=500, **kwargs) -> JsonResponse:
     """Returns a JSON response from the given error. The response content will be
-    inferred from `error` and will be a `dict` with at least the key "message" (mapped
-    to a `str`).
-
-    (see https://google.github.io/styleguide/jsoncstyleguide.xml)
+    a dict with (at least) the key 'message' mapped to the error message
+    (For details, see https://google.github.io/styleguide/jsoncstyleguide.xml).
 
     :param error: dict, Exception or string. If dict, it will be used as response
-        content (assuring there is at least the key 'message' which will be built
-        from `status` if missing). If `str`, a dict `{message: <content>}` will
-        be built. If exception, the same dict but with the `message` key mapped to
-        a string inferred from the exception
+        content (the content 'message', if missing, will be built from `status`).
+        If `str` or `Exception`, `str(error)` will be set as the 'message' key of the
+        returned Response content
     :param status: the response HTTP status code (int, default: 500)
     :param kwargs: optional params for JSONResponse (except 'content' and 'status')
     """
-    content = {}
     if isinstance(error, dict):
-        content = error
-        message = f'{responses[status]} (status code: {status})'
+        content = dict(error)
+        content.setdefault('message', f'{responses[status]} (status code: {status})')
     else:
-        if isinstance(error, ValidationError):
-            message = "; ".join(error.messages)
-        elif isinstance(error, FlatfileError):
-            message = f'{error.__class__.__name__} {error}'
-        else:
-            message = str(error)
-    content.setdefault('message', message)
+        content = {'message': str(error)}
     kwargs.setdefault('content_type', MimeType.json)
     return JsonResponse(content, status=status, **kwargs)
 
