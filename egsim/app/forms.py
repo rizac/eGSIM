@@ -225,7 +225,11 @@ class ResidualsVisualizeForm(ResidualsForm):
         return cleaned_data
 
     def output(self) -> dict:
-        """produce the plot output (see superclass method doc)"""
+        """
+        produce the plot output (see superclass method doc).
+        On Flatfile errors, return None and add register the error
+        (see `self.errors_json_data` for details) so that `self.is_valid=False`.
+        """
         # residuals (x y): Frequency Z(<imt>)
         # likelihood (x y): Frequency LH(<imt>)
         # <ff_column> (x y): Z(<imt>) <ff_column>

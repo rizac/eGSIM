@@ -40,7 +40,7 @@ def harmonize_input_gsims(gsims: Iterable[Union[str, GMPE]]) -> dict[str, GMPE]:
                 OSError,AttributeError, DeprecationWarning) as _:
             errors.append(gs if isinstance(gs, str) else gsim_name(gs))
     if errors:
-        raise InvalidInput(*errors)
+        raise ModelError(*errors)
 
     return {k: output_gsims[k] for k in sorted(output_gsims)}
 
@@ -58,7 +58,7 @@ def harmonize_input_imts(imts: Iterable[Union[str, float, IMT]]) -> dict[str, IM
         except (TypeError, ValueError, KeyError) as exc:
             errors.append(imtx if isinstance(imtx, str) else imt_name(imtx))
     if errors:
-        raise InvalidInput(*errors)
+        raise ImtError(*errors)
     return {imt_name(i): i for i in sorted(imt_set, key=_imtkey)}
 
 
@@ -90,7 +90,7 @@ def sa_period(obj: Union[float, str, IMT]) -> Union[float, None]:
     return float(period) if np.isfinite(period) else None
 
 
-def validate_inputs(gsims:dict[str, GMPE], imts: dict[str, IMT]):
+def validate_inputs(gsims: dict[str, GMPE], imts: dict[str, IMT]):
     """Validate the input ground motion models (`gsims`)
     and intensity measures types (`imts`), raising `IncompatibleInput` in case
     of failure, and simply returning (None) otherwise
@@ -101,15 +101,15 @@ def validate_inputs(gsims:dict[str, GMPE], imts: dict[str, IMT]):
         instance, as output from `harmonize_input_imts`
     """
     imt_names = {n if sa_period(i) is None else n[:2] for n, i in imts.items()}
-    errors = []
+    errors = {}
     for gm_name, gsim_inst in gsims.items():
         invalid_imts = imt_names - intensity_measures_defined_for(gsim_inst)
         if not invalid_imts:
             continue
-        errors.append([gm_name] + sorted(invalid_imts))
+        errors[gm_name] = list(invalid_imts)
 
     if errors:
-        raise ModelUndefinedForImtError(*errors) from None
+        raise ModelUndefinedForImtError(errors) from None
 
     return gsims, imts
 
@@ -141,16 +141,38 @@ def validate_imt_sa_limits(gsim: GMPE, imts: dict[str, IMT]) -> dict[str, IMT]:
 # Custom Exceptions:
 
 
-class InvalidInput(ValueError):
-    """Base exception for any input validation error"""
+class InputError(ValueError):
+    """Base **abstract** exception for any input error (model, imt, flatfile)"""
+
+    # if given, modify str(self) by using this prefix + the passed args. If missing,
+    # str(self) is supposed to be the (only) passed arg:
+    msg_prefix: str
 
     def __str__(self):
         """Reformat ``str(self)``"""
-        # Basically remove the brackets if `self.arg` is a tuple i.e. if  `__init__`
-        # was called with multiple arguments:
-        return ", ".join(str(a) for a in self.args)
+        args = ", ".join(sorted(str(a) for a in self.args))
+        try:
+            return f'{self.msg_prefix} {args}'
+        except AttributeError:
+            return args
 
 
-class ModelUndefinedForImtError(InvalidInput):
-    pass
+class ModelError(InputError):
+    msg_prefix = 'invalid model(s)'
+
+
+class ImtError(InputError):
+    msg_prefix = 'invalid intensity measure(s)'
+
+
+class ModelUndefinedForImtError(InputError):
+    msg_prefix = 'model(s) not defined for the supplied imt(s)'
+
+    def invalid_models(self):
+        return self.args[0]
+
+    def __str__(self):
+        """returns just msg_prefix. Access models mapped to the invalid imts
+        via self.arg"""
+        return self.msg_prefix
 

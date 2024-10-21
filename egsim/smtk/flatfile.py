@@ -19,7 +19,7 @@ try:
 except ImportError:
     from yaml import SafeLoader  # same as using yaml.safe_load
 
-from .validators import sa_period, InvalidInput
+from .validators import sa_period, InputError
 
 _csv_default_args = (
     ('na_values', ("", "null", "NULL", "None",
@@ -436,22 +436,30 @@ def cast_to_dtype(
 # Exceptions:
 
 
-class FlatfileError(InvalidInput):
-    """General flatfile column(s) error. See subclasses for details"""
+class FlatfileError(InputError):
+    """General flatfile column(s) error. Inherits from smtks.validators.InputError.
+    Note that the str representation equals the init arguments comma-separated:
+    FlatfileError(arg1, arg2, ...) -> f"{str(arg1)}, {str(arg2)}, ..."
+    See subclasses for details
+    """
+    pass
 
 
 class MissingColumnError(FlatfileError, AttributeError, KeyError):
     """MissingColumnError. It inherits also from AttributeError and
     KeyError to be compliant with pandas and OpenQuake"""
-    pass
+
+    msg_prefix = 'missing column(s)'
 
 
 class ColumnNamesConflictError(FlatfileError):
-    pass
+
+    msg_prefix = 'column names conflict'
 
 
 class InvalidColumnDataError(FlatfileError, ValueError, TypeError):
-    pass
+
+    msg_prefix = 'invalid data for'
 
 
 # registered columns:

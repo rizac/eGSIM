@@ -1,6 +1,7 @@
 """
 Base Form for to model-to-data operations i.e. flatfile handling
 """
+from contextlib import contextmanager
 from io import BytesIO
 from typing import Optional, Any
 import pandas as pd
@@ -114,12 +115,7 @@ class FlatfileForm(EgsimBaseForm):
                 # (https://stackoverflow.com/a/10758350):
                 dataframe = read_flatfile(u_flatfile)
             except FlatfileError as err:
-                # get error class name as message prefix, e.g.
-                # ColumnNamesConflictError -> "column names conflict"
-                prefix = err.__class__.__name__.removesuffix('Error')
-                prefix = ''.join(' ' + c.lower() if c != c.lower() else c
-                                 for c in prefix).strip()
-                self.add_error("flatfile", f'{prefix} {str(err)}')
+                self.add_error("flatfile", str(err))
                 return cleaned_data  # no need to further process
 
         # replace the flatfile parameter with the pandas dataframe:
@@ -136,14 +132,22 @@ class FlatfileForm(EgsimBaseForm):
 
         return cleaned_data
 
+    @contextmanager
+    def catch_flatfile_errors(self):
+        try:
+            yield
+        except FlatfileError as ferr:
+            self.add_error('flatfile', str(ferr))
+
 
 class FlatfileValidationForm(APIForm, FlatfileForm):
     """Form for flatfile validation, on success
     return info from a given uploaded flatfile"""
 
-    def output(self) -> dict:
-        """Compute and return the output from the input data (`self.cleaned_data`).
-        This method must be called after checking that `self.is_valid()` is True
+    def output(self) -> Optional[dict]:
+        """
+        Compute and return the output from the input data (`self.cleaned_data`).
+        This method must be called after checking that `self.is_valid()` is True.
 
         :return: any Python object (e.g., a JSON-serializable dict)
         """
@@ -153,8 +157,8 @@ class FlatfileValidationForm(APIForm, FlatfileForm):
         for col in sorted(dataframe.columns):
             # return human-readable column metadata from its values (dataframe[col]).
             # Note that if `col` is a registered column, then all metadata match the
-            # registered one (otherwise we should never be here because `self.is_valid`
-            # is False. See FlatfileForm and smtk/flatfile.py)
+            # registered one (otherwise we should never be here because
+            # `self.is_valid` is False. See FlatfileForm and smtk/flatfile.py)
             columns.append(get_hr_flatfile_column_meta(col, dataframe[col]))
 
         return {'columns': columns}

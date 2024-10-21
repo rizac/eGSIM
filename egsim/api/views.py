@@ -16,11 +16,13 @@ from django.http.response import HttpResponse
 from django.views.generic.base import View
 from django.forms.fields import MultipleChoiceField
 
+from ..smtk import FlatfileError, InputError
 from ..smtk.converters import dataframe2dict
-from .forms import APIForm
+from .forms import APIForm, EgsimBaseForm, GsimImtForm
 from .forms.scenarios import PredictionsForm, ArrayField
 from .forms.flatfile import FlatfileForm
 from .forms.residuals import ResidualsForm
+from ..smtk.validators import ModelError, ModelUndefinedForImtError, ImtError
 
 
 class MimeType:  # noqa
@@ -130,15 +132,22 @@ class RESTAPIView(View):
             try:
                 response_function = self.supported_formats()[rformat]
             except KeyError:
-                raise ValidationError(f'Invalid format {rformat}')
+                return error_response(
+                    f'format: {EgsimBaseForm.ErrCode["invalid"]}',
+                    self.CLIENT_ERR_CODE
+                )
             form = self.formclass(**form_kwargs)
-            if not form.is_valid():
-                return error_response(form.errors_json_data(), self.CLIENT_ERR_CODE)
-            return response_function(self, form)
-        except ValidationError as v_err:
-            return error_response(v_err, self.CLIENT_ERR_CODE)
-        except Exception as err:
-            msg = f'({err.__class__.__name__}): {str(err)}'
+            if form.is_valid():
+                obj = form.output()
+                if form.is_valid():
+                    return response_function(self, obj, form)
+            return error_response(form.errors_json_data(), self.CLIENT_ERR_CODE)
+        except Exception as server_err:
+            msg = (
+                'Server error: if you sense a potential bug, '
+                'please contact the site administrators. Original error message: '
+                f'({server_err.__class__.__name__}): {str(server_err)}'
+            )
             return error_response(msg, self.SERVER_ERR_CODE)
 
     @classmethod
@@ -158,34 +167,36 @@ class RESTAPIView(View):
                         formats[frmt] = meth
         return formats
 
-    def response_json(self, form: APIForm, **kwargs) -> JsonResponse:
+    def response_json(self, form_output: Any, form: APIForm, **kwargs) -> JsonResponse:
         kwargs.setdefault('status', 200)
-        return JsonResponse(form.output(), **kwargs)
+        return JsonResponse(form_output, **kwargs)
 
 
 class SmtkView(RESTAPIView):
     """RESTAPIView for smtk (strong motion toolkit) output (e.g. Predictions or
     Residuals, set in the `formclass` class attribute"""
 
-    def response_csv(self, form:APIForm, **kwargs):  # noqa
-        content = write_csv_to_buffer(form.output())
+    def response_csv(self, form_output: pd.DataFrame, form: APIForm, **kwargs)\
+            -> FileResponse:  # noqa
+        content = write_csv_to_buffer(form_output)
         content.seek(0)  # for safety
         kwargs.setdefault('content_type', MimeType.csv)
         kwargs.setdefault('status', 200)
         return FileResponse(content, **kwargs)
 
-    def response_hdf(self, form:APIForm, **kwargs):  # noqa
-        content = write_hdf_to_buffer({'egsim': form.output()})
+    def response_hdf(self, form_output: pd.DataFrame, form: APIForm, **kwargs)\
+            -> FileResponse:  # noqa
+        content = write_hdf_to_buffer({'egsim': form_output})
         content.seek(0)  # for safety
         kwargs.setdefault('content_type', MimeType.hdf)
         kwargs.setdefault('status', 200)
         return FileResponse(content, **kwargs)
 
-    def response_json(self, form: APIForm, **kwargs) -> JsonResponse:
+    def response_json(self, form_output: pd.DataFrame, form: APIForm, **kwargs) \
+            -> JsonResponse:
         """Return a JSON response. This method is implemented for
         legacy code/tests and should be avoided whenever possible"""
-        json_data = dataframe2dict(form.output(), as_json=True,
-                                   drop_empty_levels=True)
+        json_data = dataframe2dict(form_output, as_json=True, drop_empty_levels=True)
         kwargs.setdefault('status', 200)
         return JsonResponse(json_data, **kwargs)
 
@@ -221,10 +232,12 @@ def error_response(error: Union[str, Exception, dict],
     content = {}
     if isinstance(error, dict):
         content = error
-        message = f'{status} {responses[status]}'
+        message = f'{responses[status]} (status code: {status})'
     else:
         if isinstance(error, ValidationError):
             message = "; ".join(error.messages)
+        elif isinstance(error, FlatfileError):
+            message = f'{error.__class__.__name__} {error}'
         else:
             message = str(error)
     content.setdefault('message', message)

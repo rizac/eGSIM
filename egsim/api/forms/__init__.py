@@ -14,10 +14,9 @@ from django.forms.forms import DeclarativeFieldsMetaclass  # noqa
 from django.forms.fields import Field, FloatField
 
 from egsim.api import models
-from egsim.smtk import (validate_inputs, InvalidInput, harmonize_input_gsims,
+from egsim.smtk import (validate_inputs, harmonize_input_gsims,
                         harmonize_input_imts, gsim)
-from egsim.smtk.validators import ModelUndefinedForImtError
-
+from egsim.smtk.validators import ModelUndefinedForImtError, ImtError, ModelError
 
 _base_singleton_renderer = BaseRenderer()  # singleton no-op renderer, see below
 
@@ -119,7 +118,7 @@ class EgsimBaseForm(Form):
 
     def has_error(self, field, code=None):
         """Call `super.has_error` without forcing a full clean (if the form has not
-        been cleaned, return if the field resulted in an internal initialization error)
+        been cleaned, return whether the field resulted in an initialization error)
 
         :param field: a Form field name (not an input parameter name)
         :param code: an optional error code (e.g. 'invalid')
@@ -277,9 +276,8 @@ class GsimImtForm(SHSRForm):
             for name in self.get_region_selected_model_names():
                 if name not in ret:
                     ret[name] = gsim(name)
-        except InvalidInput as err:
-            self.add_error(key, f"{self.ErrCode.invalid} "
-                                f"({', '.join(sorted(err.args))})")
+        except ModelError as err:
+            self.add_error(key, str(err))
         return ret
 
     def clean_imt(self) -> dict[str, IMT]:
@@ -298,9 +296,8 @@ class GsimImtForm(SHSRForm):
         ret = {}
         try:
             ret = harmonize_input_imts(value)
-        except InvalidInput as err:
-            self.add_error(key, f"{self.ErrCode.invalid} "
-                                f"({', '.join(sorted(err.args))})")
+        except ImtError as err:
+            self.add_error(key, str(err))
         return ret
 
     def clean(self):
@@ -314,9 +311,11 @@ class GsimImtForm(SHSRForm):
             try:
                 validate_inputs(cleaned_data[gsim_field], cleaned_data[imt_field])
             except ModelUndefinedForImtError as _:
+                m = sorted(_.invalid_models().keys())
+                i = sorted({ix for imts in _.invalid_models().values() for ix in imts})
                 # add_error removes also the field from self.cleaned_data:
-                self.add_error(gsim_field, "some model is not defined for all imts")
-                self.add_error(imt_field, "some imt is not supported by all models")
+                self.add_error(gsim_field, f"{', '.join(m)} not defined for all imts")
+                self.add_error(imt_field, f"{', '.join(i)} not supported by all models")
         return cleaned_data
 
 

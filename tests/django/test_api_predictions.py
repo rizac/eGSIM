@@ -147,7 +147,7 @@ class Test:
                             content_type='application/json')
         assert resp1.status_code == 400
         assert resp1.json() == resp2.json()
-        assert resp1.json()['message'] == 'gsim: invalid value (AkkarEtAl2013)'
+        assert resp1.json()['message'] == 'gsim: invalid model(s) AkkarEtAl2013'
 
     def test_empty_gsim(self,
                         # pytest fixtures:
