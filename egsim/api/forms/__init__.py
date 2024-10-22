@@ -16,7 +16,7 @@ from django.forms.fields import Field, FloatField
 from egsim.api import models
 from egsim.smtk import (validate_inputs, harmonize_input_gsims,
                         harmonize_input_imts, gsim)
-from egsim.smtk.validators import ModelUndefinedForImtError, ImtError, ModelError
+from egsim.smtk.validators import IncompatibleModelImtError, ImtError, ModelError
 
 _base_singleton_renderer = BaseRenderer()  # singleton no-op renderer, see below
 
@@ -314,12 +314,10 @@ class GsimImtForm(SHSRForm):
         if not self.has_error(gsim_field) and not self.has_error(imt_field):
             try:
                 validate_inputs(cleaned_data[gsim_field], cleaned_data[imt_field])
-            except ModelUndefinedForImtError as _:
-                m = sorted(_.invalid_models().keys())
-                i = sorted({ix for imts in _.invalid_models().values() for ix in imts})
+            except IncompatibleModelImtError as imi_err:
                 # add_error removes also the field from self.cleaned_data:
-                self.add_error(gsim_field, f"{', '.join(m)} not defined for all imts")
-                self.add_error(imt_field, f"{', '.join(i)} not supported by all models")
+                self.add_error(gsim_field, str(imi_err))
+                self.add_error(imt_field, str(imi_err))
         return cleaned_data
 
 

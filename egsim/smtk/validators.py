@@ -109,7 +109,7 @@ def validate_inputs(gsims: dict[str, GMPE], imts: dict[str, IMT]):
         errors[gm_name] = list(invalid_imts)
 
     if errors:
-        raise ModelUndefinedForImtError(errors) from None
+        raise IncompatibleModelImtError(errors) from None
 
     return gsims, imts
 
@@ -144,8 +144,8 @@ def validate_imt_sa_limits(gsim: GMPE, imts: dict[str, IMT]) -> dict[str, IMT]:
 class InputError(ValueError):
     """Base **abstract** exception for any input error (model, imt, flatfile)"""
 
-    # if given, modify str(self) by using this prefix + the passed args. If missing,
-    # str(self) is supposed to be the (only) passed arg:
+    # The str representation of this Exception (and subclasses) is each arg in self.args
+    # (comma-separated), prefixed by `msg_prefix` (if given):
     msg_prefix: str
 
     def __str__(self):
@@ -165,14 +165,21 @@ class ImtError(InputError):
     msg_prefix = 'invalid intensity measure(s)'
 
 
-class ModelUndefinedForImtError(InputError):
-    msg_prefix = 'model(s) not defined for the supplied imt(s)'
-
-    def invalid_models(self):
-        return self.args[0]
+class IncompatibleModelImtError(InputError):
+    """Given any process with input models and input imts, this class is initialized
+    with a dict of input model names mapped to the input imts they do NOT define
+    (as class names, i.e. SA, not SA(period))
+    """
 
     def __str__(self):
-        """returns just msg_prefix. Access models mapped to the invalid imts
-        via self.arg"""
-        return self.msg_prefix
+        """Custom error msg"""
+        arg = self.args[0]
+        return (
+            "incompatible model(s) and intensity measure(s): " +
+            ", ".join(f'{m} + {i}' for m, ix in arg.items() for i in ix)
+        )
+        # return (
+        #     f"{', '.join(unique_models)} not defined for all intensity measures; "
+        #     f"{', '.join(unique_imts)} not supported by all models"
+        # )
 
