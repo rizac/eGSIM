@@ -14,10 +14,9 @@ from django.forms.forms import DeclarativeFieldsMetaclass  # noqa
 from django.forms.fields import Field, FloatField
 
 from egsim.api import models
-from egsim.smtk import (validate_inputs, InvalidInput, harmonize_input_gsims,
+from egsim.smtk import (validate_inputs, harmonize_input_gsims,
                         harmonize_input_imts, gsim)
-from egsim.smtk.validators import ModelUndefinedForImtError
-
+from egsim.smtk.validators import IncompatibleModelImtError, ImtError, ModelError
 
 _base_singleton_renderer = BaseRenderer()  # singleton no-op renderer, see below
 
@@ -119,7 +118,7 @@ class EgsimBaseForm(Form):
 
     def has_error(self, field, code=None):
         """Call `super.has_error` without forcing a full clean (if the form has not
-        been cleaned, return if the field resulted in an internal initialization error)
+        been cleaned, return whether the field resulted in an initialization error)
 
         :param field: a Form field name (not an input parameter name)
         :param code: an optional error code (e.g. 'invalid')
@@ -132,11 +131,11 @@ class EgsimBaseForm(Form):
             return False
         return super().has_error(field, code)
 
-    class ErrCode(StrEnum):
-        """Custom error code and msg replacing Django defaults and simplifying
-        how to raise field errors. Usage:
-            raise ValidationError(self.ErrCode.invalid)
-            self.add_error(field, self.ErrCode.invalid)
+    class ErrMsg(StrEnum):
+        """Custom error message enum: maps common Django ValueError's codes
+        to a standardized message string. Usage:
+            raise ValidationError(self.ErrMsg.invalid)
+            self.add_error(field, self.ErrMsg.required)
         """
         required = "missing parameter is required"
         invalid = "invalid value"
@@ -159,8 +158,12 @@ class EgsimBaseForm(Form):
         for field_name, errs in self.errors.get_json_data().items():
             param = self.param_name_of(field_name)
             for err in errs:
+                # Use as error message:
+                # 1. err['code'], and convert it to the relative message, if found
+                # 2. if the above failed, use err['message']
+                # 3. if the above failed, use the string "unknown error"
                 try:
-                    msg = self.ErrCode[err['code']]
+                    msg = self.ErrMsg[err['code']].value
                 except KeyError:
                     msg = err.get('message', 'unknown error')
                 errors.setdefault(msg, set()).add(param)
@@ -267,7 +270,7 @@ class GsimImtForm(SHSRForm):
         key = 'gsim'
         value = self.cleaned_data.get(key, None)
         if not value:
-            self.add_error(key, self.ErrCode.required)
+            self.add_error(key, self.ErrMsg.required)
             return {}
         if type(value) not in (list, tuple):
             value = [value]
@@ -277,9 +280,8 @@ class GsimImtForm(SHSRForm):
             for name in self.get_region_selected_model_names():
                 if name not in ret:
                     ret[name] = gsim(name)
-        except InvalidInput as err:
-            self.add_error(key, f"{self.ErrCode.invalid} "
-                                f"({', '.join(sorted(err.args))})")
+        except ModelError as err:
+            self.add_error(key, str(err))
         return ret
 
     def clean_imt(self) -> dict[str, IMT]:
@@ -291,16 +293,15 @@ class GsimImtForm(SHSRForm):
         key = 'imt'
         value = self.cleaned_data.get(key, None)
         if not value:
-            self.add_error(key, self.ErrCode.required)
+            self.add_error(key, self.ErrMsg.required)
             return {}
         if type(value) not in (list, tuple):
             value = [value]
         ret = {}
         try:
             ret = harmonize_input_imts(value)
-        except InvalidInput as err:
-            self.add_error(key, f"{self.ErrCode.invalid} "
-                                f"({', '.join(sorted(err.args))})")
+        except ImtError as err:
+            self.add_error(key, str(err))
         return ret
 
     def clean(self):
@@ -313,10 +314,10 @@ class GsimImtForm(SHSRForm):
         if not self.has_error(gsim_field) and not self.has_error(imt_field):
             try:
                 validate_inputs(cleaned_data[gsim_field], cleaned_data[imt_field])
-            except ModelUndefinedForImtError as _:
+            except IncompatibleModelImtError as imi_err:
                 # add_error removes also the field from self.cleaned_data:
-                self.add_error(gsim_field, "some model is not defined for all imts")
-                self.add_error(imt_field, "some imt is not supported by all models")
+                self.add_error(gsim_field, str(imi_err))
+                self.add_error(imt_field, str(imi_err))
         return cleaned_data
 
 

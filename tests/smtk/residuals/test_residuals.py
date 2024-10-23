@@ -84,8 +84,6 @@ def test_residuals_execution():
             max_diff = np.nanquantile(np.abs(rel_diff), QTL)
             vals_ok = max_diff < RTOL
 
-        if not vals_ok:
-            asd = 9
         assert vals_ok
 
 

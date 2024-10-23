@@ -8,7 +8,7 @@ from django.forms import BooleanField
 from collections.abc import Collection
 
 from egsim.smtk import get_residuals, intensity_measures_defined_for, \
-    ground_motion_properties_required_by
+    ground_motion_properties_required_by, FlatfileError
 from egsim.api.forms import APIForm
 from egsim.api.forms import GsimImtForm
 from egsim.api.forms.flatfile import FlatfileForm
@@ -66,13 +66,18 @@ class ResidualsForm(GsimImtForm, FlatfileForm, APIForm):
 
     def output(self) -> pd.DataFrame:
         """Compute and return the output from the input data (`self.cleaned_data`).
-        This method must be called after checking that `self.is_valid()` is True
+        This method must be called after checking that `self.is_valid()` is True.
+        On Flatfile errors, return None and add register the error
+        (see `self.errors_json_data` for details) so that `self.is_valid=False`.
 
         :return: any Python object (e.g., a JSON-serializable dict)
         """
-        cleaned_data = self.cleaned_data
-        return get_residuals(cleaned_data["gsim"],
-                             cleaned_data["imt"],
-                             cleaned_data['flatfile'],
-                             cleaned_data['likelihood'],
-                             cleaned_data['normalize'])
+        try:
+            cleaned_data = self.cleaned_data
+            return get_residuals(cleaned_data["gsim"],
+                                 cleaned_data["imt"],
+                                 cleaned_data['flatfile'],
+                                 cleaned_data['likelihood'],
+                                 cleaned_data['normalize'])
+        except FlatfileError as err:
+            self.add_error("flatfile", str(err))

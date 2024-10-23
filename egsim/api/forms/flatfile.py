@@ -1,6 +1,7 @@
 """
 Base Form for to model-to-data operations i.e. flatfile handling
 """
+from contextlib import contextmanager
 from io import BytesIO
 from typing import Optional, Any
 import pandas as pd
@@ -66,7 +67,7 @@ class FlatfileForm(EgsimBaseForm):
                                        'not both')
         elif u_form is None and not self.data.get('flatfile', None):
             # note: with no selection from the web GUI we have data['flatfile'] = None
-            self.add_error("flatfile",  self.ErrCode.required)
+            self.add_error("flatfile",  self.ErrMsg.required)
 
         cleaned_data = super().clean()
 
@@ -103,7 +104,7 @@ class FlatfileForm(EgsimBaseForm):
             flatfile_db_obj = models.Flatfile.queryset('name', 'media_root_path').\
                 filter(name=cleaned_data['flatfile']).first()
             if flatfile_db_obj is None:
-                self.add_error("flatfile", self.ErrCode.invalid_choice)
+                self.add_error("flatfile", self.ErrMsg.invalid_choice)
                 return cleaned_data
             # cleaned_data["flatfile"] is a models.Flatfile instance:
             dataframe = flatfile_db_obj.read_from_filepath()
@@ -114,12 +115,7 @@ class FlatfileForm(EgsimBaseForm):
                 # (https://stackoverflow.com/a/10758350):
                 dataframe = read_flatfile(u_flatfile)
             except FlatfileError as err:
-                # get error class name as message prefix, e.g.
-                # ColumnNamesConflictError -> "column names conflict"
-                prefix = err.__class__.__name__.removesuffix('Error')
-                prefix = ''.join(' ' + c.lower() if c != c.lower() else c
-                                 for c in prefix).strip()
-                self.add_error("flatfile", f'{prefix} {str(err)}')
+                self.add_error("flatfile", str(err))
                 return cleaned_data  # no need to further process
 
         # replace the flatfile parameter with the pandas dataframe:
@@ -141,9 +137,10 @@ class FlatfileValidationForm(APIForm, FlatfileForm):
     """Form for flatfile validation, on success
     return info from a given uploaded flatfile"""
 
-    def output(self) -> dict:
-        """Compute and return the output from the input data (`self.cleaned_data`).
-        This method must be called after checking that `self.is_valid()` is True
+    def output(self) -> Optional[dict]:
+        """
+        Compute and return the output from the input data (`self.cleaned_data`).
+        This method must be called after checking that `self.is_valid()` is True.
 
         :return: any Python object (e.g., a JSON-serializable dict)
         """
@@ -153,8 +150,8 @@ class FlatfileValidationForm(APIForm, FlatfileForm):
         for col in sorted(dataframe.columns):
             # return human-readable column metadata from its values (dataframe[col]).
             # Note that if `col` is a registered column, then all metadata match the
-            # registered one (otherwise we should never be here because `self.is_valid`
-            # is False. See FlatfileForm and smtk/flatfile.py)
+            # registered one (otherwise we should never be here because
+            # `self.is_valid` is False. See FlatfileForm and smtk/flatfile.py)
             columns.append(get_hr_flatfile_column_meta(col, dataframe[col]))
 
         return {'columns': columns}

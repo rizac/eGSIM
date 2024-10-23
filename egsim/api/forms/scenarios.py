@@ -40,7 +40,7 @@ class ArrayField(Field):
     def clean(self, value):
         cleaned_data = []
         if not value and self.required:
-            raise ValidationError(APIForm.ErrCode.required)
+            raise ValidationError(APIForm.ErrMsg.required)
         if not isinstance(value, (list, tuple)):
             value = [value]
         size = len(self.base_fields)
@@ -173,7 +173,7 @@ class PredictionsForm(GsimImtForm, APIForm):
         try:
             return _mag_scalerel[self.cleaned_data['msr']]()
         except Exception as exc:  # noqa
-            raise ValidationError(self.ErrCode.invalid)
+            raise ValidationError(self.ErrMsg.invalid)
 
     def clean_initial_point(self):
         """Clean the "location" field by converting the given value to an
@@ -182,7 +182,7 @@ class PredictionsForm(GsimImtForm, APIForm):
         try:
             return Point(*self.cleaned_data['initial_point'])
         except Exception as exc:  # noqa
-            raise ValidationError(self.ErrCode.invalid)
+            raise ValidationError(self.ErrMsg.invalid)
 
     def clean_region(self):
         """Clean the "region" field by converting the value (which is set as str
@@ -191,7 +191,7 @@ class PredictionsForm(GsimImtForm, APIForm):
         try:
             return int(self.cleaned_data['region'])
         except Exception as exc:  # noqa
-            raise ValidationError(self.ErrCode.invalid)
+            raise ValidationError(self.ErrMsg.invalid)
 
     def output(self) -> pd.DataFrame:
         """Compute and return the output from the input data (`self.cleaned_data`).

@@ -38,7 +38,7 @@ class Test:
         # (only for model(s)?)
         assert not form.is_valid()
         assert form.errors_json_data()['message'] == \
-               'model: invalid value (BindiEtAl2011t, BindiEtAl2014RJb)'
+               'model: invalid model(s) BindiEtAl2011t, BindiEtAl2014RJb'
 
         form = GsimImtForm({GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb']})
         assert not form.is_valid()
@@ -48,13 +48,13 @@ class Test:
         form = GsimImtForm({GSIM: ['abcde', 'BindiEtAl2014Rjb']})
         assert not form.is_valid()
         assert form.errors_json_data()['message'] == \
-               'gsim: invalid value (abcde); ' \
+               'gsim: invalid model(s) abcde; ' \
                'imt: missing parameter is required'
 
         form = GsimImtForm({IMT: ['abcde', 'BindiEtAl2014Rjb']})
         assert not form.is_valid()
         assert form.errors_json_data()['message'] == \
-               'imt: invalid value (BindiEtAl2014Rjb, abcde); ' \
+               'imt: invalid intensity measure(s) BindiEtAl2014Rjb, abcde; ' \
                'model: missing parameter is required'
 
     def test_imt_invalid(self):
@@ -65,19 +65,19 @@ class Test:
         form = GsimImtForm(data)
         assert not form.is_valid()
         assert form.errors_json_data()['message'] == \
-               'imt: invalid value (SA(r))'
+               'imt: invalid intensity measure(s) SA(r)'
 
         form = GsimImtForm({GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
                             IMT: ['SA', '0.t', 'MMI']})
         assert not form.is_valid()
         assert form.errors_json_data()['message'] == \
-               'imt: invalid value (0.t, SA)'
+               'imt: invalid intensity measure(s) 0.t, SA'
 
         form = GsimImtForm({GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
-                            IMT: ['MMI', '_T_' , 'SA(r)']})
+                            IMT: ['MMI', '_T_', 'SA(r)']})
         assert not form.is_valid()
         assert form.errors_json_data()['message'] == \
-               'imt: invalid value (SA(r), _T_)'
+               'imt: invalid intensity measure(s) SA(r), _T_'
 
     def test_flatifle_form(self):
         # double flatfile provided (this should NOT be poossible from the API
@@ -190,8 +190,10 @@ class Test:
         form = GsimImtForm(data)
         assert not form.is_valid()
         msg = form.errors_json_data()['message']
-        assert msg == ('gsim: some model is not defined for all imts; '
-                       'imt: some imt is not supported by all models')
+        assert msg == (
+            'gsim, imt: incompatible model(s) and intensity measure(s) '
+            'BindiEtAl2011+PGD, BindiEtAl2014Rjb+PGD'
+        )
 
     def test_arrayfields_all_valid_input_types(self):
         """Tests some valid inputs in the egsim Fields accepting array of values
@@ -236,11 +238,12 @@ class Test:
 
         form = PredictionsForm(data)
         assert not form.is_valid()
-        assert form.errors_json_data()['message'] == \
-              'distance: 2 values are invalid; ' \
-              'imt: invalid value (SA); ' \
-              'mag: 1 value is invalid; ' \
-              'msr: value not found or misspelled'
+        assert form.errors_json_data()['message'] == (
+            'distance: 2 values are invalid; '
+            'imt: invalid intensity measure(s) SA; '
+            'mag: 1 value is invalid; '
+            'msr: value not found or misspelled'
+        )
 
     def test_flatfile_validation(self):
         flatfile_df = read_flatfile(flatfile_tk_path)

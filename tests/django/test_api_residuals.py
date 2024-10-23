@@ -96,6 +96,30 @@ class Test:
             assert resp2.status_code == 400
             assert 'flatfile' in resp2.json()['message']
 
+        # 4 missing column error (PGV):
+        csv = SimpleUploadedFile("file.csv", (b"PGA;rake;rjb;vs30;hypo_lat;mag\n"
+                                              b"1.1;1;1;1;1;1;1"),
+                                 content_type="text/csv")
+        inputdic2 = dict(inputdic, flatfile=csv)
+        inputdic2.pop('data-query')
+        # test wrong flatfile:
+        resp2 = client.post(self.url, data=inputdic2)
+        assert resp2.status_code == 400
+        # account for different ordering in error columns:
+        assert resp2.json()['message'] == 'flatfile: missing column(s) PGV'
+
+        # 5 missing column error (event id):
+        csv = SimpleUploadedFile("file.csv", (b"PGA;PGV;SA(0.2);rake;rjb;vs30;hypo_lat;mag\n"
+                                              b"1.1;1;1;1;1;1;1;1;0"),
+                                 content_type="text/csv")
+        inputdic2 = dict(inputdic, flatfile=csv)
+        inputdic2.pop('data-query')
+        # test wrong flatfile:
+        resp2 = client.post(self.url, data=inputdic2)
+        assert resp2.status_code == 400
+        # account for different ordering in error columns:
+        assert resp2.json()['message'] == 'flatfile: missing column(s) event_id'
+
     def test_kotha_turkey(self, client):
         csv = SimpleUploadedFile("file.csv",
                                  self.flatfile_tk_content,

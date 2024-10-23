@@ -19,7 +19,7 @@ try:
 except ImportError:
     from yaml import SafeLoader  # same as using yaml.safe_load
 
-from .validators import sa_period, InvalidInput
+from .validators import sa_period, InputError
 
 _csv_default_args = (
     ('na_values', ("", "null", "NULL", "None",
@@ -96,7 +96,7 @@ def read_flatfile(
             dfr = pd.read_csv(filepath_or_buffer, **kwargs)
         except ValueError as exc:
             # invalid_columns = _read_csv_inspect_failure(filepath_or_buffer, **kwargs)
-            raise InvalidColumnDataError(str(exc)) from None
+            raise ColumnDataError(str(exc)) from None
 
     if rename:
         dfr.rename(columns=rename, inplace=True)
@@ -213,7 +213,7 @@ def validate_flatfile_dataframe(
             continue
 
     if invalid_columns:
-        raise InvalidColumnDataError(*invalid_columns)
+        raise ColumnDataError(*invalid_columns)
 
     # check no dupes:
     ff_cols = set(dfr.columns)
@@ -221,7 +221,7 @@ def validate_flatfile_dataframe(
     for c in dfr.columns:
         aliases = set(FlatfileMetadata.get_aliases(c))
         if len(aliases & ff_cols) > 1:
-            raise ColumnNamesConflictError(*list(aliases & ff_cols))
+            raise IncompatibleColumnError(*list(aliases & ff_cols))
         if not has_imt and FlatfileMetadata.get_type(c) == ColumnType.intensity:
             has_imt = True
 
@@ -436,22 +436,30 @@ def cast_to_dtype(
 # Exceptions:
 
 
-class FlatfileError(InvalidInput):
-    """General flatfile column(s) error. See subclasses for details"""
+class FlatfileError(InputError):
+    """General flatfile column(s) error. Inherits from smtks.validators.InputError.
+    Note that the str representation equals the init arguments comma-separated:
+    FlatfileError(arg1, arg2, ...) -> f"{str(arg1)}, {str(arg2)}, ..."
+    See subclasses for details
+    """
+    pass
 
 
 class MissingColumnError(FlatfileError, AttributeError, KeyError):
     """MissingColumnError. It inherits also from AttributeError and
     KeyError to be compliant with pandas and OpenQuake"""
-    pass
+
+    msg_prefix = 'missing column(s)'
 
 
-class ColumnNamesConflictError(FlatfileError):
-    pass
+class IncompatibleColumnError(FlatfileError):
+
+    msg_prefix = 'column names conflict'
 
 
-class InvalidColumnDataError(FlatfileError, ValueError, TypeError):
-    pass
+class ColumnDataError(FlatfileError, ValueError, TypeError):
+
+    msg_prefix = 'invalid data for'
 
 
 # registered columns:

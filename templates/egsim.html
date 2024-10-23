@@ -102,7 +102,7 @@ window.fetch = function() {
 					data => showFetchError(data.message)
 				).catch(
 					// standard HTTP error (non JSON serializable, show statusText and code):
-					error => showFetchError(`${response.statusText}${response.status ? " (error code: " + response.status +")" : ""}`)
+					error => showFetchError(`${response.statusText}${response.status ? " (status code: " + response.status +")" : ""}`)
 				);
 				reject(response);
 			}else{

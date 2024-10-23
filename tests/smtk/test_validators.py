@@ -2,17 +2,29 @@ import pytest
 from openquake.hazardlib import imt
 
 from egsim.smtk import validate_inputs, harmonize_input_gsims, harmonize_input_imts, gsim
-from egsim.smtk.validators import ModelUndefinedForImtError, validate_imt_sa_limits
+from egsim.smtk.validators import IncompatibleModelImtError, validate_imt_sa_limits
 
 
-def test_invalid_imts():
+def test_invalid_imts(capsys):
     gsims = ['BindiEtAl2014Rjb']
     imts = ['CAV']
-    with pytest.raises(ModelUndefinedForImtError) as err:
+    with pytest.raises(IncompatibleModelImtError) as err:
         validate_inputs(
             harmonize_input_gsims(gsims),
             harmonize_input_imts(imts)
         )
+    assert str(err.value) == ('incompatible model(s) and intensity measure(s) '
+                              'BindiEtAl2014Rjb+CAV')
+
+    gsims = ['BindiEtAl2014Rjb']
+    imts = ['CAV', 'MMI']
+    with pytest.raises(IncompatibleModelImtError) as err:
+        validate_inputs(
+            harmonize_input_gsims(gsims),
+            harmonize_input_imts(imts)
+        )
+    assert str(err.value) == ('incompatible model(s) and intensity measure(s) '
+                              'BindiEtAl2014Rjb+CAV, BindiEtAl2014Rjb+MMI')
 
     # period outside the gsim SA limits:
     validate_inputs(
