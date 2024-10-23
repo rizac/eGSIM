@@ -191,8 +191,8 @@ class Test:
         assert not form.is_valid()
         msg = form.errors_json_data()['message']
         assert msg == (
-            'gsim: BindiEtAl2011, BindiEtAl2014Rjb not defined for all imts; '
-            'imt: PGD not supported by all models'
+            'gsim, imt: incompatible model(s) and intensity measure(s) '
+            'BindiEtAl2011+PGD, BindiEtAl2014Rjb+PGD'
         )
 
     def test_arrayfields_all_valid_input_types(self):

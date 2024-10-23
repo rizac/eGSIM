@@ -3,6 +3,7 @@ Created on 16 Feb 2018
 
 @author: riccardo
 """
+import warnings
 from itertools import combinations
 
 import pytest
@@ -171,15 +172,17 @@ def check_with_openquake(rupture_params: dict[str, set[str]],
     oq_sites_params = set()
     oq_distances = set()
 
-    for name in registered_gsims:
-        try:
-            model = gsim(name)
-        except (TypeError, ValueError, FileNotFoundError, OSError, AttributeError,
-                IndexError, KeyError, DeprecationWarning) as _:
-            continue
-        oq_rupture_params.update(model.REQUIRES_RUPTURE_PARAMETERS)
-        oq_sites_params.update(model.REQUIRES_SITES_PARAMETERS)
-        oq_distances.update(model.REQUIRES_DISTANCES)
+    with warnings.catch_warnings(record=False) as w:
+        warnings.simplefilter('ignore')
+        for name in registered_gsims:
+            try:
+                model = gsim(name)
+            except (TypeError, ValueError, FileNotFoundError, OSError, AttributeError,
+                    IndexError, KeyError, DeprecationWarning) as _:
+                continue
+            oq_rupture_params.update(model.REQUIRES_RUPTURE_PARAMETERS)
+            oq_sites_params.update(model.REQUIRES_SITES_PARAMETERS)
+            oq_distances.update(model.REQUIRES_DISTANCES)
 
     for name in rupture_params:
         if name in {'evt_id', 'evt_time'}:

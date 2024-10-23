@@ -175,11 +175,6 @@ class IncompatibleModelImtError(InputError):
         """Custom error msg"""
         arg = self.args[0]
         return (
-            "incompatible model(s) and intensity measure(s): " +
-            ", ".join(f'{m} + {i}' for m, ix in arg.items() for i in ix)
+            "incompatible model(s) and intensity measure(s) " +
+            ", ".join(f'{m}+{i}' for m in sorted(arg.keys()) for i in sorted(arg[m]))
         )
-        # return (
-        #     f"{', '.join(unique_models)} not defined for all intensity measures; "
-        #     f"{', '.join(unique_imts)} not supported by all models"
-        # )
-

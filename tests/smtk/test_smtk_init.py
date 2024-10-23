@@ -74,13 +74,15 @@ def test_load_model_with_deprecation_warnings():
 def test_gsim_name_1to1_relation():
     excs = (TypeError, IndexError, KeyError, ValueError,
             FileNotFoundError, OSError, AttributeError)
-    for model in registered_gsims:
-        try:
-            gsim_ = gsim(model, raise_deprecated=False)
-        except excs as exc:
-            continue
-        model_name_back = gsim_name(gsim_)
-        assert model == model_name_back
+    with warnings.catch_warnings(record=False) as w:
+        warnings.simplefilter('ignore')
+        for model in registered_gsims:
+            try:
+                gsim_ = gsim(model, raise_deprecated=False)
+            except excs as exc:
+                continue
+            model_name_back = gsim_name(gsim_)
+            assert model == model_name_back
 
     for model, cls in registered_gsims.items():
         if cls.superseded_by:

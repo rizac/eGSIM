@@ -13,8 +13,8 @@ def test_invalid_imts(capsys):
             harmonize_input_gsims(gsims),
             harmonize_input_imts(imts)
         )
-    assert str(err.value) == ('incompatible model(s) and intensity measure(s): '
-                              'BindiEtAl2014Rjb + CAV')
+    assert str(err.value) == ('incompatible model(s) and intensity measure(s) '
+                              'BindiEtAl2014Rjb+CAV')
 
     gsims = ['BindiEtAl2014Rjb']
     imts = ['CAV', 'MMI']
@@ -23,8 +23,8 @@ def test_invalid_imts(capsys):
             harmonize_input_gsims(gsims),
             harmonize_input_imts(imts)
         )
-    assert str(err.value) == ('incompatible model(s) and intensity measure(s): '
-                              'BindiEtAl2014Rjb + CAV, BindiEtAl2014Rjb + MMI')
+    assert str(err.value) == ('incompatible model(s) and intensity measure(s) '
+                              'BindiEtAl2014Rjb+CAV, BindiEtAl2014Rjb+MMI')
 
     # period outside the gsim SA limits:
     validate_inputs(
