@@ -189,7 +189,7 @@ class FlatfileMetadataInfoForm(GsimImtForm, APIForm):
 
         ff_columns = {
             FlatfileMetadata.get_aliases(c)[0]
-            for c in ground_motion_properties_required_by(*gsims)
+            for c in ground_motion_properties_required_by(*gsims) | {'evt_id'}
         }
 
         imts = list(cleaned_data['imt'])

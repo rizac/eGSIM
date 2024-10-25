@@ -237,12 +237,10 @@ IA:
 evt_id:
   alias: event_id
   help: >-
-    The unique ID of the recorded seismic event. If missing, an id is inferred
-    from the event coordinates (latitude, longitude, depth and time) 
-    which must all be present.
-    In general, you can use the id provided by the event catalog or web service,
-    or create your own, as long as it holds: same id <=> same event. IDs should
-    be preferably of type integer for performance reasons
+    The unique ID of the recorded seismic event (i.e., for any record it must hold: 
+    same id <=> same event). IDs do not have a data type but should be preferably 
+    of type integer for performance reasons: if not (e.g., they are provided by 
+    external sources), try to convert them to integers
   type: rupture
 sta_id:
   alias: station_id

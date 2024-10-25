@@ -226,9 +226,7 @@ def _get_init_data_json(debug=False) -> dict:
                         if getattr(f, 'help_text', n).lower() != n.lower()
                     }
                 },
-                'flatfile_meta_info': {
-                    'show_dialog': False
-                },
+                'flatfile_meta_info': {},
                 'download_formats': data_ext
             }
         },

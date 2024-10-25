@@ -1,66 +1,77 @@
-<div class='position-relative d-flex flex-row' style="flex: 1 1 auto;">
+<div class='d-flex flex-row' style="flex: 1 1 auto;line-height: 1.75rem;">
 
-<!--	<div class='border my-5 start-50 position-absolute top-0 bottom-0 d-flex flex-column shadow bg-white'-->
-<!--			style='z-index:1000;transform: translateX(-50%); width:75vw' v-if="forms.misc.flatfile_meta_info.show_dialog">-->
+	<div class='d-flex flex-column gap-3 align-items-start p-3'
+		 style='flex-shrink: 0; flex-grow: 0; height:100%; overflow:auto;'>
 
-<!--		<div class='p-3'>-->
-<!--			<div>Select your models and intensity measure types of interest</div>-->
-<!--			<div class='small text-muted'>(no model selected = all models selected)</div>-->
-<!--		</div>-->
-
-
-<!--	</div>-->
-
-
-	<div class='p-4 d-flex flex-column gap-4 align-items-stretch' style='max-width:33vw; line-height: 1.75rem;'>
-
-		<div class='text-justify'>
+		<div style='text-align: justify; width:0; min-width:100%'> <!--make width adjust according to other siblings width -->
 			Ground motion data are commonly stored in a tabular data file called Flatfile.
 			In eGSIM, flatfiles are used to compare observed or synthetic ground motions
-			with the model predictions implemented in OpenQuake. To do so, each flatfile
-			record must include the ground motions (intensity measures such as PGA)
-			alongside the input parameters (e.g., magnitude) required by the models.
+			with the model predictions implemented in OpenQuake.
+
+			To do so, each flatfile record must include the observed ground motions
+			(intensity measures such as PGA) and the input data (e.g., magnitude)
+			required by the models
 		</div>
 		<div class='d-flex flex-column gap-3'>
 			<div class='d-flex flex-row gap-2'>
 				<div class='d-flex flex-column justify-content-around text-nowrap text-right'>
-					<div>Header (Fields) &rarr;</div>
+					<div style='height:1.5rem'>&nbsp;</div>
+					<div>Header &rarr;</div>
 					<div>Record #1  &rarr;</div>
 					<div>Record #2  &rarr;</div>
 					<div>&ctdot;</div>
 				</div>
-				<table class='table table-bordered mb-0'>
-					<tr>
-						<td>mag</td><td>rhypo</td><td>PGA</td><td>SA(0.1)</td><td>&ctdot;</td>
-					</tr>
-					<tr>
-						<td>&ctdot;</td><td>&ctdot;</td><td>&ctdot;</td><td>&ctdot;</td><td>&ctdot;</td>
-					</tr>
-					<tr>
-						<td>&ctdot;</td><td>&ctdot;</td><td>&ctdot;</td><td>&ctdot;</td><td>&ctdot;</td>
-					</tr>
-					<tr>
-						<td>&ctdot;</td><td>&ctdot;</td><td>&ctdot;</td><td>&ctdot;</td><td>&ctdot;</td>
-					</tr>
-				</table>
+				<div>
+					<div style='height:1.5rem' class='text-center'>&darr; Fields or columns &darr;</div>
+					<table class='table table-bordered mb-0'>
+						<tr>
+							<td>mag</td><td>rhypo</td><td>PGA</td><td>SA(0.1)</td><td>&ctdot;</td>
+						</tr>
+						<tr>
+							<td>&ctdot;</td><td>&ctdot;</td><td>&ctdot;</td><td>&ctdot;</td><td>&ctdot;</td>
+						</tr>
+						<tr>
+							<td>&ctdot;</td><td>&ctdot;</td><td>&ctdot;</td><td>&ctdot;</td><td>&ctdot;</td>
+						</tr>
+						<tr>
+							<td>&ctdot;</td><td>&ctdot;</td><td>&ctdot;</td><td>&ctdot;</td><td>&ctdot;</td>
+						</tr>
+					</table>
+				</div>
 			</div>
 			<div class='text-center'>Flatfile example sketch</div>
 		</div>
-		<div class=text-justify'>
-			As such, the data to supply in an eGSIM flatfile depend on the models to compare
-			and the intensity measures to use. In
-			order to help the nontrivial compilation
-			of a flatfile, often from heterogeneous external sources, you can
-			select here the models and intensity measures of interest and dynamically generate
-			a comprehensive documentation of the required flatfile
-			fields. Once compiled, flatfiles can be
-			uploaded in HDF (recommended) or CSV format and used throughout the
-			application (Data visual inspection and Model-to-data comparison)
+		<div style='text-align: justify; width:0; min-width:100%'> <!--make width adjust according to other siblings width -->
+			Here you can inspect how your flatfile should be formatted according to your requirements.
+			Once compiled, flatfiles can be uploaded in HDF (recommended) or CSV format
+			and used throughout the application (Data visual inspection and Model-to-data comparison)
 		</div>
 	</div>
 
 	<div v-if="Object.keys(responses.flatfile_meta_info || {}).length"
-		 style='flex:1 1 0px;' class='d-flex flex-column gap-2'>
+		 style='flex:1 1 auto;height:100%;overflow:auto' class='d-flex flex-column gap-3 p-3'>
+		<div class='d-flex flex-row align-items-stretch gap-3'>
+			<div>
+				{% verbatim %}
+				The following {{ Object.keys(responses.flatfile_meta_info.columns || {}).length }} flatfile fields
+				are required to compare {{ forms.flatfile_meta_info.imt.length }} intensity
+				{{ forms.flatfile_meta_info.imt.length == 1 ? 'measure' : 'measures' }}
+				{{ forms.flatfile_meta_info.imt.length > 0 && forms.flatfile_meta_info.imt.length <= 10 ?
+					' (' + forms.flatfile_meta_info.imt.join(', ') + ')' : '' }}
+				with the predictions of {{ forms.flatfile_meta_info.gsim.length }}
+				{{ forms.flatfile_meta_info.gsim.length == 1 ? 'model' : 'models' }}
+				{{ forms.flatfile_meta_info.gsim.length > 0  && forms.flatfile_meta_info.gsim.length <= 10 ?
+					' (' + forms.flatfile_meta_info.gsim.join(', ') + '). ' : '. ' }}
+				Any other supplied field will be safely ignored, but try to avoid uploading data
+				unnecessarily
+				{% endverbatim %}
+			</div>
+			<button type="button" title="Select new models and intensity measures"
+					class="btn btn-outline-primary btn-sm"
+					@click='responses.flatfile_meta_info = {}'>
+				Change prerequisites
+			</button>
+		</div>
 		<div style='flex:1 1 0px; overflow:auto' class='border'>
 			<table class='table table-striped-columns' style='height:100%'>
 				<thead class='table-dark'>
@@ -83,17 +94,14 @@
 			</table>
 		</div>
 
-		<div class='mt-2'>
+		<div class='d-flex flex-column gap-2'>
 			<span>Flatfile header (CSV format)</span>
 			<input class='form-control' :value='responses.flatfile_meta_info.columns.map(c => c.name).join(",")' />
 		</div>
 	</div>
 
-	<div v-else style='d-flex flex-column flex: 1 1 auto'>
-		<div>
-		Select models and intensity measures
-		</div>
-		<div style='flex: 1 1 auto' class='position-relative border-top border-bottom'>
+	<div v-else class='d-flex flex-column gap-3' style='flex: 1 1 auto; height:100%;'>
+		<div style='flex: 1 1 auto' class='position-relative border-start'>
 			<gsim-map @gsim-selected="(gs) => { forms.flatfile_meta_info.gsim = Array.from(new Set(forms.flatfile_meta_info.gsim.concat(gs))) }"
 					  @gsim-unselected="(gs) => { forms.flatfile_meta_info.gsim = forms.flatfile_meta_info.gsim.filter(g => !gs.includes(g)); }"
 					  :regionalizations="regionalizations"
@@ -102,7 +110,7 @@
 			</gsim-map>
 
 			<form novalidate @submit.prevent=""
-				  class='position-absolute d-flex flex-column p-3' style='position:absolute;top:0px;max-height:100%;z-index:10'>
+				  class='position-absolute d-flex flex-column p-3 gap-3' style='position:absolute;top:0px;max-height:100%;z-index:10'>
 
 				<gsim-select v-model="forms.flatfile_meta_info.gsim"
 							 :models="models"
@@ -110,24 +118,16 @@
 							 style="flex: 0 1 auto; min-height:0px">
 				</gsim-select>
 
-				<imt-select v-model="forms.flatfile_meta_info.imt" :imts='imts' class='mt-3'></imt-select>
+				<imt-select v-model="forms.flatfile_meta_info.imt" :imts='imts'></imt-select>
 
+				<button class='btn btn-primary' type='button'
+						:disabled="forms.flatfile_meta_info.gsim.length * forms.flatfile_meta_info.imt.length == 0"
+						@click='post(urls.flatfile_meta_info, forms.flatfile_meta_info).then(r => r.json()).then(data => { responses.flatfile_meta_info = data; });'>
+					Get flatfile format (required fields)
+				</button>
 			</form>
 		</div>
-	</div>
-	<div>
-		<button class='btn btn-primary me-2' type='button'
-				@click='post(urls.flatfile_meta_info, forms.flatfile_meta_info).then(r => r.json()).then(data => { responses.flatfile_meta_info = data; }); forms.misc.flatfile_meta_info.show_dialog=false'>
-			Fetch required flatfile fields
-		</button>
-	</div>
 
-<!--	<div class="p-3 text-center">-->
-<!--		-->
-<!--		<button class='btn btn-primary' type='button'-->
-<!--				@click='forms.misc.flatfile_meta_info.show_dialog=false'>-->
-<!--			Close-->
-<!--		</button>-->
-<!--	</div>-->
+	</div>
 
 </div>
