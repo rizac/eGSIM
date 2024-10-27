@@ -32,6 +32,7 @@ def get_residuals(
         gsims: Iterable[Union[str, GMPE]],
         imts: Iterable[Union[str, imt.IMT]],
         flatfile: pd.DataFrame,
+        *,
         likelihood=False,
         mean=False,
         normalise=True
@@ -48,8 +49,9 @@ def get_residuals(
         `gsims`) and the observed intensity measures arranged in columns
     :param likelihood: boolean telling if also the likelihood of the residuals
         (according to Equation 9 of Scherbaum et al. (2004)) should be computed
-        and returned with the
-    :param mean:
+        and returned
+    :param mean: boolean telling if also the models mean (used to compute residuals)
+        should be returned
     :param normalise: boolean (default True) normalize the random effects residuals
         (calculated using the inter-event residual formula described in
          Abrahamson & Youngs (1992) Eq. 10)

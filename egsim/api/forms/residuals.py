@@ -77,7 +77,8 @@ class ResidualsForm(GsimImtForm, FlatfileForm, APIForm):
             return get_residuals(cleaned_data["gsim"],
                                  cleaned_data["imt"],
                                  cleaned_data['flatfile'],
-                                 cleaned_data['likelihood'],
-                                 cleaned_data['normalize'])
+                                 likelihood=cleaned_data['likelihood'],
+                                 mean=False,
+                                 normalise=cleaned_data['normalize'])
         except FlatfileError as err:
             self.add_error("flatfile", str(err))
