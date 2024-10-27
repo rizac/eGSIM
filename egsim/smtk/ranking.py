@@ -66,7 +66,7 @@ def get_residuals_stats(
     for gsim in gsims:
         for imt in imts:
             for res_type in (Clabel.total_res, Clabel.inter_ev_res, Clabel.intra_ev_res):
-                col = (imt, gsim, res_type)
+                col = (imt, res_type, gsim)
                 if residuals.get(col) is None:
                     continue
                 result.setdefault(f"{imt} {res_type} mean", {})[gsim] = \
@@ -93,7 +93,7 @@ def get_residuals_likelihood_stats(
     for gsim in gsims:
         for imt in imts:
             for lh_type in (Clabel.total_lh, Clabel.inter_ev_lh, Clabel.intra_ev_lh):
-                col = (imt, gsim, lh_type)
+                col = (imt, lh_type, gsim)
                 if residuals.get(col) is None:
                     continue
                 p25, p50, p75 = np.nanpercentile(residuals[col], [25, 50, 75])
@@ -123,7 +123,7 @@ def get_residuals_loglikelihood(
     for gsim in gsims:
         aslls = []
         for imt in imts:
-            col = (imt, gsim, Clabel.total_res)
+            col = (imt, Clabel.total_res, gsim)
             values = residuals.get(col)
             if values is None:
                 continue
@@ -184,11 +184,11 @@ def _get_edr_gsim_information(
     stddev = np.array([], dtype=float)
 
     for imt in imts:
-        col = (imt, gsim, Clabel.total_res)
+        col = (imt, Clabel.total_res, gsim)
         _stddev = residuals.get(col)
         col = (Clabel.input_data, ColumnType.intensity.value, imt)
         _obs = np.log(residuals.get(col))
-        col = (imt, gsim, Clabel.mean)
+        col = (imt, Clabel.mean, gsim)
         _expected = residuals.get(col)
         if _stddev is None or _obs is None or _expected is None:
             continue
