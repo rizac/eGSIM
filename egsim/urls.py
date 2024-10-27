@@ -1,6 +1,6 @@
 """eGSIM URL Configuration"""
 
-from django.contrib import admin  # added by default by django
+from django.contrib import admin  # added by default by django  # noqa
 from django.urls import include, path
 
 urlpatterns = [

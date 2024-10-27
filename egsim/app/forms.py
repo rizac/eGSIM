@@ -316,8 +316,8 @@ class ResidualsVisualizeForm(ResidualsForm):
         return {'plots': [plots[key] for key in sorted(plots.keys())]}
 
     @staticmethod
-    def get_plot_traces_and_layout(model: str, imt: str, x, y, likelihood:bool,
-                                   xlabel:str, color:str) -> tuple[list[dict], dict]:
+    def get_plot_traces_and_layout(model: str, imt: str, x, y, likelihood: bool,
+                                   xlabel: str, color: str) -> tuple[list[dict], dict]:
         """
         Return the traces and layout for displaying prediction plots (using the
         JavaScript Plotly library). Traces is a list, where each Trace is a dict
@@ -532,7 +532,7 @@ class FlatfileVisualizeForm(APIForm, FlatfileForm):
 
     @staticmethod
     def get_plot_traces_and_layout(x, y, x_label: str, y_label: str,
-                                   color:str) -> tuple[list[dict], dict]:
+                                   color: str) -> tuple[list[dict], dict]:
         """
         Return the traces and layout for displaying prediction plots (using the
         JavaScript Plotly library). Traces is a list, where each Trace is a dict
@@ -543,7 +543,7 @@ class FlatfileVisualizeForm(APIForm, FlatfileForm):
         :param x: the x values. If None, the plot type will be a histogram (display data
             distribution as bars on the y-axis, i.e. horizontal bars). Otherwise,
             data will be displayed as scatter plot (a point for each (x, y) pair)
-        :param x: the x values. If None, the plot type will be a histogram (display data
+        :param y: the y values. If None, the plot type will be a histogram (display data
             distribution as bars on the x-axis, i.e. vertical bars). Otherwise,
             data will be displayed as scatter plot (a point for each (x, y) pair)
         :param x_label: the x-axis label (str). Unused if x is None

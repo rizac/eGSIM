@@ -37,7 +37,7 @@ def harmonize_input_gsims(gsims: Iterable[Union[str, GMPE]]) -> dict[str, GMPE]:
                 gs = gsim_name(gsim_inst)
             output_gsims[gs] = gsim_inst
         except (TypeError, ValueError, IndexError, KeyError, FileNotFoundError,
-                OSError,AttributeError, DeprecationWarning) as _:
+                OSError, AttributeError, DeprecationWarning) as _:
             errors.append(gs if isinstance(gs, str) else gsim_name(gs))
     if errors:
         raise ModelError(*errors)
@@ -55,7 +55,7 @@ def harmonize_input_imts(imts: Iterable[Union[str, float, IMT]]) -> dict[str, IM
     for imtx in imts:
         try:
             imt_set.add(imt(imtx))
-        except (TypeError, ValueError, KeyError) as exc:
+        except (TypeError, ValueError, KeyError) as _:
             errors.append(imtx if isinstance(imtx, str) else imt_name(imtx))
     if errors:
         raise ImtError(*errors)

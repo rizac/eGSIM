@@ -1,7 +1,6 @@
 """
 Base Form for to model-to-data operations i.e. flatfile handling
 """
-from contextlib import contextmanager
 from io import BytesIO
 from typing import Optional, Any
 import pandas as pd

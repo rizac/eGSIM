@@ -244,6 +244,9 @@ def get_residuals_from_expected_and_observed_motions(
     :param expected: the DataFrame returned from `get_expected_motions`
     :param observed: the DataFame of the (natural logarithm of) the
         observed ground motion
+    :param normalise: boolean (default True) normalize the random effects residuals
+        (calculated using the inter-event residual formula described in
+         Abrahamson & Youngs (1992) Eq. 10)
     """
     residuals: pd.DataFrame = pd.DataFrame(index=expected.index)
     mean_cols = expected.columns[expected.columns.get_level_values(1) == Clabel.mean]
