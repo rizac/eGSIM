@@ -66,13 +66,13 @@ def get_residuals_stats(
     for gsim in gsims:
         for imt in imts:
             for res_type in (Clabel.total_res, Clabel.inter_ev_res, Clabel.intra_ev_res):
+                mean, std = np.nan, np.nan
                 col = (imt, res_type, gsim)
-                if residuals.get(col) is None:
-                    continue
-                result.setdefault(f"{imt} {res_type} mean", {})[gsim] = \
-                    residuals[col].mean()
-                result.setdefault(f"{imt} {res_type} stddev", {})[gsim] = \
-                    residuals[col].std(ddof=0)
+                if residuals.get(col) is not None:
+                    mean = residuals[col].mean()
+                    std = residuals[col].std(ddof=0)
+                result.setdefault(f"{imt} {res_type} mean", {})[gsim] = mean
+                result.setdefault(f"{imt} {res_type} stddev", {})[gsim] = std
 
     return result
 
@@ -93,12 +93,13 @@ def get_residuals_likelihood_stats(
     for gsim in gsims:
         for imt in imts:
             for lh_type in (Clabel.total_lh, Clabel.inter_ev_lh, Clabel.intra_ev_lh):
+                median, iqr = np.nan, np.nan
                 col = (imt, lh_type, gsim)
-                if residuals.get(col) is None:
-                    continue
-                p25, p50, p75 = np.nanpercentile(residuals[col], [25, 50, 75])
-                result.setdefault(f"{imt} {lh_type} median", {})[gsim] = p50
-                result.setdefault(f"{imt} {lh_type} iqr", {})[gsim] = p75 - p25
+                if residuals.get(col) is not None:
+                    p25, median, p75 = np.nanpercentile(residuals[col], [25, 50, 75])
+                    iqr = p75 - p25
+                result.setdefault(f"{imt} {lh_type} median", {})[gsim] = median
+                result.setdefault(f"{imt} {lh_type} iqr", {})[gsim] = iqr
 
     return result
 
@@ -124,20 +125,21 @@ def get_residuals_loglikelihood(
         aslls = []
         for imt in imts:
             col = (imt, Clabel.total_res, gsim)
-            values = residuals.get(col)
-            if values is None:
-                continue
+            values = residuals.get(col, [])
             asll = np.log2(norm.pdf(values, 0., 1.0))
-            result.setdefault(f'{imt} loglikelihood', {})[gsim] = \
-                -(1.0 / len(asll)) * np.sum(asll)
+            llh = np.nan
+            finite = np.isfinite(asll)
+            if finite.any():
+                # concatenate all model assl(s) (see end of loop):
+                aslls = np.hstack([aslls, asll])
+                llh = -(1.0 / len(asll[finite])) * np.sum(asll[finite])
+            result.setdefault(f'{imt} loglikelihood', {})[gsim] = llh
 
-            # concatenate all model assl(s) (see end of loop):
-            aslls = np.hstack([aslls, asll])
-
-        if len(imts) > 1:
-            result.setdefault('All_IMT loglikelihood', {})[gsim] = \
-                -(1.0 / len(aslls)) * np.sum(aslls)
-        # result[gsim]["All"]['loglikelihood'] = -(1.0 / len(aslls)) * np.sum(aslls)
+        all_llh = np.nan
+        finite = np.isfinite(aslls)
+        if finite.any():
+            all_llh = -(1.0 / len(aslls[finite])) * np.sum(aslls[finite])
+        result.setdefault('All_IMT loglikelihood', {})[gsim] = all_llh
 
     return result
 
@@ -166,8 +168,8 @@ def get_residuals_edr_values(
     for gsim in gsims:
         obs, expected, stddev = _get_edr_gsim_information(gsim, imts, residuals)
         results = get_edr(obs, expected, stddev, bandwidth, multiplier)
-        result.setdefault("mde norm", {})[gsim] = float(results[0])
-        result.setdefault("sqrt kappa", {})[gsim] = float(results[1])
+        result.setdefault("mde_norm", {})[gsim] = float(results[0])
+        result.setdefault("sqrt_kappa", {})[gsim] = float(results[1])
         result.setdefault("edr", {})[gsim] = float(results[2])
     return result
 

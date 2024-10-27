@@ -33,6 +33,7 @@ def get_residuals(
         imts: Iterable[Union[str, imt.IMT]],
         flatfile: pd.DataFrame,
         likelihood=False,
+        mean=False,
         normalise=True
 ) -> pd.DataFrame:
     """
@@ -47,6 +48,8 @@ def get_residuals(
         `gsims`) and the observed intensity measures arranged in columns
     :param likelihood: boolean telling if also the likelihood of the residuals
         (according to Equation 9 of Scherbaum et al. (2004)) should be computed
+        and returned with the
+    :param mean:
     :param normalise: boolean (default True) normalize the random effects residuals
         (calculated using the inter-event residual formula described in
          Abrahamson & Youngs (1992) Eq. 10)
@@ -59,13 +62,15 @@ def get_residuals(
     flatfile_r = prepare_flatfile(flatfile, gsims, imts)
     # 3. compute residuals:
     residuals = get_residuals_from_validated_inputs(
-        gsims, imts, flatfile_r, normalise=normalise)
+        gsims, imts, flatfile_r, normalise=normalise, return_mean=mean)
     labels = [Clabel.total_res, Clabel.inter_ev_res, Clabel.intra_ev_res]
+    if mean:
+        labels += [Clabel.mean]
     if likelihood:
         residuals = get_residuals_likelihood(residuals)
-        labels = [Clabel.total_lh,
-                  Clabel.inter_ev_lh,
-                  Clabel.intra_ev_lh]
+        labels += [Clabel.total_lh,
+                   Clabel.inter_ev_lh,
+                   Clabel.intra_ev_lh]
     # sort columns (kind of reindex, more verbose for safety):
     original_cols = set(residuals.columns)
     sorted_cols = product(imts, labels, gsims)
@@ -109,7 +114,8 @@ def get_residuals_from_validated_inputs(
         gsims: dict[str, GMPE],
         imts: dict[str, imt.IMT],
         flatfile: pd.DataFrame,
-        normalise=True) -> pd.DataFrame:
+        normalise=True,
+        return_mean=False) -> pd.DataFrame:
     residuals = []
     # compute the observations (compute the log for all once here):
     observed = get_observed_motions(flatfile, imts, True)
@@ -120,7 +126,8 @@ def get_residuals_from_validated_inputs(
         res = get_residuals_from_expected_and_observed_motions(
             expected,
             observed.loc[expected.index, :],
-            normalise=normalise)
+            normalise=normalise,
+            return_mean=return_mean)
         residuals.append(res)
     # concat preserving index (last arg. is False by default but set anyway for safety):
     return pd.concat(residuals, axis='index', ignore_index=False)
@@ -237,7 +244,8 @@ def get_expected_motions(
 def get_residuals_from_expected_and_observed_motions(
         expected: pd.DataFrame,
         observed: pd.DataFrame,
-        normalise=True) -> pd.DataFrame:
+        normalise=True,
+        return_mean=False) -> pd.DataFrame:
     """
     Calculate the residual terms, returning a new DataFrame
 
@@ -254,7 +262,11 @@ def get_residuals_from_expected_and_observed_motions(
         obs = observed.get(imtx)
         if obs is None:
             continue
-        mean = expected[(imtx, Clabel.mean, gsim)]
+        mean = expected.get((imtx, Clabel.mean, gsim))
+        if mean is None:
+            continue
+        if return_mean:
+            residuals[(imtx, Clabel.mean, gsim)] = mean
         # compute total residuals:
         total_stddev = expected.get((imtx, Clabel.total_std, gsim))
         if total_stddev is None:
@@ -289,14 +301,20 @@ def _get_random_effects_residuals(obs, mean, inter, intra, normalise=True):
     return inter_res, intra_res
 
 
-def get_residuals_likelihood(residuals: pd.DataFrame) -> pd.DataFrame:
+def get_residuals_likelihood(residuals: pd.DataFrame, inplace=True) -> pd.DataFrame:
     """
     Return the likelihood values for the residuals column found in `residuals`
     (e.g. Total, inter- intra-event) according to Equation 9 of Scherbaum et al. (2004)
 
     :param residuals: a pandas DataFrame resulting from :ref:`get_residuals`
+    :param inplace: if True (the default) append likelihoods to the given residuals
+        and return a copy of it. If False, return a new dataframe with the
+        likelihoods only
     """
-    likelihoods = pd.DataFrame(index=residuals.index.copy())
+    if inplace:
+        likelihoods = residuals.copy()
+    else:
+        likelihoods = pd.DataFrame(index=residuals.index.copy())
     col_list = list(residuals.columns)
     residuals_columns = {
         Clabel.total_res: Clabel.total_lh,
