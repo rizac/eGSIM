@@ -284,10 +284,17 @@ def write_csv_to_buffer(data: pd.DataFrame, **csv_kwargs) -> BytesIO:
     return content
 
 
-def read_csv_from_buffer(buffer: Union[bytes, IO]) -> pd.DataFrame:
-    """Read from a file-like object containing CSV data"""
+def read_csv_from_buffer(buffer: Union[bytes, IO],
+                         header: Optional[Union[int, list[int]]] = None) -> pd.DataFrame:
+    """
+    Read from a file-like object containing CSV data. Do not supply header
+    for buffer resulting from residuals/ predictions computation, pass 0 for rankings /
+    measures of fit computation
+    """
     content = BytesIO(buffer) if isinstance(buffer, bytes) else buffer
-    dframe = pd.read_csv(content, header=[0, 1, 2], index_col=0)
+    if header is None:
+        header = [0, 1, 2]
+    dframe = pd.read_csv(content, header=header, index_col=0)
     dframe.rename(columns=lambda c: "" if c.startswith("Unnamed:") else c,
                   inplace=True)
     return dframe

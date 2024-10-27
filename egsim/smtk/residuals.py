@@ -32,10 +32,9 @@ def get_residuals(
         gsims: Iterable[Union[str, GMPE]],
         imts: Iterable[Union[str, imt.IMT]],
         flatfile: pd.DataFrame,
-        *,
         likelihood=False,
-        mean=False,
-        normalise=True
+        normalise=True,
+        mean=False
 ) -> pd.DataFrame:
     """
     Calculate the residuals from a given flatfile gsim(s) and imt(s)
@@ -520,7 +519,7 @@ def get_ground_motion_property_values(
     depending on missing-data replacement rules hardcoded in this function and
     documented in the associated YAML file.
     If the column cannot be retrieved or created, this function
-    raises :ref:`MissingColumn` error notifying the required missing column.
+    raises :ref:`MissingColumn` error notifying the required missing column
     """
     column_name = get_column_name(flatfile, gm_property)
     series = None if column_name is None else flatfile[column_name]

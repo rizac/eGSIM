@@ -8,6 +8,8 @@ Created on 22 Oct 2018
 from os.path import dirname, join, abspath
 from io import BytesIO
 import yaml
+import numpy as np
+import pandas as pd
 import pytest
 
 from unittest.mock import patch
@@ -222,8 +224,8 @@ class Test:
         assert resp2.status_code == 400
 
     def test_residuals_service(self,
-                                   # pytest fixtures:
-                                   client):
+                               # pytest fixtures:
+                               client):
         with open(self.request_filepath) as _:
             inputdic = yaml.safe_load(_)
         inputdic['data-query'] = '(vs30 >= 1000) & (mag>=7)'
@@ -234,20 +236,31 @@ class Test:
         assert resp1.status_code == 200
         assert resp1.json() == resp2.json()
 
+        resp_json = None
         for format in [None, 'csv', 'hdf']:
             if format is None:
                 inputdic.pop('format', None)
             else:
                 inputdic['format'] = format
 
-        resp2 = client.post(
-            self.url, data=inputdic, content_type='application/json')
+            resp2 = client.post(
+                self.url, data=inputdic, content_type='application/json')
 
-        assert resp2.status_code == 200
-        content = BytesIO(resp2.getvalue())
-        dfr2 = read_csv_from_buffer(content) if format == 'csv' \
-            else read_hdf_from_buffer(content)
-        assert resp1.json() == dataframe2dict(dfr2)
+            assert resp2.status_code == 200
+            content = BytesIO(resp2.getvalue())
+            if format is None:  # format defaults to JSON
+                resp_json = resp1.json()
+                continue
+            dfr2 = read_csv_from_buffer(content) if format == 'csv' \
+                else read_hdf_from_buffer(content)
+            new_json = dataframe2dict(dfr2)
+            assert np.allclose(
+                resp_json['SA(0.2)']['total_residual']['BindiEtAl2011'],
+                new_json['SA(0.2)']['total_residual']['BindiEtAl2011'])
+            assert np.allclose(
+                resp_json['PGA']['total_residual']['BindiEtAl2014Rjb'],
+                new_json['PGA']['total_residual']['BindiEtAl2014Rjb'])
+            # assert resp_json == dataframe2dict(dfr2)
 
     def test_residuals_invalid_get(self,
                                    # pytest fixtures:
@@ -318,3 +331,64 @@ class Test:
         inter_ev_values = dfr[('SA(0.1)', 'inter_event_residual', 'BooreEtAl2014')]
         q1_nonorm, m_nonomr, q9_nonorm =  inter_ev_values.quantile([.1, .5, .9])
         assert -1 < m_nonomr < -.5
+
+    def test_residuals_ranking(self,
+                               # pytest fixtures:
+                               client):
+        with open(self.request_filepath) as _:
+            inputdic = yaml.safe_load(_)
+        inputdic['data-query'] = '(vs30 >= 1000) & (mag>=7)'
+        inputdic['ranking'] = True
+
+        resp2 = client.post(self.url, data=inputdic,
+                            content_type='application/json')
+        resp1 = client.get(self.querystring(inputdic))
+        assert resp1.status_code == 200
+        assert resp1.json() == resp2.json()
+
+        resp_json = None
+        for format in [None, 'csv', 'hdf']:
+            if format is None:
+                inputdic.pop('format', None)
+            else:
+                inputdic['format'] = format
+
+            inputdic.pop('likelihood', None)
+            inputdic.pop('normalize', None)
+            resp2 = client.post(
+                self.url, data=inputdic, content_type='application/json')
+            assert resp2.status_code == 200
+            if format is None:
+                resp_json = resp2.json()
+                continue
+
+            content = resp2.getvalue()
+            # if prev_content is None:
+            #     prev_content = content
+            # else:
+            #     assert prev_content == content
+            dfr2 = read_csv_from_buffer(BytesIO(content), header=0) \
+                if format == 'csv' \
+                else read_hdf_from_buffer(BytesIO(content))
+
+            assert sorted(dfr2.columns) == sorted(resp_json.keys())
+            for k in resp_json.keys():
+                assert np.allclose(resp_json[k], dfr2[k], equal_nan=True)
+
+        # test with all possible variants of likelihood and normalize
+        # parameters, as those are set by default to True, True and thus
+        # results should always be the same
+        with patch('egsim.api.forms.residuals.get_residuals',
+                   side_effect=pd.DataFrame()) as g_res:
+            for i_dict in [
+                {'likelihood': False, 'normalize': False},
+                {'likelihood': False, 'normalize': True},
+                {'likelihood': True, 'normalize': False},
+                {'likelihood': True, 'normalize': True},
+               ]:
+                resp2 = client.post(
+                    self.url, data=inputdic | i_dict, content_type='application/json')
+                args = g_res.call_args
+                assert args[1]['likelihood'] is True
+                assert args[1]['mean'] is True
+                assert args[1]['normalise'] is True
