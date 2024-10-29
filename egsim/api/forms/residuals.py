@@ -29,10 +29,10 @@ class ResidualsForm(GsimImtForm, FlatfileForm, APIForm):
                                         'residual formula described in '
                                         'Abrahamson & Youngs (1992) Eq. 10)'))
     ranking = BooleanField(initial=False, required=False,
-                           help_text='compute and return several metrics to assess '
-                                     'how predictions fit the data. With ranking, '
-                                     'likelihood and normalize will be set to True '
-                                     'regardless of user input')
+                           help_text='models ranking: compute residuals and derive '
+                                     'several metrics to assess how predictions fit '
+                                     'the data (note: likelihood and normalize are '
+                                     'ignored)')
 
     # Custom API param names (see doc of `EgsimBaseForm._field2params` for details):
     _field2params = {}

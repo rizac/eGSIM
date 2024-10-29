@@ -88,7 +88,8 @@ def convert_accel_units(
 
 def dataframe2dict(
     dframe: pd.DataFrame, as_json=True,
-    drop_empty_levels=True
+    drop_empty_levels=True,
+    orient: str = 'list',  # or 'dict'
 ) -> dict[Union[str, tuple], list]:
     """Convert the given dataframe into a Python dict, in the format:
     ```
@@ -101,16 +102,25 @@ def dataframe2dict(
     :param drop_empty_levels: if True (the default) trailing empty strings / None in
         hierarchical columns will be dropped. E.g. the `dict` item
         ("A", "", "") -> values will be returned as {'A' -> values}
+    :param orient: determines the type of values of the dictionary:
+        ‘dict’ (default) : dict like: {column -> {index -> value}}. Each column is
+        mapped to a dict where each index value is mapped to the column value.
+        Useful when the DataFrame index is a str or something meaningful: e
+        ‘list’ : list like {column -> [values]}. Each column is mapped to the
+        relative values, converted as list. Useful when the DataFrame index is the
+        default RangeIndex indicating only the row position
     """
+    # RangeIndex (0, 1, ...) the default index when no explicit index is provided:
+    assert orient in ('list', 'dict'), 'orient should be either "list" ot "dict"'
     if not as_json and not drop_empty_levels:
         # use pandas default method:
-        return dframe.to_dict(orient='list')
+        return dframe.to_dict(orient=orient)
     # customized output:
     output = {}
     df_na = None
     if as_json:
         df_na = na_values(dframe)
-    for col, vals in dframe.to_dict(orient='series').items():
+    for col, series in dframe.to_dict(orient='series').items():
         if drop_empty_levels and isinstance(col, tuple):
             # multi-index columns (hierarchical), remove trailing '' / None:
             keys = list(col)
@@ -128,10 +138,13 @@ def dataframe2dict(
                 key = key[-1]
             key = str(key)
             # remove nan +-inf:
-            vals = array2json(vals, df_na[col])
+            vals = array2json(series, df_na[col])
         else:
-            vals = vals.tolist()
-        dest_ret[key] = vals
+            vals = series.tolist()
+        if orient == 'list':
+            dest_ret[key] = vals
+        else:
+            dest_ret[key] = dict(zip(series.index.astype(str), vals))
     return output
 
 

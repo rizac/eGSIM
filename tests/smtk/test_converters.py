@@ -1,6 +1,7 @@
 """
 """
 from io import StringIO
+from itertools import product
 
 import pytest
 
@@ -26,6 +27,46 @@ def test_dataframe2dict():
     _check_dataframe2dict(dfr)
 
 
+def test_dataframe2dict_orient_dict():
+    dfr = pd.DataFrame({
+        ('mag', ''): [np.nan, 3, -np.inf],
+        ('PGA', 'CauzziEtAl'): [1., np.inf, 5.37]
+    })
+    res = dataframe2dict(dfr, as_json=False, drop_empty_levels=False)
+    expected = {
+        ('mag', ''): [np.nan, 3, -np.inf],
+        ('PGA', 'CauzziEtAl'): [1., np.inf, 5.37]
+    }
+    assert list(expected) == list(res)
+    assert all(isinstance(v, list) for v in res.values())
+    assert all(len(_1) == len(_2) for _1, _2, in zip(res.values(), expected.values()))
+    assert all(_1 == _2 or (np.isnan(_1) and np.isnan(_2))
+               for k in res for _1, _2 in zip(expected[k], res[k]))
+
+    dfr = pd.DataFrame({
+        'PGA lh': {'model1': np.nan, 'model2': 3, 'model3': -np.inf},
+        'Sa(0.1) llh': {'model1': 1., 'model2': np.inf, 'model3': 5.37}
+    })
+    for as_json, drop_empty_levels in product([True, False], [True, False]):
+        res = dataframe2dict(dfr, as_json=as_json,
+                             drop_empty_levels=drop_empty_levels,
+                             orient='dict')
+        assert len(res) == 2
+        assert all(isinstance(v, dict) for v in res.values())
+        assert list(res['PGA lh'].keys()) == ['model1', 'model2', 'model3']
+        assert list(res['Sa(0.1) llh'].keys()) == ['model1', 'model2', 'model3']
+
+        v = list(res['PGA lh'].values())
+        assert v[0] is None if as_json else np.isnan(v[0])
+        assert v[1] == 3
+        assert v[2] is None if as_json else -np.inf
+
+        v = list(res['Sa(0.1) llh'].values())
+        assert v[0] == 1
+        assert v[1] is None if as_json else np.inf
+        assert v[2] == 5.37
+
+
 def _check_dataframe2dict(dfr):
     """Test the flatfile metadata"""
     res = dataframe2dict(dfr, as_json=False, drop_empty_levels=False)
@@ -34,6 +75,7 @@ def _check_dataframe2dict(dfr):
         ('PGA', 'CauzziEtAl'): [1., np.inf, 5.37]
     }
     assert list(expected) == list(res)
+    assert all(isinstance(v, list) for v in res.values())
     assert all(len(_1) == len(_2) for _1, _2, in zip(res.values(), expected.values()))
     assert all(_1==_2 or (np.isnan(_1) and np.isnan(_2))
                for k in res for _1, _2 in zip(expected[k], res[k]))
@@ -44,6 +86,7 @@ def _check_dataframe2dict(dfr):
         ('PGA', 'CauzziEtAl'): [1., np.inf, 5.37]
     }
     assert list(expected) == list(res)
+    assert all(isinstance(v, list) for v in res.values())
     assert all(len(_1) == len(_2) for _1, _2, in zip(res.values(), expected.values()))
     assert all(_1 == _2 or (np.isnan(_1) and np.isnan(_2))
                for k in res for _1, _2 in zip(expected[k], res[k]))

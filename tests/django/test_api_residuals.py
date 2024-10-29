@@ -373,7 +373,11 @@ class Test:
 
             assert sorted(dfr2.columns) == sorted(resp_json.keys())
             for k in resp_json.keys():
-                assert np.allclose(resp_json[k], dfr2[k], equal_nan=True)
+                assert sorted(resp_json[k].keys()) == sorted(dfr2[k].keys())
+                assert np.allclose(
+                    np.array(list(resp_json[k].values()), dtype=float),
+                    dfr2[k],
+                    equal_nan=True)
 
         # test with all possible variants of likelihood and normalize
         # parameters, as those are set by default to True, True and thus
@@ -392,3 +396,6 @@ class Test:
                 assert args[1]['likelihood'] is True
                 assert args[1]['mean'] is True
                 assert args[1]['normalise'] is True
+
+
+# TODO: remove check residualsform (is done in output)

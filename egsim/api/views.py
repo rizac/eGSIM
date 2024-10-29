@@ -211,6 +211,17 @@ class ResidualsView(SmtkView):
 
     formclass = ResidualsForm
 
+    def response_json(self, form_output: pd.DataFrame, form: APIForm, **kwargs) \
+            -> JsonResponse:
+        """Return a JSON response. This method is overwritten because the JSON
+        data differs if we computed measures of fit (param. `ranking`) or not
+        """
+        orient = 'dict' if form.cleaned_data['ranking'] else 'list'
+        json_data = dataframe2dict(form_output, as_json=True,
+                                   drop_empty_levels=True, orient=orient)
+        kwargs.setdefault('status', 200)
+        return JsonResponse(json_data, **kwargs)
+
 
 def error_response(error: Union[str, Exception, dict],
                    status=500, **kwargs) -> JsonResponse:
@@ -288,8 +299,8 @@ def read_csv_from_buffer(buffer: Union[bytes, IO],
                          header: Optional[Union[int, list[int]]] = None) -> pd.DataFrame:
     """
     Read from a file-like object containing CSV data. Do not supply header
-    for buffer resulting from residuals/ predictions computation, pass 0 for rankings /
-    measures of fit computation
+    for buffer resulting from residuals/ predictions computation (3 header rows),
+    pass 0 for rankings / measures of fit computation (1 header row).
     """
     content = BytesIO(buffer) if isinstance(buffer, bytes) else buffer
     if header is None:
