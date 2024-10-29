@@ -214,7 +214,7 @@ class ResidualsView(SmtkView):
     def response_json(self, form_output: pd.DataFrame, form: APIForm, **kwargs) \
             -> JsonResponse:
         """Return a JSON response. This method is overwritten because the JSON
-        data differs if we computed measures of fit (param. `ranking`) or not
+        data differs if we computed measures of fit (param. `ranking=True`) or not
         """
         orient = 'dict' if form.cleaned_data['ranking'] else 'list'
         json_data = dataframe2dict(form_output, as_json=True,
@@ -225,14 +225,15 @@ class ResidualsView(SmtkView):
 
 def error_response(error: Union[str, Exception, dict],
                    status=500, **kwargs) -> JsonResponse:
-    """Returns a JSON response from the given error. The response content will be
-    a dict with (at least) the key 'message' mapped to the error message
-    (For details, see https://google.github.io/styleguide/jsoncstyleguide.xml).
+    """Return a JSON response from the given error. The response body/content will be
+    a dict with (at least) the key 'message' (If missing, the key value will be
+    inferred and added to the dict. The dict format is inspired from:
+    https://google.github.io/styleguide/jsoncstyleguide.xml).
 
-    :param error: dict, Exception or string. If dict, it will be used as response
-        content (the content 'message', if missing, will be built from `status`).
-        If `str` or `Exception`, `str(error)` will be set as the 'message' key of the
-        returned Response content
+    :param error: dict, Exception or string:
+        - If dict, JSONResponse.content = dict (if dict['message'] is missing,
+          it will be set inferred from `status`).
+        - If `str` or `Exception`, JSONResponse.content = {'message': str(error)}
     :param status: the response HTTP status code (int, default: 500)
     :param kwargs: optional params for JSONResponse (except 'content' and 'status')
     """

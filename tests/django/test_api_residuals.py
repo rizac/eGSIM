@@ -52,7 +52,7 @@ class Test:
             inputdic = yaml.safe_load(_)
 
         # Uploaded flatfile, but not well-formed:
-        # 1 missing ground motion properties:
+        # column in data-query not defined:
         csv = SimpleUploadedFile("file.csv", b"PGA,b,c,d\n1.1,,,", 
                                  content_type="text/csv")
         inputdic2 = dict(inputdic, flatfile=csv)
@@ -60,19 +60,51 @@ class Test:
         resp2 = client.post(self.url, data=inputdic2)
         assert resp2.status_code == 400
         assert resp2.json()['message'] == \
-               "data-query: name 'vs30' is not defined; " \
-               "flatfile: missing required column(s): mag, rake, rjb, vs30"
-        # 2 missing compatible IMTs
-        csv = SimpleUploadedFile("file.csv", b"CAV,b,c,d\n1.1,,,",
+               "data-query: name 'vs30' is not defined"
+
+        # 1b no rows matching query:
+        csv = SimpleUploadedFile("file.csv", b"PGA,vs30,mag,b,c,d\n1.1,,,",
                                  content_type="text/csv")
         inputdic2 = dict(inputdic, flatfile=csv)
         # test wrong flatfile:
         resp2 = client.post(self.url, data=inputdic2)
         assert resp2.status_code == 400
+        assert resp2.json()['message'] == "data-query: no rows matching query"
+
+        # 1c missing ground motion properties:
+        csv = SimpleUploadedFile("file.csv", b"PGA,vs30,mag,b,c,d\n1.1,,,",
+                                 content_type="text/csv")
+        inputdic2 = dict(inputdic, flatfile=csv)
+        inputdic2.pop('data-query')  # to avoid adata-query errors (already checked)
+        # test wrong flatfile:
+        resp2 = client.post(self.url, data=inputdic2)
+        assert resp2.status_code == 400
         assert resp2.json()['message'] == \
-               ("data-query: name 'vs30' is not defined; "
-                "flatfile: missing required column(s): "
-                "PGA or PGV or SA, mag, rake, rjb, vs30")
+               "flatfile: missing column(s) PGV"
+
+        # 1d missing ground motion properties (2):
+        csv = SimpleUploadedFile("file.csv", b"PGA,PGV,vs30,mag,b,c,d\n1.1,,,",
+                                 content_type="text/csv")
+        inputdic2 = dict(inputdic, flatfile=csv)
+        inputdic2.pop('data-query')  # to avoid adata-query errors (already checked)
+        # test wrong flatfile:
+        resp2 = client.post(self.url, data=inputdic2)
+        assert resp2.status_code == 400
+        assert resp2.json()['message'] == \
+               ("flatfile: missing column(s) SA(period_in_s) (columns found: 0, "
+                f'at least two are required)')
+
+        # 1d missing ground motion properties (2):
+        csv = SimpleUploadedFile("file.csv", b"PGA,PGV,SA(0.2),vs30,mag,b,c,d\n1.1,,,",
+                                 content_type="text/csv")
+        inputdic2 = dict(inputdic, flatfile=csv)
+        inputdic2.pop('data-query')  # to avoid adata-query errors (already checked)
+        # test wrong flatfile:
+        resp2 = client.post(self.url, data=inputdic2)
+        assert resp2.status_code == 400
+        assert resp2.json()['message'] == \
+               "flatfile: missing column(s) rake, rjb"
+
         # 3 dupes:
         csv = SimpleUploadedFile("file.csv", b"CAV,hypo_lat,evt_lat,d\n1.1,,,",
                                  content_type="text/csv")

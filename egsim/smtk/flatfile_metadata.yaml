@@ -218,8 +218,11 @@ PGV:
 SA:
   dtype: float
   help: >-
-    Spectral Acceleration, in g. SA columns are in the form "SA(P)",
-    where P denotes the period at which it has been computed, in s
+    Spectral Acceleration, in g. SA columns must be supplied in the form "SA(P)",
+    where P denotes the period at which it has been computed, in s. You do not need
+    to provide all required periods because missing ones will determined by linear 
+    interpolation (but in this case, the flatfile must contain at least 2 distinct SA 
+    periods)
   type: intensity
 PGD:
   dtype: float

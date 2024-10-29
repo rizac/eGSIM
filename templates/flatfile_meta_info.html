@@ -84,12 +84,15 @@
 				</thead>
 
 				<tbody>
-					<tr v-for="col in responses.flatfile_meta_info.columns">
-						<td v-html="col.name" class="text-nowrap"></td>
+					<template v-for="col in responses.flatfile_meta_info.columns">
+					<!-- v-if below required to show only the first SA and avoid redundancy -->
+					<tr v-if="(!col.name.startsWith('SA(')) || col.name === responses.flatfile_meta_info.columns.filter(c => c.name.startsWith('SA(')).sort()[0].name">
+						<td v-html="col.name.startsWith('SA') ? 'SA(&ctdot;)' : col.name" class="text-nowrap"></td>
 						<td v-html="col.type.replaceAll('_', ' ')" class="text-nowrap"></td>
 						<td v-html="col.dtype" style="max-width: 10rem"></td>
 						<td v-html="col.help"></td>
 					</tr>
+					</template>
 				</tbody>
 			</table>
 		</div>

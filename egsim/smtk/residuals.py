@@ -420,7 +420,7 @@ def get_required_imts(flatfile: pd.DataFrame, imts: Collection[str]) -> pd.DataF
     sa_imts = imts - non_sa_imts
     # get supported imts but does not allow 'SA' alone to be valid:
     if non_sa_imts:
-        # from the requested imts, raise if some are not in the flatfile:
+        # some IMT(s) (non SA) not found in the flatfile columns:
         if non_sa_imts - set(flatfile.columns):
             raise MissingColumnError(*list(non_sa_imts - set(flatfile.columns)))
         # add non SA imts:
@@ -467,6 +467,14 @@ def get_required_sa(flatfile: pd.DataFrame, sa_imts: Iterable[str]) -> pd.DataFr
         raise ColumnDataError(*invalid_sa)
 
     if target_periods:  # need to find some SA by interpolation (row-wise)
+
+        # check we can interpolate:
+        if set(target_periods) - set(source_periods):  # interpolation needed
+            if len(source_periods) < 2:
+                raise MissingColumnError(f'SA(period_in_s) '
+                                         f'(columns found: {len(source_periods)}, '
+                                         f'at least two are required)')
+
         # sort source periods:
         source_periods = {p: source_periods[p] for p in sorted(source_periods.keys())}
         # Take the log10 of all SA in the source flatfile:
@@ -501,8 +509,15 @@ def get_required_ground_motion_properties(
             any(len(g.REQUIRES_DISTANCES) == 0 for g in gsims):
         req_properties |= {'rrup'}
 
+    missing_flatfile_columns = set()
     for p in req_properties:
-        req_properties_flatfile[p] = get_ground_motion_property_values(flatfile, p)
+        try:
+            req_properties_flatfile[p] = get_ground_motion_property_values(flatfile, p)
+        except MissingColumnError:
+            missing_flatfile_columns.add(p)
+    if missing_flatfile_columns:
+        raise MissingColumnError(*list(missing_flatfile_columns))
+
     return req_properties_flatfile
 
 
