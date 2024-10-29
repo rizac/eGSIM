@@ -219,10 +219,10 @@ SA:
   dtype: float
   help: >-
     Spectral Acceleration, in g. SA columns must be supplied in the form "SA(P)",
-    where P denotes the period at which it has been computed, in s. You should, but not 
-    need to provide exactly all required periods: as long as the flatfile contains 
-    at least two distinct SA columns, missing periods will be determined by logarithmic 
-    interpolation (log10)
+    where P denotes the SA period, in seconds. If a specific period is required 
+    for computation but missing in the flatfile, the relative SA value will be 
+    determined for each record by logarithmic interpolation (log10), but in this case
+    the flatfile must contain at least two distinct SA columns
   type: intensity
 PGD:
   dtype: float

@@ -14,6 +14,7 @@ from egsim.smtk.flatfile import (read_flatfile, get_dtype_of, FlatfileMetadata,
                                  query as flatfile_query)
 from egsim.api import models
 from egsim.api.forms import EgsimBaseForm, APIForm, GsimImtForm
+from egsim.smtk.validators import sa_period
 
 
 # Let's provide uploaded flatfile Field in a separate Form as the Field is not
@@ -157,7 +158,8 @@ class FlatfileValidationForm(APIForm, FlatfileForm):
 
 
 class FlatfileMetadataInfoForm(GsimImtForm, APIForm):
-    """Form for querying the necessary metadata columns from a given list of Gsims"""
+    """Form for querying the necessary metadata columns from a given list of models
+    and intensity measures"""
 
     def clean_gsim(self) -> dict[str, Any]:
         """Custom gsim clean, allowing empty gsim parameter (=select all models)"""
@@ -166,10 +168,29 @@ class FlatfileMetadataInfoForm(GsimImtForm, APIForm):
         return super().clean_gsim()
 
     def clean_imt(self) -> dict[str, Any]:
-        """Custom imt clean, allowing empty imt parameter"""
-        if not self.cleaned_data.get('imt', None):
+        """
+        Custom imt clean, allowing empty imt parameter (no IMT) and also SA
+        without period ('SA')
+        """
+        value = self.cleaned_data.get('imt', None)
+        if not value:
             return {}
-        return super().clean_imt()
+        if type(value) not in (list, tuple):
+            value = [value]
+        # super.validate only IMTs except SA:
+        imts = []
+        if any(i != 'SA' for i in value):
+            self.cleaned_data['imt'] = [i for i in value if i != 'SA']
+            # check that all imts explicitly provided are ok (no typos and so on):
+            imts = super().clean_imt().keys()
+        if any(i == 'SA' for i in value):
+            imts = list(imts) + ['SA']
+        # for consistency, we should return a dict[str, IMT]. However, the dict
+        # values will not be used (see `output` below). So provide a dict
+        # where keys are mapped to None (and 'SA' provided only once):
+        if not self.has_error('imt'):
+            return {'SA' if i.startswith('SA') else i: None for i in imts}
+        return {}
 
     def clean(self):
         """skip the superclass `clean` method because we do not want to check

@@ -266,7 +266,8 @@ EGSIM.component('imt-select', {
 	//https://vuejs.org/v2/guide/components-props.html#Prop-Types:
 	props: {
 		modelValue: { type: Array },  // [Vue model] Array of IMT names, with or without arguments
-		imts: { type: Array }  // without arguments (so 'SA', not 'SA(1.0)')
+		imts: { type: Array },  // input IMTs (without arguments, so 'SA', not 'SA(1.0)')
+		saWithoutPeriod: {type: Boolean, default: false}  // whether SA must be typed with periods or not (=> use only <select>)
 	},
 	emits: ['update:modelValue'],
 	data() {
@@ -315,7 +316,7 @@ EGSIM.component('imt-select', {
 				{{ imt }}
 			</option>
 		</select>
-		<div v-show="selectedImtClassNames.includes('SA')" class='d-flex flex-row'>
+		<div :class="selectedImtClassNames.includes('SA') && !saWithoutPeriod ? 'd-flex' : 'd-none'" class='flex-row'>
 			<array-input
 				v-model="SAPeriods"
 				class='form-control border-top-0 rounded-top-0 rounded-end-0 border-end-0'
@@ -337,6 +338,9 @@ EGSIM.component('imt-select', {
 			this.selectedImts.splice(0, this.selectedImts.length, ...this.getSelectedImts());
 		},
 		getSelectedImts(){
+			if (this.saWithoutPeriod){
+				return Array.from(this.selectedImtClassNames);
+			}
 			var imts = this.selectedImtClassNames.filter(i => i != 'SA');
 			if (imts.length < this.selectedImtClassNames.length){
 				// we selected 'SA'. Add periods:

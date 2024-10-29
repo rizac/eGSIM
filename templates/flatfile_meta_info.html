@@ -51,41 +51,30 @@
 	<div v-if="Object.keys(responses.flatfile_meta_info || {}).length"
 		 style='flex:1 1 auto;height:100%;overflow:auto' class='d-flex flex-column gap-3 p-3'>
 		<div class='d-flex flex-row align-items-stretch gap-3'>
-			<div>
+			<div style='flex:1 1 auto'>
 				{% verbatim %}
 				The following flatfile fields are required to compare
-				{{
-					forms.flatfile_meta_info.imt.filter(i => !i.startsWith('SA')).length +
-					forms.flatfile_meta_info.imt.some(i => i.startsWith('SA'))
-				}}
-				intensity measure {{ forms.flatfile_meta_info.imt.length == 1 ? 'type' : 'types' }}
-				({{
-					forms.flatfile_meta_info.imt.filter(i => !i.startsWith('SA')).
-					concat(forms.flatfile_meta_info.imt.some(i => i.startsWith('SA')) ? ['SA']: []).sort().join(", ")
-				}})
-				with the predictions of {{ forms.flatfile_meta_info.gsim.length }}
-				{{ forms.flatfile_meta_info.gsim.length == 1 ? 'model' : 'models' }}
+				<b>{{ forms.flatfile_meta_info.imt.length }} intensity measure
+				{{ forms.flatfile_meta_info.imt.length == 1 ? 'type' : 'types' }}</b>
+				({{ forms.flatfile_meta_info.imt.join(", ") }})
+				with the predictions of <b>{{ forms.flatfile_meta_info.gsim.length }}
+				{{ forms.flatfile_meta_info.gsim.length == 1 ? 'model' : 'models' }}</b>
 				({{
 					forms.flatfile_meta_info.gsim.length <= 8 ? forms.flatfile_meta_info.gsim.join(", ") :
 					forms.flatfile_meta_info.gsim.slice(0, 5).join(", ") + " and other " + (forms.flatfile_meta_info.gsim.length - 5) + " models"
 				}}).
-				<p>
-				Required fields:
+				<b>Minimum required fields:
 				{{
-					responses.flatfile_meta_info.columns.filter(c => !c.name.startsWith('SA')).length
-				}}
-				{{
-					responses.flatfile_meta_info.columns.some(c => c.name.startsWith('SA')) ?
-					" + at least two SA columns" : ""
-				}}.
+					responses.flatfile_meta_info.columns.length
+				}}</b>.
 				Any other supplied field will be safely ignored, but try to avoid uploading data
-				unnecessarily
+				unnecessarily. In any uploaded file format (e.g. HDF, CSV) the field order is irrelevant
 				{% endverbatim %}
 			</div>
 			<button type="button" title="Select new models and intensity measures"
 					class="btn btn-outline-primary btn-sm"
 					@click='responses.flatfile_meta_info = {}'>
-				Change prerequisites
+				Change requirements
 			</button>
 		</div>
 		<div style='flex:1 1 0px; overflow:auto' class='border'>
@@ -100,22 +89,22 @@
 				</thead>
 
 				<tbody>
-					<template v-for="col in responses.flatfile_meta_info.columns">
-					<!-- v-if below required to show only the first SA and avoid redundancy -->
-					<tr v-if="(!col.name.startsWith('SA')) || col.name === responses.flatfile_meta_info.columns.filter(c => c.name.startsWith('SA')).sort()[0].name">
+					<tr v-for="col in responses.flatfile_meta_info.columns">
 						<td v-html="col.name.startsWith('SA') ? 'SA(&ctdot;)' : col.name" class="text-nowrap"></td>
 						<td v-html="col.type.replaceAll('_', ' ')" class="text-nowrap"></td>
 						<td v-html="col.dtype" style="max-width: 10rem"></td>
 						<td v-html="col.help"></td>
 					</tr>
-					</template>
 				</tbody>
 			</table>
 		</div>
 
 		<div class='d-flex flex-column gap-2'>
-			<span>Flatfile header (CSV format)</span>
-			<input class='form-control' :value='responses.flatfile_meta_info.columns.map(c => c.name).join(",")' />
+			<span>Flatfile header (CSV format){{
+				responses.flatfile_meta_info.columns.some(c => c.name.startsWith("SA")) ? " with two SA periods as example" : ""
+			}}</span>
+			<input class='form-control'
+				   :value='responses.flatfile_meta_info.columns.filter(c => !c.name.startsWith("SA")).map(c => c.name).concat(responses.flatfile_meta_info.columns.some(c => c.name.startsWith("SA")) ? ["SA(0.1)", "SA(1)"] : []).join(",")' />
 		</div>
 	</div>
 
@@ -137,7 +126,7 @@
 							 style="flex: 0 1 auto; min-height:0px">
 				</gsim-select>
 
-				<imt-select v-model="forms.flatfile_meta_info.imt" :imts='imts'></imt-select>
+				<imt-select v-model="forms.flatfile_meta_info.imt" :imts='imts' sa-without-period></imt-select>
 
 				<button class='btn btn-primary' type='button'
 						:disabled="forms.flatfile_meta_info.gsim.length * forms.flatfile_meta_info.imt.length == 0"
