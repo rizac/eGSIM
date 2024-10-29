@@ -177,7 +177,7 @@ class FlatfileMetadataInfoForm(GsimImtForm, APIForm):
             return {}
         if type(value) not in (list, tuple):
             value = [value]
-        # super.validate only IMTs except SA:
+        # validate only IMTs except SA:
         imts = []
         if any(i != 'SA' for i in value):
             self.cleaned_data['imt'] = [i for i in value if i != 'SA']
