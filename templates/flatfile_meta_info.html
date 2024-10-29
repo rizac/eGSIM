@@ -53,15 +53,31 @@
 		<div class='d-flex flex-row align-items-stretch gap-3'>
 			<div>
 				{% verbatim %}
-				The following {{ Object.keys(responses.flatfile_meta_info.columns || {}).length }} flatfile fields
-				are required to compare {{ forms.flatfile_meta_info.imt.length }} intensity
-				{{ forms.flatfile_meta_info.imt.length == 1 ? 'measure' : 'measures' }}
-				{{ forms.flatfile_meta_info.imt.length > 0 && forms.flatfile_meta_info.imt.length <= 10 ?
-					' (' + forms.flatfile_meta_info.imt.join(', ') + ')' : '' }}
+				The following flatfile fields are required to compare
+				{{
+					forms.flatfile_meta_info.imt.filter(i => !i.startsWith('SA')).length +
+					forms.flatfile_meta_info.imt.some(i => i.startsWith('SA'))
+				}}
+				intensity measure {{ forms.flatfile_meta_info.imt.length == 1 ? 'type' : 'types' }}
+				({{
+					forms.flatfile_meta_info.imt.filter(i => !i.startsWith('SA')).
+					concat(forms.flatfile_meta_info.imt.some(i => i.startsWith('SA')) ? ['SA']: []).sort().join(", ")
+				}})
 				with the predictions of {{ forms.flatfile_meta_info.gsim.length }}
 				{{ forms.flatfile_meta_info.gsim.length == 1 ? 'model' : 'models' }}
-				{{ forms.flatfile_meta_info.gsim.length > 0  && forms.flatfile_meta_info.gsim.length <= 10 ?
-					' (' + forms.flatfile_meta_info.gsim.join(', ') + '). ' : '. ' }}
+				({{
+					forms.flatfile_meta_info.gsim.length <= 8 ? forms.flatfile_meta_info.gsim.join(", ") :
+					forms.flatfile_meta_info.gsim.slice(0, 5).join(", ") + " and other " + (forms.flatfile_meta_info.gsim.length - 5) + " models"
+				}}).
+				<p>
+				Required fields:
+				{{
+					responses.flatfile_meta_info.columns.filter(c => !c.name.startsWith('SA')).length
+				}}
+				{{
+					responses.flatfile_meta_info.columns.some(c => c.name.startsWith('SA')) ?
+					" + at least two SA columns" : ""
+				}}.
 				Any other supplied field will be safely ignored, but try to avoid uploading data
 				unnecessarily
 				{% endverbatim %}
@@ -86,7 +102,7 @@
 				<tbody>
 					<template v-for="col in responses.flatfile_meta_info.columns">
 					<!-- v-if below required to show only the first SA and avoid redundancy -->
-					<tr v-if="(!col.name.startsWith('SA(')) || col.name === responses.flatfile_meta_info.columns.filter(c => c.name.startsWith('SA(')).sort()[0].name">
+					<tr v-if="(!col.name.startsWith('SA')) || col.name === responses.flatfile_meta_info.columns.filter(c => c.name.startsWith('SA')).sort()[0].name">
 						<td v-html="col.name.startsWith('SA') ? 'SA(&ctdot;)' : col.name" class="text-nowrap"></td>
 						<td v-html="col.type.replaceAll('_', ' ')" class="text-nowrap"></td>
 						<td v-html="col.dtype" style="max-width: 10rem"></td>
