@@ -152,7 +152,7 @@ class Test:
         resp2 = client.post(self.url, data=inputdic2)
         assert resp2.status_code == 400
         # account for different ordering in error columns:
-        assert resp2.json()['message'] == 'flatfile: missing column(s) event_id'
+        assert resp2.json()['message'] == 'flatfile: missing column(s) evt_id'
 
     def test_kotha_turkey(self, client):
         csv = SimpleUploadedFile("file.csv",

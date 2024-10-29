@@ -16,7 +16,7 @@ from egsim.smtk.flatfile import (read_flatfile,
                                  query,
                                  ColumnType,
                                  FlatfileError,
-                                 get_dtype_of)
+                                 get_dtype_of, optimize_flatfile_dataframe, ColumnDtype)
 from egsim.smtk.flatfile import FlatfileMetadata, _load_flatfile_metadata
 
 
@@ -152,3 +152,26 @@ def test_flatfile_exceptions():
                 strr = s.getvalue()
                 # assert f'{exc_cls.__name__}:' in strr
                 assert ", ".join(sorted(cols)) in strr
+
+
+def test_optimize_flatfile():
+    dfr = pd.DataFrame({
+        'i': [1, 2, 3, 4],
+        'd': [datetime.utcnow(), datetime.utcnow(), datetime.utcnow(), datetime.utcnow()],
+        'f': [1.2, 1.4, float('nan'), 5],
+        'b': [True, False, True, False],
+        's': ['asdasd', 'asdasd', 'asdasd', 'asdasd']
+    })
+    assert get_dtype_of(dfr.i) == ColumnDtype.int
+    assert get_dtype_of(dfr.d) == ColumnDtype.datetime
+    assert get_dtype_of(dfr.f) == ColumnDtype.float
+    assert get_dtype_of(dfr.b) == ColumnDtype.bool
+    assert get_dtype_of(dfr.s) == ColumnDtype.str
+
+    optimize_flatfile_dataframe(dfr)
+
+    assert get_dtype_of(dfr.i) == ColumnDtype.int
+    assert get_dtype_of(dfr.d) == ColumnDtype.datetime
+    assert get_dtype_of(dfr.f) == ColumnDtype.float
+    assert get_dtype_of(dfr.b) == ColumnDtype.bool
+    assert get_dtype_of(dfr.s) == ColumnDtype.category

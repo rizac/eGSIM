@@ -31,6 +31,9 @@ _csv_default_args = (
 )
 
 
+EVENT_ID_COLUMN_NAME = 'evt_id'
+
+
 def read_flatfile(
         filepath_or_buffer: Union[str, IOBase],
         rename: dict[str, str] = None,
@@ -108,6 +111,7 @@ def read_flatfile(
                 defaults[new] = dtypes.pop(old)
 
     validate_flatfile_dataframe(dfr, dtypes, defaults, 'raise' if is_hdf else 'coerce')
+    optimize_flatfile_dataframe(dfr)
     if not isinstance(dfr.index, pd.RangeIndex):
         dfr.reset_index(drop=True, inplace=True)
     return dfr
@@ -229,6 +233,17 @@ def validate_flatfile_dataframe(
         raise MissingColumnError('No IMT column found')
 
     return dfr
+
+
+def optimize_flatfile_dataframe(dfr: pd.DataFrame):
+    """Optimize the given dataframe by replacing str column with
+    categorical (if memory is saved with the conversion) and reseting
+    the dataframe index to"""
+    for c in dfr.columns:
+        if get_dtype_of(dfr[c]) == ColumnDtype.str:
+            cat_dtype = dfr[c].astype('category')
+            if cat_dtype.memory_usage(deep=True) < dfr[c].memory_usage(deep=True):
+                dfr[c] = cat_dtype
 
 
 def query(flatfile: pd.DataFrame, query_expression: str,

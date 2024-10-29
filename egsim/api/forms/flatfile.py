@@ -11,10 +11,9 @@ from django.forms.fields import CharField, FileField
 
 from egsim.smtk import (ground_motion_properties_required_by, FlatfileError)
 from egsim.smtk.flatfile import (read_flatfile, get_dtype_of, FlatfileMetadata,
-                                 query as flatfile_query)
+                                 query as flatfile_query, EVENT_ID_COLUMN_NAME)
 from egsim.api import models
 from egsim.api.forms import EgsimBaseForm, APIForm, GsimImtForm
-from egsim.smtk.validators import sa_period
 
 
 # Let's provide uploaded flatfile Field in a separate Form as the Field is not
@@ -207,10 +206,9 @@ class FlatfileMetadataInfoForm(GsimImtForm, APIForm):
         cleaned_data = self.cleaned_data
         gsims = list(cleaned_data['gsim'])
 
-        ff_columns = {
-            FlatfileMetadata.get_aliases(c)[0]
-            for c in ground_motion_properties_required_by(*gsims) | {'evt_id'}
-        }
+        required_columns = (ground_motion_properties_required_by(*gsims) |
+                            {EVENT_ID_COLUMN_NAME})  # <- event id always required
+        ff_columns = {FlatfileMetadata.get_aliases(c)[0] for c in required_columns}
 
         imts = list(cleaned_data['imt'])
 

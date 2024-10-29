@@ -240,10 +240,11 @@ IA:
 evt_id:
   alias: event_id
   help: >-
-    The unique ID of the recorded seismic event (i.e., for any record it must hold: 
-    same id <=> same event). IDs do not have a data type but should be preferably 
-    of type integer for performance reasons: if not (e.g., they are provided by 
-    external sources), try to convert them to integers
+    The ID of the seismic event (i.e., two records 
+    with the same event ID indicate that they originate from the same seismic 
+    event). IDs should be of type integer for performance reasons. Alternatively, you 
+    can try using strings of text but this might increase a lot the memory usage, 
+    especially if the number of distinct IDs is high
   type: rupture
 sta_id:
   alias: station_id

@@ -20,7 +20,7 @@ from openquake.hazardlib.contexts import RuptureContext, ContextMaker
 from openquake.hazardlib.scalerel import PeerMSR
 
 from .flatfile import (FlatfileError, MissingColumnError, FlatfileMetadata,
-                       ColumnDataError, IncompatibleColumnError)
+                       ColumnDataError, IncompatibleColumnError, EVENT_ID_COLUMN_NAME)
 from .validators import (validate_inputs, harmonize_input_gsims, sa_period,
                          harmonize_input_imts, validate_imt_sa_limits)
 from .registry import (get_ground_motion_values, Clabel,
@@ -100,7 +100,7 @@ def prepare_flatfile(flatfile: pd.DataFrame,
     # copy event columns (raises if columns not found):
     ev_cols = get_event_id_column_names(flatfile)
     flatfile_r[ev_cols] = flatfile[ev_cols]
-    # copy station columns (for the moment not used, so skip if no station columns)
+    # copy station columns (for the moment not used, so do not raise if no columns)
     try:
         st_cols = get_station_id_column_names(flatfile)
         flatfile_r[st_cols] = flatfile[st_cols]
@@ -357,14 +357,13 @@ def get_column_name(flatfile: pd.DataFrame, column: str) -> Union[str, None]:
 
 
 def get_event_id_column_names(flatfile: pd.DataFrame) -> list[str]:
-    default_col_name = 'event_id'
-    col_name = get_column_name(flatfile, default_col_name)
+    col_name = get_column_name(flatfile, EVENT_ID_COLUMN_NAME)
     if col_name is not None:
         return [col_name]
     cols = ['event_latitude', 'event_longitude', 'event_depth', 'event_time']
     col_names = [get_column_name(flatfile, c) for c in cols]
     if any(c is None for c in col_names):
-        raise MissingColumnError(default_col_name)
+        raise MissingColumnError(EVENT_ID_COLUMN_NAME)
     return col_names
 
 
