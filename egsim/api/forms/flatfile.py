@@ -192,9 +192,13 @@ class FlatfileMetadataInfoForm(GsimImtForm, APIForm):
         if 'SA' in unique_imts:
             min_p, max_p = [], []
             for m_name, model in self.cleaned_data['gsim'].items():
-                min_p_, max_p_ = get_sa_limits(model)
-                min_p.append(min_p_)
-                max_p.append(max_p_)
+                p_bounds = get_sa_limits(model)
+                if p_bounds is None:
+                    # FIXME: we assume a model supporting SA with no period limits
+                    #  is defined for all periods, but is it true?
+                    continue
+                min_p.append(p_bounds[0])
+                max_p.append(p_bounds[1])
             min_p = max(min_p)
             max_p = min(max_p)
             if max_p < min_p:
