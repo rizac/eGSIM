@@ -2,14 +2,15 @@
 Base Form for to model-to-data operations i.e. flatfile handling
 """
 from io import BytesIO
-from typing import Optional, Any
+from typing import Optional
 import pandas as pd
 from django.core.files.uploadedfile import TemporaryUploadedFile
 
 from django.forms import Form
 from django.forms.fields import CharField, FileField
 
-from egsim.smtk import (ground_motion_properties_required_by, FlatfileError)
+from egsim.smtk import (ground_motion_properties_required_by, FlatfileError,
+                        intensity_measures_defined_for, get_sa_limits)
 from egsim.smtk.flatfile import (read_flatfile, get_dtype_of, FlatfileMetadata,
                                  query as flatfile_query, EVENT_ID_COLUMN_NAME)
 from egsim.api import models
@@ -157,45 +158,53 @@ class FlatfileValidationForm(APIForm, FlatfileForm):
 
 
 class FlatfileMetadataInfoForm(GsimImtForm, APIForm):
-    """Form for querying the necessary metadata columns from a given list of models
-    and intensity measures"""
+    """Form for querying the necessary metadata columns from a given selection
+    of models"""
 
-    def clean_gsim(self) -> dict[str, Any]:
-        """Custom gsim clean, allowing empty gsim parameter (=select all models)"""
-        if not self.cleaned_data.get('gsim', None):
-            return {n: None for n in models.Gsim.names()}  # dict values are not used
-        return super().clean_gsim()
-
-    def clean_imt(self) -> dict[str, Any]:
+    def clean_imt(self) -> set[str]:
         """
-        Custom imt clean, allowing empty imt parameter (no IMT) and also SA
-        without period ('SA')
+        intensity measures should be given as type / class name (e.g. SA not "SA(P)").
+        If empty, this parameter will default to all available IMTs
         """
         value = self.cleaned_data.get('imt', None)
+        aval_imts = FlatfileMetadata.get_intensity_measures()
         if not value:
-            return {}
+            return aval_imts
         if type(value) not in (list, tuple):
             value = [value]
-        # validate only IMTs except SA:
-        imts = []
-        if any(i != 'SA' for i in value):
-            self.cleaned_data['imt'] = [i for i in value if i != 'SA']
-            # check that all imts explicitly provided are ok (no typos and so on):
-            imts = super().clean_imt().keys()
-        if any(i == 'SA' for i in value):
-            imts = list(imts) + ['SA']
-        # for consistency, we should return a dict[str, IMT]. However, the dict
-        # values will not be used (see `output` below). So provide a dict
-        # where keys are mapped to None (and 'SA' provided only once):
-        if not self.has_error('imt'):
-            return {'SA' if i.startswith('SA') else i: None for i in imts}
-        return {}
+        value = set(value)
+        if value - aval_imts:
+            self.add_error('imt', self.ErrMsg.invalid)
+        return value
 
     def clean(self):
         """skip the superclass `clean` method because we do not want to check
         imt and gsim compatibility
         """
-        pass
+        unique_imts = self.cleaned_data['imt']
+
+        for m_name, model in self.cleaned_data['gsim'].items():
+            imts = intensity_measures_defined_for(model)
+            unique_imts &= set(imts)
+            if not unique_imts:
+                break
+
+        if 'SA' in unique_imts:
+            min_p, max_p = [], []
+            for m_name, model in self.cleaned_data['gsim'].items():
+                min_p_, max_p_ = get_sa_limits(model)
+                min_p.append(min_p_)
+                max_p.append(max_p_)
+            min_p = max(min_p)
+            max_p = min(max_p)
+            if max_p < min_p:
+                unique_imts -= {'SA'}
+            else:
+                self.cleaned_data['sa_period_limits'] = [min_p, max_p]
+
+        if not unique_imts:
+            self.add_error('gsim', 'No intensity measure defined for all models')
+        return self.cleaned_data
 
     def output(self) -> dict:
         """Compute and return the output from the input data (`self.cleaned_data`).
@@ -210,11 +219,25 @@ class FlatfileMetadataInfoForm(GsimImtForm, APIForm):
                             {EVENT_ID_COLUMN_NAME})  # <- event id always required
         ff_columns = {FlatfileMetadata.get_aliases(c)[0] for c in required_columns}
 
-        imts = list(cleaned_data['imt'])
+        imts = cleaned_data['imt']
 
         columns = []
+        sa_period_limits = cleaned_data.get('sa_period_limits', None)
         for col in sorted(ff_columns | set(imts)):
             columns.append(get_hr_flatfile_column_meta(col))
+            if col == 'SA':
+                sa_p_min, sa_p_max = sa_period_limits
+                help_ = columns[-1]['help'].split('.')
+                new_text = (f' <b>The period range supported by all selected model(s) '
+                            f'is [{sa_p_min}, {sa_p_max}] (endpoints included)</b>'
+                            if sa_p_min < sa_p_max else
+                            f' <b>The only period supported by all selected model(s) '
+                            f'is {sa_p_min}</b>')
+                help_.insert(2, new_text)
+                if sa_p_min == sa_p_max:
+                    # only one period: remove last part were we talk about interpolating
+                    help_ = help_[:3]
+                columns[-1]['help'] = ".".join(help_)
 
         return {'columns': columns}
 

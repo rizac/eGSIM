@@ -39,10 +39,10 @@
 					</table>
 				</div>
 			</div>
-<!--			<div class='text-center'>Flatfile example sketch</div>-->
 		</div>
 		<div style='text-align: justify; width:0; min-width:100%'> <!--make width adjust according to other siblings width -->
-			Here you can inspect how your flatfile should be formatted according to your requirements.
+			Here you can inspect how your flatfile should be formatted according to your
+			models of interest.
 			Once compiled, flatfiles can be uploaded in HDF (recommended) or CSV format
 			and used throughout the application (Data visual inspection and Model-to-data comparison)
 		</div>
@@ -53,28 +53,27 @@
 		<div class='d-flex flex-row align-items-stretch gap-3'>
 			<div style='flex:1 1 auto'>
 				{% verbatim %}
-				The following flatfile fields are required to compare
-				<b>{{ forms.flatfile_meta_info.imt.length }} intensity measure
-				{{ forms.flatfile_meta_info.imt.length == 1 ? 'type' : 'types' }}</b>
-				({{ forms.flatfile_meta_info.imt.join(", ") }})
-				with the predictions of <b>{{ forms.flatfile_meta_info.gsim.length }}
-				{{ forms.flatfile_meta_info.gsim.length == 1 ? 'model' : 'models' }}</b>
-				({{
-					forms.flatfile_meta_info.gsim.length <= 8 ? forms.flatfile_meta_info.gsim.join(", ") :
-					forms.flatfile_meta_info.gsim.slice(0, 5).join(", ") + " and other " + (forms.flatfile_meta_info.gsim.length - 5) + " models"
-				}}).
-				<b>Minimum required fields:
+				<b>Selected
+				{{ forms.flatfile_meta_info.gsim.length == 1 ? 'model' : 'models' }}:
+				{{ forms.flatfile_meta_info.gsim.length }}</b>,
+				<b>flatfile minimum required fields:
 				{{
-					responses.flatfile_meta_info.columns.length
-				}}</b>.
+					responses.flatfile_meta_info.columns.filter(c => !c.type.toLowerCase().includes("intensity")).length + 1
+				}}
+				</b>
+				(at least one intensity measure
+					and {{ responses.flatfile_meta_info.columns.filter(c => !c.type.toLowerCase().includes("intensity")).length }}
+					mandatory input parameter(s):
+					{{ responses.flatfile_meta_info.columns.filter(c => !c.type.toLowerCase().includes("intensity")).map(c => c.name).join(", ") }}).
+
 				Any other supplied field will be safely ignored, but try to avoid uploading data
-				unnecessarily. The fields order is irrelevant
+				unnecessarily. The fields order is irrelevant.
 				{% endverbatim %}
 			</div>
 			<button type="button" title="Select new models and intensity measures"
 					class="btn btn-outline-primary btn-sm"
 					@click='responses.flatfile_meta_info = {}'>
-				Change requirements
+				Change models selection
 			</button>
 		</div>
 		<div style='flex:1 1 0px; overflow:auto' class='border'>
@@ -98,14 +97,6 @@
 				</tbody>
 			</table>
 		</div>
-
-		<div class='d-flex flex-column gap-2'>
-			<span>Flatfile header (CSV format){{
-				responses.flatfile_meta_info.columns.some(c => c.name.startsWith("SA")) ? " with two SA periods as example" : ""
-			}}</span>
-			<input class='form-control'
-				   :value='responses.flatfile_meta_info.columns.filter(c => !c.name.startsWith("SA")).map(c => c.name).concat(responses.flatfile_meta_info.columns.some(c => c.name.startsWith("SA")) ? ["SA(0.1)", "SA(1)"] : []).join(",")' />
-		</div>
 	</div>
 
 	<div v-else class='d-flex flex-column gap-3' style='flex: 1 1 auto; height:100%;'>
@@ -126,10 +117,10 @@
 							 style="flex: 0 1 auto; min-height:0px">
 				</gsim-select>
 
-				<imt-select v-model="forms.flatfile_meta_info.imt" :imts='imts' sa-without-period></imt-select>
+<!--				<imt-select v-model="forms.flatfile_meta_info.imt" :imts='imts' sa-without-period></imt-select>-->
 
 				<button class='btn btn-primary' type='button'
-						:disabled="forms.flatfile_meta_info.gsim.length * forms.flatfile_meta_info.imt.length == 0"
+						:disabled="forms.flatfile_meta_info.gsim.length == 0"
 						@click='post(urls.flatfile_meta_info, forms.flatfile_meta_info).then(r => r.json()).then(data => { responses.flatfile_meta_info = data; });'>
 					Get flatfile format (required fields)
 				</button>
