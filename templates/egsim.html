@@ -156,7 +156,7 @@ const EGSIM = Vue.createApp({
 				saLimits: elm[2].length ? elm[2] : Array.from(defaultSALimits),
 				warning: elm[3] ? data.warning_groups[elm[3]]: "",
 			}
-		});
+		}).sort((m1, m2) => (m1.name < m2.name ? -1 : (m1.name > m2.name ? 1: 0)));
 		var currentPage = data.currentPage || 'home';  // one of the key of the Objet 'tab' below
 		return {
 			models: Object.freeze(models),
