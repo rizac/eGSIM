@@ -309,8 +309,8 @@ EGSIM.component('imt-select', {
 		<select
 			v-model="selectedImtClassNames"
 			multiple
-			class='form-control rounded-bottom-0'
-			:class="selectedImtClassNames.includes('SA') ? '' : 'rounded-bottom'"
+			class='form-control'
+			:class="selectedImtClassNames.includes('SA') && !saWithoutPeriod ? 'rounded-bottom-0' : ''"
 			style="flex: 1 1 auto;">
 			<option	v-for='imt in imts' :value="imt">
 				{{ imt }}
