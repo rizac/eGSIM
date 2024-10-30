@@ -73,8 +73,13 @@ EGSIM.component('gsim-select', {
 			var text = this.inputElementText.trim();
 			if (text){
 				var selectedModelsSet = new Set(this.selectedModels);
-				var regexp = new RegExp(text.replace(/\s+/, '').replace(/([^\w\*\?])/g, '\\$1').replace(/\*/g, '.*').replace(/\?/g, '.'), 'i');
-				models = this.models.filter(m => !selectedModelsSet.has(m.name) && m.name.search(regexp) > -1);
+				if (text.startsWith("imt:")){
+					var imt = text.substring("imt:".length);
+					models = this.models.filter(m => !selectedModelsSet.has(m.name) && m.imts.has(imt));
+				}else{
+					var regexp = new RegExp(text.replace(/\s+/, '').replace(/([^\w\*\?])/g, '\\$1').replace(/\*/g, '.*').replace(/\?/g, '.'), 'i');
+					models = this.models.filter(m => !selectedModelsSet.has(m.name) && m.name.search(regexp) > -1);
+				}
 				// adjust popup height:
 				if (models.length){
 					setTimeout( () => this.resizeHTMLSelectElement(models.length), 20 );
@@ -190,6 +195,7 @@ EGSIM.component('gsim-select', {
 			@keydown.esc.prevent="inputElementText=''"
 			class='form-control'
 			:class="selectedModels.length ? 'rounded-top-0 border-top-0' : ''"
+			title="you can also type imt: followed by an intensity measure (e.g. imt:SA) to show only models defined for that imt"
 			:placeholder="'Type name (' + models.length + ' models available) or select by region (click on map)'" />
 		<div
 			class='position-relative'
