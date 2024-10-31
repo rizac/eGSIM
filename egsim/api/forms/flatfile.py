@@ -301,5 +301,3 @@ def get_hr_flatfile_column_meta(name: str, values: Optional[pd.Series] = None) -
         'dtype': c_dtype,
         'help': c_help
     }
-
-

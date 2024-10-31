@@ -148,7 +148,7 @@ const EGSIM = Vue.createApp({
 		// Array of Objects:
 		var imts = new Set();
 		data.imt_groups.forEach(imtz => imtz.forEach(i => imts.add(i)));
-		var defaultSALimits = [-Math.Infinity, Math.Infinity];
+		var defaultSALimits = [-Infinity, Infinity];
 		var models = data.gsims.map(elm => {  // elm: Array of 2 or 3 elements: name, imt_group, warning
 			return {
 				name: elm[0],
