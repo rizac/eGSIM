@@ -23,9 +23,10 @@ class ResidualsForm(GsimImtForm, FlatfileForm, APIForm):
                              help_text=('normalize the random effects residuals '
                                         '(Abrahamson & Youngs (1992), Eq. 10)'))
     ranking = BooleanField(initial=False, required=False,
-                           help_text='return several residuals metrics to easily '
-                                     'assess how predictions fit the data. Useful '
-                                     'for model ranking (note: likelihood and '
+                           help_text='Model ranking: easily assess how predictions '
+                                     'fit the data by returning aggregate '
+                                     'measures from the computed residuals (stats, '
+                                     'loglikelihood, EDR) (note: likelihood and '
                                      'normalize are ignored in this case)')
 
     # Custom API param names (see doc of `EgsimBaseForm._field2params` for details):
