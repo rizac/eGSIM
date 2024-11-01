@@ -10,11 +10,10 @@ import pytest
 import numpy as np
 from openquake.hazardlib.imt import IMT, SA
 
-from egsim.smtk.converters import convert_accel_units
 from openquake.hazardlib.gsim.base import registry
-from egsim.smtk import (registered_gsims, gsim, imt, \
-                        intensity_measures_defined_for,
-                        gsim_name)
+from egsim.smtk.registry import (registered_gsims, gsim, imt,
+                                 intensity_measures_defined_for,
+                                 gsim_name, get_sa_limits)
 
 
 _gsim_aliases_ = {v: k for k, v in gsim_aliases.items()}
@@ -88,6 +87,7 @@ def test_gsim_name_1to1_relation():
         if cls.superseded_by:
             asd = 9
 
+
 def read_gsims(raise_deprecated=True, catch_deprecated=True):
     count, ok = 0, 0
     excs = (TypeError, IndexError, KeyError, ValueError,
@@ -128,22 +128,9 @@ def test_imt_as_float_is_converted_to_sa():
         imt('SA("0.1a")')
 
 
-# legacy code and relative tests (convert acceleration units). See notes function below
-
-def test_convert_accel_units():
-    """test convert accel units"""
-    from scipy.constants import g
-    for m_sec in ["m/s/s", "m/s**2", "m/s^2"]:
-        for cm_sec in ["cm/s/s", "cm/s**2", "cm/s^2"]:
-            assert convert_accel_units(1, m_sec, cm_sec) == 100
-            assert convert_accel_units(1, cm_sec, m_sec) == .01
-            assert convert_accel_units(g, m_sec, "g") == 1
-            assert convert_accel_units(g, cm_sec, "g") == .01
-            assert convert_accel_units(1, "g", m_sec) == g
-            assert convert_accel_units(1, "g", cm_sec) == g*100
-            assert convert_accel_units(1, cm_sec, cm_sec) == 1
-            assert convert_accel_units(1, m_sec, m_sec) == 1
-
-    assert convert_accel_units(1, "g", "g") == 1
-    with pytest.raises(ValueError):
-        assert convert_accel_units(1, "gf", "gf") == 1
+def test_sa_limits():
+    with warnings.catch_warnings(record=False):
+        warnings.simplefilter('ignore')
+        for g in read_gsims():
+            lims = get_sa_limits(g)
+            assert lims is None or (len(lims) == 2 and lims[0] < lims[1])

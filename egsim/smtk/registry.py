@@ -108,7 +108,7 @@ def get_sa_limits(
     pers = None
     for c in dir(model):
         if 'COEFFS' in c:
-            pers = [sa.period for sa in getattr(model, c).sa_coeffs]
+            pers = [sa.period for sa in getattr(model, c).sa_coeffs] or None
             if pers:  # might be an empty list, so break only if non-empty
                 break
     return (min(pers), max(pers)) if pers is not None else None
