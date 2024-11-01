@@ -172,8 +172,7 @@ class FlatfileMetadataInfoForm(GsimImtForm, APIForm):
             return aval_imts
         if type(value) not in (list, tuple):
             value = [value]
-        value = set(value)
-        if value - aval_imts:
+        if set(value) - aval_imts:
             self.add_error('imt', self.ErrMsg.invalid)
         return value
 
@@ -190,20 +189,19 @@ class FlatfileMetadataInfoForm(GsimImtForm, APIForm):
                 break
 
         if 'SA' in unique_imts:
-            min_p, max_p = [], []
+            inf = float('inf')
+            min_p, max_p = -inf, inf
             for m_name, model in self.cleaned_data['gsim'].items():
                 p_bounds = get_sa_limits(model)
                 if p_bounds is None:
                     # FIXME: we assume a model supporting SA with no period limits
                     #  is defined for all periods, but is it true?
                     continue
-                min_p.append(p_bounds[0])
-                max_p.append(p_bounds[1])
-            min_p = max(min_p)
-            max_p = min(max_p)
-            if max_p < min_p:
+                min_p = max(min_p, p_bounds[0])
+                max_p = min(max_p, p_bounds[1])
+            if min_p > max_p:
                 unique_imts -= {'SA'}
-            else:
+            elif -inf < min_p <= max_p < inf:
                 self.cleaned_data['sa_period_limits'] = [min_p, max_p]
 
         if not unique_imts:
@@ -229,13 +227,16 @@ class FlatfileMetadataInfoForm(GsimImtForm, APIForm):
         sa_period_limits = cleaned_data.get('sa_period_limits', None)
         for col in sorted(ff_columns | set(imts)):
             columns.append(get_hr_flatfile_column_meta(col))
-            if col == 'SA':
+            if col == 'SA' and sa_period_limits is not None:
                 sa_p_min, sa_p_max = sa_period_limits
                 help_ = columns[-1]['help'].split('.')
-                new_text = (f' <b>The period range supported by all selected model(s) '
+                the_selected_model = 'the selected model'
+                if len(gsims) > 1:
+                    the_selected_model = f'all {len(gsims)} selected models'
+                new_text = (f' <b>The period range supported by {the_selected_model} '
                             f'is [{sa_p_min}, {sa_p_max}] (endpoints included)</b>'
                             if sa_p_min < sa_p_max else
-                            f' <b>The only period supported by all selected model(s) '
+                            f' <b>The only period supported by {the_selected_model} '
                             f'is {sa_p_min}</b>')
                 help_.insert(2, new_text)
                 if sa_p_min == sa_p_max:
