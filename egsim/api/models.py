@@ -134,8 +134,9 @@ class MediaFile(EgsimDbModel):
 
 
 class Flatfile(MediaFile, Reference):
-    """Class handling flatfiles stored in the file system. The associated media
-    file is an HDF file representing a valid flatfile (pandas DataFrame)
+    """Class handling flatfiles stored in the file system. For each row of this table,
+    the associated media file is an HDF file representing a valid flatfile (pandas
+    DataFrame)
     """
 
     def write_to_filepath(self, flatfile: Any, mkdirs=True, **kwargs):
@@ -168,12 +169,13 @@ class Flatfile(MediaFile, Reference):
 
 class Regionalization(MediaFile, Reference):
     """Class handling regionalizations stored in the file system. A regionalization
-    is basically a collection of regions, and each region is an object denoted
-    by a geometry on earth (e.g. a Polygon), a unique name and a list of
-    (ground shaking) models selected for the region.
-    The associated media file is a (geo)JSON file where a regionalization is a
-    geoJSON FeatureCollection object, and a region is a geoJSON Feature object.
-    E.g.:
+    is a collection of regions, where each region is an object denoted by:
+     - a geometry (e.g. a Polygon enclosed by poitns in (lat, lon) coordinates), 
+     - a unique name (identifier) 
+     - a list of ground shaking models selected for the region.
+    For each row of this table, the associated media file is a geoJSON file where a 
+    regionalization is stored as FeatureCollection object, and each region is a 
+    geoJSON Feature object. E.g.:
     ```
     {
         "type": 'FeatureCollection',
