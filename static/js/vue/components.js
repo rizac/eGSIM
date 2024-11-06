@@ -1,7 +1,7 @@
 /* This is an input[type=text] where the v-model is an array represented on the
 input as space space separated list (comma is also allowed)
 */
-EGSIM.component('array-input', {
+EGSIM.component('base-array-input', {
 	// modelValue is the value of v-model set on this array-input:
 	props: {
 		'modelValue': { type: Array },
@@ -45,6 +45,110 @@ EGSIM.component('array-input', {
 	}
 });
 
+EGSIM.component('array-input', {
+	// modelValue is the value of v-model set on this array-input:
+	props: {
+		modelValue: { type: Array },
+		initialStart: {type: [String, Number], default: null},
+		initialStop: {type: [String, Number], default: null},
+		logScale: {type: Boolean, default: false}
+	},
+	data(){
+		return {
+			showBaseInput: true,
+			log: !!this.logScale,
+			start: parseFloat(this.initialStart),
+			stop: parseFloat(this.initialStop),
+			num: null,
+			maxLength: 99
+		}
+	},
+	computed: {
+		mValue: {
+			get() { return this.modelValue },
+			set(value) { this.$emit('update:modelValue', value) }
+		}
+	},
+	emits: ['update:modelValue'],
+	template: `<div class='d-flex gap-1'>
+		<base-array-input v-show="showBaseInput" v-model="mValue" class='form-control' style='flex: 1 1 auto'></base-array-input>
+		<div :class="showBaseInput ? 'd-none' : 'd-flex'" class='align-items-center gap-1' style='flex: 1 1 0' ref='element'>
+			<input type='text' v-model="num" v-on:input="setArray" class='form-control' placeholder='n' style='width:0; flex: 1 1 auto'>
+			<span class='text-nowrap'>values from</span>
+			<input type='text' v-model="start" v-on:input="setArray" class='form-control' style='width:0; flex: 1 1 auto'>
+			<span>to</span>
+			<input type='text' v-model="stop" v-on:input="setArray" class='form-control' style='width:0; flex: 1 1 auto'>
+			<label title='values will be spaced evenly on a log scale (default: linear scale)' class='text-nowrap'>
+				<input type='checkbox' v-model='log' v-on:change="setArray" class='me-1'>log
+			</label>
+		</div>
+		<button type='button'
+			@click="showBaseInput=!showBaseInput"
+			class='btn btn-outline-primary border-0 position-relative'
+			:title='showBaseInput ? "input evenly spaced numbers over a specified interval on a linear or log scale" : "restore default input"'>
+			<i v-show='showBaseInput' class="fa fa-ellipsis-h"></i>
+			<i v-show='!showBaseInput' class="fa fa-times"></i>
+		</button>
+	</div>`,
+	mounted(){
+		this.$refs.element.style.width = `${this.$refs.element.parentNode.querySelectorAll('input')[0].offsetWidth}px`;
+		this.$refs.element.style.height = `${this.$refs.element.parentNode.querySelectorAll('input')[0].offsetHeight}px`;
+	},
+	methods: {
+		setArray(){
+			// calc in separate thread and fire if meanwhile we did not change the inputs:
+			var [n, s, e, l, m] = [this.num, this.start, this.stop, this.log];
+			setTimeout(() => {
+				var arr = this.createArray(n, s, e, l, this.maxLength);
+				if ((this.num === n) && (this.start === s) && (this.stop === e) && (this.log === l)){
+					this.mValue = arr;
+				}
+			}, 25);
+		},
+		createArray(num, start, stop, log, maxLength){
+			var num = parseInt(num);
+			if (!(num > 1) || !(num <= maxLength)){  // note: this checks for num not NaN, too
+				return [];
+			}
+			var start = parseFloat(start);
+			var stop = parseFloat(stop);
+			if (!(stop > start)){  // note: this checks for numbers not NaN, too
+				return [];
+			}
+			var values = Array.from(Array(num).keys());
+			if (log){
+				var base = 10; // Math.E;
+				// map [0, ..., N-1] into [1, ..., BASE] (approximately)
+				values = values.map(i => base ** (i / values.length));
+				// map to in [0, ..., 1]:
+				var range = values[values.length-1] - values[0];
+				values = values.map(v => (v - values[0]) / range);
+				// map to [start, .. stop]:
+				var range = stop - start;
+				values = values.map(v =>  start + v * range);
+			}else{
+				var step = parseFloat((stop - start) / (num-1));
+				values = values.map(i => start + (i * step));
+			}
+			// if for some reason we do not have a strict ordering, return []:
+			if (!(values[0] < values[1])){ return []; }
+			// Now fix floating-point error and compute the maximum required decimal digits (dd):
+			var round = this.round;
+			var dd = 0;
+			while(
+				(!(round(values[0], dd) < round(values[1], dd))) ||
+				(start !== round(start, dd)) ||
+				(stop !== round(stop, dd))){
+				dd += 1;
+			}
+			return values.map(v => round(v, dd));
+		},
+		round(number, decimalDigits){
+			var base = 10 ** decimalDigits;
+			return Math.round(number * base) / base;
+		}
+	}
+});
 
 EGSIM.component('gsim-select', {
 	props: {
@@ -281,11 +385,7 @@ EGSIM.component('imt-select', {
 		var SAPeriods = this.modelValue.filter(i => i.startsWith('SA(')).map(sa => sa.substring(3, sa.length-1));
 		return {
 			selectedImtClassNames: selectedImtClassNames,
-			SAPeriods: SAPeriods,
-			defaultSAPeriods: [0.05, 0.075, 0.1, 0.11, 0.12, 0.13, 0.14, 0.15, 0.16, 0.17, 0.18, 0.19, 0.20,
-				0.22, 0.24, 0.26, 0.28, 0.30, 0.32, 0.34, 0.36, 0.38, 0.40, 0.42, 0.44, 0.46, 0.48, 0.5, 0.55,
-				0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8,
-				1.9, 2.0, 3.0, 4.0, 5.0, 7.5, 10.0]
+			SAPeriods: SAPeriods
 		}
 	},
 	computed: {
@@ -309,33 +409,25 @@ EGSIM.component('imt-select', {
 			}
 		}
 	},
-	template: `<div class='d-flex flex-column form-control'
+	template: `<div class='d-flex flex-column form-control gap-2'
 		title="Intensity measure type(s)">
 		<span class='mb-2'>Imt ({{ selectedImts.length }} selected)</span>
 		<select
 			v-model="selectedImtClassNames"
 			multiple
 			class='form-control'
-			:class="selectedImtClassNames.includes('SA') && !saWithoutPeriod ? 'rounded-bottom-0' : ''"
 			style="flex: 1 1 auto;">
 			<option	v-for='imt in imts' :value="imt">
 				{{ imt }}
 			</option>
 		</select>
-		<div :class="selectedImtClassNames.includes('SA') && !saWithoutPeriod ? 'd-flex' : 'd-none'" class='flex-row'>
+		<div class='align-items-baseline gap-1'
+			:class="selectedImtClassNames.includes('SA') && !saWithoutPeriod ? 'd-flex' : 'd-none'">
+			<span class='text-nowrap'>SA periods</span>
 			<array-input
-				v-model="SAPeriods"
-				class='form-control border-top-0 rounded-top-0 rounded-end-0 border-end-0'
-				placeholder="SA periods (space- or comma-separated)"
+				v-model="SAPeriods" initial-start="0.05" initial-stop="10"
+				style='flex: 1 1 auto'
 			 />
-			<button
-				@click="SAPeriods = Array.from(SAPeriods.length ? [] : defaultSAPeriods)"
-				type='button'
-				:title='SAPeriods.length ? "clear text" : "input a predefined list of SA periods"'
-				class='btn border-0 bg-white rounded-top-0 rounded-start-0 border-bottom border-end'>
-				<i class="fa fa-times-circle"
-					:class='SAPeriods.length ? "fa-times-circle" : "fa-arrow-circle-o-left"'></i>
-			</button>
 		</div>
 	</div>`,
 	methods: {
@@ -634,79 +726,4 @@ EGSIM.component('flatfile-select', {
 			<i class='fa fa-upload'></i>
 		</button>
 	</div>`
-});
-
-
-EGSIM.component('evenly-spaced-array-input', {
-	props: {
-		initialStart: {type: [String, Number], default: null},
-		initialStop: {type: [String, Number], default: null},
-	},
-	data(){
-		return {
-			execCount: 0,
-			maxNum: 2000, // prevent performance problems
-			log: false,
-			start: parseFloat(this.initialStart),
-			stop: parseFloat(this.initialStop),
-			num: null
-		}
-	},
-	emits: ['array-created'],
-	template:`<div class='d-flex align-items-baseline text-nowrap gap-1'>
-		<input type='text' v-model="num" v-on:input="submit" class='form-control' :placeholder='"n (&le;" + maxNum + ")"' style='min-width:5.8rem !important'>
-		values from
-		<input type='text' v-model="start" v-on:input="submit" class='form-control'>
-		to
-		<input type='text' v-model="stop" v-on:input="submit" class='form-control'>
-		<label title='values will be spaced evenly on a log scale (default: linear scale)'><input type='checkbox' v-model='log' v-on:change="submit" class='me-1'>log</label>
-	</div>`,
-	methods: {
-		submit(){
-			// calc in separate thread and fire if meanwhile we did not change the inputs:
-			this.execCount += 1;
-			var count = this.execCount;
-			setTimeout(() => {
-				var arr = this.createArray();
-				if (this.execCount == count){
-					this.$emit('array-created', arr);
-				}
-			}, 25);
-		},
-		createArray(){
-			var num = parseInt(this.num);
-			if (!(num > 1) || !(num <= this.maxNum)){  // note: this checks for num not NaN, too
-				return [];
-			}
-			var start = parseFloat(this.start);
-			var stop = parseFloat(this.stop);
-			if (!(stop > start)){  // note: this checks for numbers not NaN, too
-				return [];
-			}
-			var values = Array.from(Array(num).keys());
-			if (this.log){
-				// map [0...N-1] onto  [0...1] using y = e ** x:
-				var E = Math.E;
-				var range = E ** ((num-1) / num) - 1;
-				values = values.map(i => (E ** (i/num) - 1)/ range);
-				// map [0...1] onto  [start...end]:
-				range = stop - start;
-				values = values.map(v =>  start + v * range);
-			}else{
-				var step = parseFloat((stop - start) / (num-1));
-				values = values.map(i => start + (i * step));
-			}
-			// Fix floating-point error and compute max decimal digits for better number visualization:
-			var d = 1;  // power of then used to round (default 10**0)
-			// start and stop can be rounded to log10(d) decimal digits without precision loss, and
-			// each value rounded to log10(d) digits should be lower than the next value
-			// (check values[1] - values[0] is sufficient, especially in log space)
-			while((start != Math.round(d * start) / d) ||
-				(stop != Math.round(d * stop) / d) ||
-				parseInt(d * (values[1] - values[0])) < 1){
-				d *= 10;
-			}
-			return values.map(v => Math.round(v * d) / d);
-		}
-	}
 });

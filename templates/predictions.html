@@ -37,22 +37,7 @@
 			<div :title="forms.misc.predictions.help['magnitude']"
 				 class='d-flex align-items-baseline gap-2'>
 				<span>magnitude</span>
-				<array-input v-model="forms.predictions.magnitude" class='form-control _d-toggle_'></array-input>
-				<evenly-spaced-array-input
-					initial-start="1" initial-stop="7"
-					@array-created="values => { forms.predictions.magnitude = values; }"
-					class='_d-toggle_ d-none'>
-				</evenly-spaced-array-input>
-				<button
-					type='button'
-					onclick="this.parentNode.querySelectorAll('._d-toggle_').forEach(e => e.classList.toggle('d-none')); var t = this.getAttribute('data-title-cache'); this.setAttribute('data-title-cache', this.title); this.title = t"
-					class='btn btn-outline-primary border-0 position-relative'
-					title='input evenly spaced numbers over a specified interval on a linear or log scale'
-					data-title-cache="restore default input"
-					>
-					<span class='_d-toggle_'>⏵</span>
-					<span class='_d-toggle_ d-none'>⏴</span>
-				</button>
+				<array-input v-model="forms.predictions.magnitude" initial-start="1" initial-stop="7" style='flex: 1 1 auto'></array-input>
 			</div>
 
 			<div id='rupture-controls' class="d-flex d-none gap-3 text-nowrap pb-1 small" style='overflow-x: scroll;'>
@@ -71,14 +56,14 @@
 
 				<div :title="forms.misc.predictions.help['hypocenter-location']">
 					hypocenter-location
-					<array-input v-model="forms.predictions['hypocenter-location']"
-								 class='form-control mt-1' style='width:7.0em !important; font-size:inherit'></array-input>
+					<base-array-input v-model="forms.predictions['hypocenter-location']"
+								 class='form-control mt-1' style='width:7.0em !important; font-size:inherit'></base-array-input>
 				</div>
 
 				<div :title="forms.misc.predictions.help['initial-point']">
 					initial-point
-					<array-input v-model="forms.predictions['initial-point']"
-								 class='form-control mt-1' style='width:5.2em !important; font-size:inherit'></array-input>
+					<base-array-input v-model="forms.predictions['initial-point']"
+								 class='form-control mt-1' style='width:5.2em !important; font-size:inherit'></base-array-input>
 				</div>
 
 				<div :title="forms.misc.predictions.help['msr']">
@@ -124,22 +109,7 @@
 			<div :title="forms.misc.predictions.help['distance']"
 				 class="d-flex align-items-baseline gap-2">
 				<span>distance</span>
-				<array-input v-model="forms.predictions.distance" class='form-control _d-toggle_'></array-input>
-				<evenly-spaced-array-input
-					initial-start="1" initial-stop="100"
-					@array-created="values => { forms.predictions.distance = values; }"
-					class='_d-toggle_ d-none'>
-				</evenly-spaced-array-input>
-				<button
-					type='button'
-					onclick="this.parentNode.querySelectorAll('._d-toggle_').forEach(e => e.classList.toggle('d-none')); var t = this.getAttribute('data-title-cache'); this.setAttribute('data-title-cache', this.title); this.title = t"
-					class='btn btn-outline-primary border-0 position-relative'
-					title='input evenly spaced numbers over a specified interval on a linear or log scale'
-					data-title-cache="restore default input"
-					>
-					<span class='_d-toggle_'>⏵</span>
-					<span class='_d-toggle_ d-none'>⏴</span>
-				</button>
+				<array-input v-model="forms.predictions.distance" initial-start="1" initial-stop="100" style='flex: 1 1 auto'></array-input>
 			</div>
 
 			<div id='site-controls' class="d-flex d-none gap-3 text-nowrap pb-1 small" style='overflow-x: scroll;'>
