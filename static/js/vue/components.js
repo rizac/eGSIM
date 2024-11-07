@@ -72,7 +72,7 @@ EGSIM.component('array-input', {
 	emits: ['update:modelValue'],
 	template: `<div class='d-flex gap-1'>
 		<base-array-input v-show="showBaseInput" v-model="mValue" class='form-control' style='flex: 1 1 auto'></base-array-input>
-		<div :class="showBaseInput ? 'd-none' : 'd-flex'" class='align-items-center gap-1' style='flex: 1 1 0' ref='element'>
+		<div :class="showBaseInput ? 'd-none' : 'd-flex'" class='align-items-center gap-1' style='flex: 1 1 0'>
 			<input type='text' v-model="num" v-on:input="setArray" class='form-control' placeholder='n' style='width:0; flex: 1 1 auto'>
 			<span class='text-nowrap'>values from</span>
 			<input type='text' v-model="start" v-on:input="setArray" class='form-control' style='width:0; flex: 1 1 auto'>
@@ -86,14 +86,10 @@ EGSIM.component('array-input', {
 			@click="showBaseInput=!showBaseInput"
 			class='btn btn-outline-primary border-0 position-relative'
 			:title='showBaseInput ? "input evenly spaced numbers over a specified interval on a linear or log scale" : "restore default input"'>
-			<i v-show='showBaseInput' class="fa fa-ellipsis-h"></i>
-			<i v-show='!showBaseInput' class="fa fa-times"></i>
+			<i v-show='showBaseInput' class="fa fa-pencil"></i>
+			<i v-show='!showBaseInput' class="fa fa-reply"></i>
 		</button>
 	</div>`,
-	mounted(){
-		this.$refs.element.style.width = `${this.$refs.element.parentNode.querySelectorAll('input')[0].offsetWidth}px`;
-		this.$refs.element.style.height = `${this.$refs.element.parentNode.querySelectorAll('input')[0].offsetHeight}px`;
-	},
 	methods: {
 		setArray(){
 			// calc in separate thread and fire if meanwhile we did not change the inputs:
