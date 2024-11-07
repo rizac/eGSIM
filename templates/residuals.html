@@ -86,7 +86,7 @@
 
 				</div>
 
-				<div :style="{visibility: forms.residuals.ranking ? 'hidden' : ''}" class='d-flex align-items-baseline gap-1'>
+				<div :class="forms.residuals.ranking ? 'd-none' : 'd-flex'" class='align-items-baseline gap-1'>
 					<span style='flex: 0 0 4.5rem' title='Visualize residuals (log(observed)- log(predicted)) in interactive plots'>
 						Visualize
 					</span>

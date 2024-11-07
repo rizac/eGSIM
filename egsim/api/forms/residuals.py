@@ -25,9 +25,10 @@ class ResidualsForm(GsimImtForm, FlatfileForm, APIForm):
     ranking = BooleanField(initial=False, required=False,
                            help_text='Model ranking: easily assess how predictions '
                                      'fit the data by returning aggregate '
-                                     'measures from the computed residuals (stats, '
-                                     'loglikelihood, EDR) (note: likelihood and '
-                                     'normalize are ignored in this case)')
+                                     'measures from the computed residuals (e.g., '
+                                     'median, loglikelihood, EDR). With ranking, '
+                                     'the parameters likelihood and normalize are '
+                                     'set to true by default')
 
     # Custom API param names (see doc of `EgsimBaseForm._field2params` for details):
     _field2params = {}

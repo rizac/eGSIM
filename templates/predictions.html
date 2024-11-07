@@ -37,7 +37,7 @@
 			<div :title="forms.misc.predictions.help['magnitude']"
 				 class='d-flex align-items-baseline gap-2'>
 				<span>magnitude</span>
-				<array-input v-model="forms.predictions.magnitude" initial-start="1" initial-stop="7" style='flex: 1 1 auto'></array-input>
+				<array-div v-model="forms.predictions.magnitude" initial-start="1" initial-stop="7" style='flex: 1 1 auto'></array-div>
 			</div>
 
 			<div id='rupture-controls' class="d-flex d-none gap-3 text-nowrap pb-1 small" style='overflow-x: scroll;'>
@@ -56,14 +56,14 @@
 
 				<div :title="forms.misc.predictions.help['hypocenter-location']">
 					hypocenter-location
-					<base-array-input v-model="forms.predictions['hypocenter-location']"
-								 class='form-control mt-1' style='width:7.0em !important; font-size:inherit'></base-array-input>
+					<array-input v-model="forms.predictions['hypocenter-location']"
+								 class='form-control mt-1' style='width:7.0em !important; font-size:inherit'></array-input>
 				</div>
 
 				<div :title="forms.misc.predictions.help['initial-point']">
 					initial-point
-					<base-array-input v-model="forms.predictions['initial-point']"
-								 class='form-control mt-1' style='width:5.2em !important; font-size:inherit'></base-array-input>
+					<array-input v-model="forms.predictions['initial-point']"
+								 class='form-control mt-1' style='width:5.2em !important; font-size:inherit'></array-input>
 				</div>
 
 				<div :title="forms.misc.predictions.help['msr']">
@@ -109,7 +109,7 @@
 			<div :title="forms.misc.predictions.help['distance']"
 				 class="d-flex align-items-baseline gap-2">
 				<span>distance</span>
-				<array-input v-model="forms.predictions.distance" initial-start="1" initial-stop="100" style='flex: 1 1 auto'></array-input>
+				<array-div v-model="forms.predictions.distance" initial-start="1" initial-stop="100" style='flex: 1 1 auto'></array-div>
 			</div>
 
 			<div id='site-controls' class="d-flex d-none gap-3 text-nowrap pb-1 small" style='overflow-x: scroll;'>

@@ -1,7 +1,7 @@
 /* This is an input[type=text] where the v-model is an array represented on the
 input as space space separated list (comma is also allowed)
 */
-EGSIM.component('base-array-input', {
+EGSIM.component('array-input', {
 	// modelValue is the value of v-model set on this array-input:
 	props: {
 		'modelValue': { type: Array },
@@ -45,8 +45,8 @@ EGSIM.component('base-array-input', {
 	}
 });
 
-EGSIM.component('array-input', {
-	// modelValue is the value of v-model set on this array-input:
+EGSIM.component('array-div', {
+	// enhanced array-input allowing to easily type linear or log evenly spaced numbers
 	props: {
 		modelValue: { type: Array },
 		initialStart: {type: [String, Number], default: null},
@@ -60,7 +60,7 @@ EGSIM.component('array-input', {
 			start: parseFloat(this.initialStart),
 			stop: parseFloat(this.initialStop),
 			num: null,
-			maxLength: 99
+			maxLength: 100  // max points in the array
 		}
 	},
 	computed: {
@@ -71,9 +71,9 @@ EGSIM.component('array-input', {
 	},
 	emits: ['update:modelValue'],
 	template: `<div class='d-flex gap-1'>
-		<base-array-input v-show="showBaseInput" v-model="mValue" class='form-control' style='flex: 1 1 auto'></base-array-input>
+		<array-input v-show="showBaseInput" v-model="mValue" class='form-control' style='flex: 1 1 auto'></array-input>
 		<div :class="showBaseInput ? 'd-none' : 'd-flex'" class='align-items-center gap-1' style='flex: 1 1 0'>
-			<input type='text' v-model="num" v-on:input="setArray" class='form-control' placeholder='n' style='width:0; flex: 1 1 auto'>
+			<input v-model="num" v-on:input="setArray" class='form-control' :title='"number of values (<= " + maxLength + ")"' style='width:0; flex: 1 1 auto'>
 			<span class='text-nowrap'>values from</span>
 			<input type='text' v-model="start" v-on:input="setArray" class='form-control' style='width:0; flex: 1 1 auto'>
 			<span>to</span>
@@ -420,7 +420,7 @@ EGSIM.component('imt-select', {
 		<div class='align-items-baseline gap-1'
 			:class="selectedImtClassNames.includes('SA') && !saWithoutPeriod ? 'd-flex' : 'd-none'">
 			<span class='text-nowrap'>SA periods</span>
-			<array-input
+			<array-div
 				v-model="SAPeriods" initial-start="0.05" initial-stop="10"
 				style='flex: 1 1 auto'
 			 />
