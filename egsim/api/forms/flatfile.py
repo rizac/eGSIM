@@ -139,20 +139,19 @@ class FlatfileValidationForm(APIForm, FlatfileForm):
 
     def output(self) -> Optional[dict]:
         """
-        Compute and return the output from the input data (`self.cleaned_data`).
+        Compute and return the output from the input data (`self.cleaned_data`),
+        which is a dict with all flatfile columns info.
         This method must be called after checking that `self.is_valid()` is True.
 
         :return: any Python object (e.g., a JSON-serializable dict)
         """
+        # return human-readable column metadata from its values (dataframe[col]).
         cleaned_data = self.cleaned_data
         dataframe = cleaned_data['flatfile']
-        columns = []
-        for col in sorted(dataframe.columns):
-            # return human-readable column metadata from its values (dataframe[col]).
-            # Note that if `col` is a registered column, then all metadata match the
-            # registered one (otherwise we should never be here because
-            # `self.is_valid` is False. See FlatfileForm and smtk/flatfile.py)
-            columns.append(get_hr_flatfile_column_meta(col, dataframe[col]))
+        columns = [
+            get_hr_flatfile_column_meta(col, dataframe[col])
+            for col in sorted(dataframe.columns)
+        ]
 
         return {'columns': columns}
 
@@ -257,20 +256,15 @@ def get_hr_flatfile_column_meta(name: str, values: Optional[pd.Series] = None) -
     }
 
     :param name: the flatfile column name
-    :param values: if provided, return metadata from the values. Otherwise, return
-        metadata registered for the flatfile column with the given name (if no column
-        is registered with that name or alias, then return a dict with empty values)
+    :param values: the column data, ignored if `name` is a registered flatfile column.
+        Otherwise, if provided, it will be used to infer the column metadata
     """
-    if values is not None:
-        try:
-            c_categories = values.cat.categories
-            c_dtype = get_dtype_of(c_categories)
-        except AttributeError:
-            c_categories = []
-            c_dtype = get_dtype_of(values)
-        c_type = ""
-        c_help = ""
-    else:
+    c_type = ""
+    c_help = ""
+    c_dtype = None
+    c_categories = []
+
+    if FlatfileMetadata.has(name):
         c_dtype = FlatfileMetadata.get_dtype(name)
         c_categories = FlatfileMetadata.get_categories(name)
         c_type = getattr(FlatfileMetadata.get_type(name), 'value', "")
@@ -284,6 +278,13 @@ def get_hr_flatfile_column_meta(name: str, values: Optional[pd.Series] = None) -
                 c_help += f". {c_aliases}"
             else:
                 c_help = c_aliases
+    elif values is not None:
+        try:
+            c_categories = values.cat.categories
+            c_dtype = get_dtype_of(c_categories)
+        except AttributeError:
+            c_categories = []
+            c_dtype = get_dtype_of(values)
 
     if c_dtype is not None:
         c_dtype = c_dtype.value

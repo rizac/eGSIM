@@ -485,6 +485,13 @@ class FlatfileMetadata:
     """
 
     @staticmethod
+    def has(column: str) -> bool:
+        """Return whether the given column name is a registered flatfile column
+        (column aliases included)
+        """
+        return bool(FlatfileMetadata._props_of(column))
+
+    @staticmethod
     def get_rupture_params() -> set[str]:
         """Return a set of strings with all column names (including aliases)
         denoting a rupture parameter
@@ -528,12 +535,12 @@ class FlatfileMetadata:
 
     @staticmethod
     def get_dtype(column: str) -> Union[ColumnDtype, None]:
-        """Return the Column data type of the given column name, as `ColumnDtype`
-        enum item, or None (=no data type set for the column). Note:
-        if the column dtype is categorical (a finite limited set of possible values)
-        this method returns the (unique) dtype of all categories. As such,
-        `ColumnDtype.category` is never returned: to check if the data is categorical,
-        check that `get_categories(column)` returns a non-empty list
+        """Return the data type of the given column name, as item of the
+        `ColumnDtype` Enum item, or None (=no data type set for the column).
+        If the column dtype is categorical, this method returns the (unique) dtype
+        of all categories. This means that `ColumnDtype.category` is never returned,
+        and to check that the column dtype is categorical, check that
+        `get_categories(column)` returns a non-empty list
         """
         dtype = FlatfileMetadata._get_dtype(column)
         if isinstance(dtype, pd.CategoricalDtype):

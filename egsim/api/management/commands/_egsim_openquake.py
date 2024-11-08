@@ -62,9 +62,7 @@ class Command(BaseCommand):
                 self.stdout.write(f"  {prefix} {name}. No ground motion property "
                                   f"defined")
                 return False
-            invalid = sorted(
-                c for c in gmp if FlatfileMetadata.get_type(c) is None
-            )
+            invalid = sorted(c for c in gmp if not FlatfileMetadata.has(c))
             if invalid:
                 self.stdout.write(f"  {prefix} {name}. Unregistered "
                                   f"ground motion properties: {invalid}")
