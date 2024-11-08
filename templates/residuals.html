@@ -96,7 +96,7 @@
 						<option :value='null'>Residuals histogram (density distribution)</option>
 						<option :value='null'>Likelihood histogram (density distribution)</option>
 						<option v-for='f in forms.misc.residuals.selected_flatfile_fields.filter(f => !f.type.toLowerCase().includes("intensity"))' :value='f.name'>
-							{% verbatim %} Residuals vs. {{ f.name + " (" + f.dtype + ")" }} {% endverbatim %}
+							{% verbatim %} Residuals vs. {{ f.name }} {% endverbatim %}
 						</option>
 					</select>
 

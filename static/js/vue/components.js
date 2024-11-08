@@ -2,9 +2,9 @@
 input as space space separated list (comma is also allowed)
 */
 EGSIM.component('array-input', {
-	// modelValue is the value of v-model set on this array-input:
+	// input for numeric arrays
 	props: {
-		'modelValue': { type: Array },
+		'modelValue': { type: Array }, // <- this is the value of v-model
 		'placeholder': { type: String, default: "type values comma- or space-separated"}
 	},
 	emits: ['update:modelValue'],
@@ -46,7 +46,8 @@ EGSIM.component('array-input', {
 });
 
 EGSIM.component('array-div', {
-	// enhanced array-input allowing to easily type linear or log evenly spaced numbers
+	// div including an array-input with the option to
+	// easily type linear or log evenly spaced numbers
 	props: {
 		modelValue: { type: Array },
 		initialStart: {type: [String, Number], default: null},
@@ -591,7 +592,8 @@ EGSIM.component('gsim-map', {
 			}
 			for (var regx of this.regionalizations){
 				var regBounds = regx.bbox;  // (minLng, minLat, maxLng, maxLat)
-				var outOfBounds = outOfBoundsLng(regBounds[0], regBounds[2]) || outOfBoundsLat(regBounds[1], regBounds[3]);
+				var outOfBounds = outOfBoundsLng(regBounds[0], regBounds[2]) ||
+					outOfBoundsLat(regBounds[1], regBounds[3]);
 				var elm = this.getRegionalizationInput(regx.name);
 				if (elm){
 					elm.parentNode.style.display = outOfBounds ? 'none' : 'flex';

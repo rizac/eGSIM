@@ -57,4 +57,3 @@ class ResidualsForm(GsimImtForm, FlatfileForm, APIForm):
             return residuals
         except FlatfileError as err:
             self.add_error("flatfile", str(err))
-
