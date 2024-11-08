@@ -247,6 +247,8 @@ Eventually, **commit and push**
 
 # Django
 
+Remember to **activate the Python virtualenv** in all examples below
+
 <details>
 <summary>
 Brief Introduction to some important concepts and key terms (click to show)
@@ -299,6 +301,17 @@ initialize Django settings. The Django `shell` command does this:
 
 ```bash
 export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py shell 
+```
+
+## Get Django uploaded files directory
+
+If you did not set it explicitly in `settings.FILE_UPLOAD_TEMP_DIR` 
+(by default is missing), then Django will put uploaded files 
+in the standard temporary directory which you can get easily by 
+typing:
+
+```bash
+python -c "import tempfile;print(tempfile.gettempdir())"
 ```
 
 ## Complete DB reset

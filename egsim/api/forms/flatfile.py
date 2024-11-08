@@ -1,7 +1,6 @@
 """
 Base Form for to model-to-data operations i.e. flatfile handling
 """
-from io import BytesIO
 from typing import Optional
 import pandas as pd
 from django.core.files.uploadedfile import TemporaryUploadedFile
@@ -90,7 +89,7 @@ class FlatfileForm(EgsimBaseForm):
                 return cleaned_data
             # Get our uploaded file (Django UploadedFile object, for ref see
             # https://docs.djangoproject.com/en/5.0/ref/files/uploads/):
-            uploaded_flatfile = u_form.files[ff_keys[0]]  # len(ff_keys) should be 1
+            uploaded_flatfile = u_form.files[ff_keys[0]]
             if isinstance(uploaded_flatfile, TemporaryUploadedFile):
                 # File on disk (Django TemporaryUploadedFile object), get the path:
                 u_flatfile = uploaded_flatfile.temporary_file_path()
@@ -101,7 +100,7 @@ class FlatfileForm(EgsimBaseForm):
             # Note: as of pandas 2.2.2, HDF does not support reading from stream
             # or buffer. As such, we force every uploaded flatfile to be a
             # TemporaryUploadedFile (via settings.FILE_UPLOAD_MAX_MEMORY_SIZE = 0),
-            # and in-memory files are used only when testing
+            # and in-memory files are used only in some tests
 
         if u_flatfile is None:  # predefined flatfile
             flatfile_db_obj = models.Flatfile.queryset('name', 'media_root_path').\
