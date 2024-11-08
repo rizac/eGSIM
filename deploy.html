@@ -250,6 +250,17 @@ service $DJANGO_PROJECT restart && systemctl status $DJANGO_PROJECT
 service nginx restart && nginx -t
 </code></pre>
 
+<h3>Get Django uploaded files directory</h3>
+
+If you did not set it explicitly in settings.FILE_UPLOAD_TEMP_DIR (by default
+is missing), then Django will use the standard temporary directory which you can
+get easily by typing:
+<pre><code class="language-bash">
+source $VENV_ACTIVATE
+python -c "import tempfile;print(tempfile.gettempdir())"
+</code></pre>
+
+
 <h3>Update the package</h3>
 
 <b>this assumes there are: NO changes to

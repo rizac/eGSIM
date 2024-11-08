@@ -18,7 +18,9 @@ from django.utils.datastructures import MultiValueDict
 
 from egsim.api.urls import RESIDUALS_URL_PATH
 from egsim.api.views import (ResidualsView, RESTAPIView, as_querystring,
-                             read_csv_from_buffer, read_hdf_from_buffer)
+                             read_csv_from_buffer, read_hdf_from_buffer,
+                             write_hdf_to_buffer)
+from egsim.smtk import read_flatfile
 from egsim.smtk.converters import dataframe2dict
 
 
@@ -153,6 +155,43 @@ class Test:
         assert resp2.status_code == 400
         # account for different ordering in error columns:
         assert resp2.json()['message'] == 'flatfile: missing column(s) evt_id'
+
+    def test_upload_hdf(self, client, settings):  # <- both pytest-django fixutures
+        """As of pandas 2.2.2, HDF cannot be read from buffer but only from file.
+        Test this here
+        """
+
+        # FIRST we test that the current pandas version does NOT support
+        # upload from file
+        dfr = pd.read_csv(BytesIO(self.flatfile_tk_content))
+        bytes_io = write_hdf_to_buffer({'egsim': dfr})
+        with pytest.raises(Exception) as exc:
+            read_flatfile(bytes_io)
+
+        hdf = SimpleUploadedFile("file.csv",
+                                 bytes_io.getvalue(),
+                                 content_type="text/csv")
+        inputdic2 = {
+            'model': 'KothaEtAl2020ESHM20',
+            'imt' : 'PGA',
+            'flatfile': hdf
+        }
+        resp2 = client.post(self.url, data=inputdic2)
+        assert resp2.status_code == 200
+
+        # test that hdf does not work from buffer. To do so, assure Django will NOT
+        # write data to disk by modifying settings temporarily
+        settings.FILE_UPLOAD_MAX_MEMORY_SIZE = 2 * len(bytes_io.getvalue())
+        hdf = SimpleUploadedFile("file.csv",
+                                 bytes_io.getvalue(),
+                                 content_type="text/csv")
+        inputdic2 = {
+            'model': 'KothaEtAl2020ESHM20',
+            'imt': 'PGA',
+            'flatfile': hdf
+        }
+        resp2 = client.post(self.url, data=inputdic2)
+        assert resp2.status_code == 500
 
     def test_kotha_turkey(self, client):
         csv = SimpleUploadedFile("file.csv",

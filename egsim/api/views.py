@@ -252,6 +252,8 @@ def error_response(error: Union[str, Exception, dict],
 
 def write_hdf_to_buffer(frames: dict[str, pd.DataFrame], **kwargs) -> BytesIO:
     """Write in HDF format to a BytesIO the passed DataFrame(s)"""
+    if any(k == 'table' for k in frames.keys()):
+        raise ValueError('Key "table" invalid (https://stackoverflow.com/a/70467886)')
     with pd.HDFStore(
             "data.h5",  # apparently unused for in-memory data
             mode="w",

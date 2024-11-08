@@ -46,8 +46,8 @@ def read_flatfile(
     returning the corresponding pandas DataFrame.
 
     :param filepath_or_buffer: str, path object or file-like object of the data.
-        HDF files are the recommended formats but support only files on-disk as
-        parameter. CSV files on the other hand can be supplied as in-memory stream, or
+        HDF files are the recommended formats **but support only files on-disk as
+        parameter**. CSV files on the other hand can be supplied as in-memory stream, or
         compressed files that will be inferred from the extension (e.g. 'gzip', 'zip')
     :param rename: a dict mapping a file column to a new column name. Mostly useful
         for renaming columns to standard flatfile names, delegating all data types
@@ -83,6 +83,7 @@ def read_flatfile(
         dfr = pd.read_hdf(filepath_or_buffer, **kwargs)
         is_hdf = True
     except (HDF5ExtError, NotImplementedError):
+        import traceback
         # HdfError -> some error in the data
         # NotImplementedError -> generic buffer not implemented in HDF
         # try with CSV:
