@@ -523,18 +523,11 @@ EGSIM.component('gsim-map', {
 
 				// add layers (to change default layer, see below at the end):
 				var layers = {
-					'Geoportail': L.tileLayer('https://wxs.ign.fr/{apikey}/geoportail/wmts?REQUEST=GetTile&SERVICE=WMTS&VERSION=1.0.0&STYLE={style}&TILEMATRIXSET=PM&FORMAT={format}&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}', {
-						attribution: '<a target="_blank" href="https://www.geoportail.gouv.fr/">Geoportail France</a>',
-						bounds: [[-75, -180], [81, 180]],
-						minZoom: 2,
-						maxZoom: 19,
-						apikey: 'choisirgeoportail',
-						format: 'image/jpeg',
-						style: 'normal'
+					// Esri_WorldImagery:
+					Esri: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+						attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
 					}),
-					// 2 CartoDB gray scale map (very good with overlays, as in our case)
-					// the added base layer added is set selected by default (do not add the others then)
-					'Carto': L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+					Carto: L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
 						attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
 						subdomains: 'abcd',
 						maxZoom: 19
