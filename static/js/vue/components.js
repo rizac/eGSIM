@@ -71,8 +71,8 @@ EGSIM.component('array-div', {
 		}
 	},
 	emits: ['update:modelValue'],
-	template: `<div class='d-flex gap-1'>
-		<array-input v-show="showBaseInput" v-model="mValue" class='form-control' style='flex: 1 1 auto'></array-input>
+	template: `<div class='d-flex'>
+		<array-input v-show="showBaseInput" v-model="mValue" class='form-control rounded-end-0' style='flex: 1 1 auto'></array-input>
 		<div :class="showBaseInput ? 'd-none' : 'd-flex'" class='align-items-center gap-1' style='flex: 1 1 0'>
 			<input v-model="num" v-on:input="setArray" class='form-control' :title='"number of values (<= " + maxLength + ")"' style='width:0; flex: 1 1 auto'>
 			<span class='text-nowrap'>values from</span>
@@ -85,7 +85,8 @@ EGSIM.component('array-div', {
 		</div>
 		<button type='button'
 			@click="showBaseInput=!showBaseInput"
-			class='btn btn-outline-primary border-0 position-relative'
+			class='btn btn-outline-primary'
+			:class='showBaseInput? "border border-start-0 rounded-start-0" : "border-0 ms-1"'
 			:title='showBaseInput ? "input evenly spaced numbers over a specified interval on a linear or log scale" : "restore default input"'>
 			<i v-show='showBaseInput' class="fa fa-pencil"></i>
 			<i v-show='!showBaseInput' class="fa fa-reply"></i>
@@ -704,24 +705,24 @@ EGSIM.component('flatfile-select', {
 			}).then(resp => resp.json());
 		}
 	},
-	template:`<div class='d-flex align-items-baseline gap-1'>
-		<span>flatfile</span>
-		<select v-model="selectedIndex" class='form-control'>
+	template:`<div class='d-flex align-items-baseline'>
+		<span class='me-1'>flatfile</span>
+		<select v-model="selectedIndex" class='form-control rounded-end-0'>
 			<option v-for="(v, idx) in flatfiles" :value='idx'>
 				{{ v.innerHTML }}
 			</option>
 		</select>
-		<a title="data reference" target="_blank"
-			v-if="selectedIndex >=0 && flatfiles[selectedIndex].url"
-			:href="flatfiles[selectedIndex].url">
-			<i class="fa fa-external-link"></i>
-		</a>
 		<input type="file" style='display:none' @change="uploadFlatfiles($event.target.files)"/>
 		<button
-			class="btn btn-outline-primary border-0" type="button"
+			class="btn btn-outline-primary border border-start-0 rounded-start-0" type="button"
 			onclick="this.parentNode.querySelector('input[type=file]').click()"
 			title="upload user-defined flatfile in CSV or HDF format">
 			<i class='fa fa-upload'></i>
 		</button>
+		<a title="flatfile reference" target="_blank" class='ms-1'
+			v-if="selectedIndex >=0 && flatfiles[selectedIndex].url"
+			:href="flatfiles[selectedIndex].url">
+			<i class="fa fa-external-link"></i>
+		</a>
 	</div>`
 });
