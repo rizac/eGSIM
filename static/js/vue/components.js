@@ -229,22 +229,19 @@ EGSIM.component('gsim-select', {
 			style='border-bottom:0 !important;border-bottom-left-radius:0 !important; border-bottom-right-radius:0 !important'>
 			<span style="flex: 1 1 auto;" class='text-start'>Model ({{ selectedModels.length }} selected)</span>
 			<span v-show='inputElementText' class='text-muted small'> [ESC]: clear text and hide popup</span>
-			<i
-				v-show="Object.keys(warnings).length && !inputElementText"
+			<i v-show="Object.keys(warnings).length && !inputElementText"
 				title="Remove models with warnings (for details, hover mouse on each model icon)"
 				class="fa fa-exclamation-triangle ms-2 text-warning"
 				style="cursor: pointer;"
 				@click="removeSelectedModelsWithWarnings()">
 			</i>
-			<i
-				v-show="Object.keys(errors).length && !inputElementText"
+			<i v-show="Object.keys(errors).length && !inputElementText"
 				title="Remove models with errors (for details, hover mouse on each model icon)"
 				class="fa fa-exclamation-triangle ms-2 text-danger"
 				style="cursor: pointer;"
 				@click="removeSelectedModelsWithErrors()">
 			</i>
-			<i
-				v-show="selectedModels.length && !inputElementText"
+			<i v-show="selectedModels.length && !inputElementText"
 				title="Remove all selected models"
 				class="fa fa-times-circle ms-2"
 				style="cursor: pointer"
@@ -272,8 +269,7 @@ EGSIM.component('gsim-select', {
 			</div>
 		</div>
 		<!-- select text and relative popup/div -->
-		<input
-			type="text"
+		<input type="text"
 			v-model='inputElementText' ref="inputElement"
 			@keydown.down.prevent="focusHTMLSelectElement()"
 			@keydown.esc.prevent="inputElementText=''"
@@ -281,9 +277,7 @@ EGSIM.component('gsim-select', {
 			:class="selectedModels.length ? 'rounded-top-0 border-top-0' : ''"
 			title="you can also type imt: followed by an intensity measure (e.g. imt:SA) to show only models defined for that imt"
 			:placeholder="'Type name (' + models.length + ' models available) or select by region (click on map)'" />
-		<div
-			class='position-relative'
-			style='overflow:visible'>
+		<div class='position-relative'style='overflow:visible'>
 			<select
 				title="Highlight models: Click or [&uarr;][&darr;] (with [Shift] or [Ctrl]: multi highlight)\nSelect highlighted models: Double click, [Return] or [Enter]\nClear text and hide popup: [ESC]"
 				multiple
@@ -295,9 +289,7 @@ EGSIM.component('gsim-select', {
 				@keydown.enter.prevent="addModelsToSelection( Array.from($refs.selectElement.selectedOptions).map(o => o.value) )"
 				@keydown.up="$evt => { if( $refs.selectElement.selectedIndex == 0 ){ focusHTMLInputElement(); $evt.preventDefault(); } }"
 				@keydown.esc.prevent="inputElementText=''">
-				<option
-					v-for="m in selectableModels"
-					:value='m.name'>
+				<option v-for="m in selectableModels" :value='m.name'>
 					{{ m.name.match(displayRegex).join(" ") }}
 				</option>
 			</select>
@@ -392,8 +384,7 @@ EGSIM.component('imt-select', {
 	template: `<div class='d-flex flex-column form-control gap-2'
 		title="Intensity measure type(s)">
 		<span class='mb-2'>Imt ({{ selectedImts.length }} selected)</span>
-		<select
-			v-model="selectedImtClassNames"
+		<select v-model="selectedImtClassNames"
 			multiple
 			class='form-control'
 			style="flex: 1 1 auto;">
@@ -404,10 +395,7 @@ EGSIM.component('imt-select', {
 		<div class='align-items-baseline gap-1'
 			:class="selectedImtClassNames.includes('SA') && !saWithoutPeriod ? 'd-flex' : 'd-none'">
 			<span class='text-nowrap'>SA periods</span>
-			<array-div
-				v-model="SAPeriods" initial-start="0.05" initial-stop="10"
-				style='flex: 1 1 auto'
-			 />
+			<array-div v-model="SAPeriods" initial-start="0.05" initial-stop="10" style='flex: 1 1 auto' />
 		</div>
 	</div>`,
 	methods: {
@@ -699,8 +687,7 @@ EGSIM.component('flatfile-select', {
 			</option>
 		</select>
 		<input type="file" style='display:none' @change="uploadFlatfiles($event.target.files)"/>
-		<button
-			class="btn btn-outline-primary border border-start-0 rounded-start-0" type="button"
+		<button class="btn btn-outline-primary border border-start-0 rounded-start-0" type="button"
 			onclick="this.parentNode.querySelector('input[type=file]').click()"
 			title="upload user-defined flatfile in CSV or HDF format">
 			<i class='fa fa-upload'></i>

@@ -69,9 +69,7 @@ def get_residuals(
         labels += [Clabel.mean]
     if likelihood:
         residuals = get_residuals_likelihood(residuals)
-        labels += [Clabel.total_lh,
-                   Clabel.inter_ev_lh,
-                   Clabel.intra_ev_lh]
+        labels += [Clabel.total_lh, Clabel.inter_ev_lh, Clabel.intra_ev_lh]
     # sort columns (kind of reindex, more verbose for safety):
     original_cols = set(residuals.columns)
     sorted_cols = product(imts, labels, gsims)
@@ -80,7 +78,10 @@ def get_residuals(
     col_mapping = {}
     for c in flatfile_r.columns:
         c_type = FlatfileMetadata.get_type(c)
-        col_mapping[c] = (Clabel.input_data, c_type.value if c_type else 'misc', c)
+        col_mapping[c] = (
+            Clabel.input_data,
+            c_type.value if c_type else Clabel.uncategorized_input,
+            c)
     flatfile_r.rename(columns=col_mapping, inplace=True)
     # sort columns:
     flatfile_r.sort_index(axis=1, inplace=True)

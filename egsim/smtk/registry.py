@@ -191,3 +191,5 @@ class Clabel:
     inter_ev_lh = inter_ev_res.replace("_residual", "_likelihood")
     intra_ev_lh = intra_ev_res.replace("_residual", "_likelihood")
     mag = "mag"
+    uncategorized_input = 'uncategorized'
+
