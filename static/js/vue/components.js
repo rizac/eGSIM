@@ -472,7 +472,12 @@ EGSIM.component('gsim-map', {
 	},
 	methods: {
 		createLeafletMap(){
-			let map = L.map(this.$refs.mapDiv, {center: [48, 7], zoom: 4});
+			let map = L.map(this.$refs.mapDiv, {
+				center: [48, 7],
+				zoom: 4,
+				minZoom: 3,
+				maxBounds: new L.LatLngBounds(new L.LatLng(-90, -180-160), new L.LatLng(90, 200))
+			});
 			// center map:
 			var mapCenter = L.latLng([49, 13]);
 			map.fitBounds(L.latLngBounds([mapCenter, mapCenter]), {maxZoom: 3});
@@ -603,6 +608,12 @@ EGSIM.component('gsim-map', {
 		},
 		mapClicked(event) {
 			var latLng = [event.latlng.lat, event.latlng.lng];
+			// check if longitude is outside [-180, 180] (we assume lat always within -90, 90)
+			if (latLng[1] > 180){
+				latLng[1] = -180 + (latLng[1] % 180)
+			}else if (latLng[1] < -180){
+				latLng[1] = 180 + (latLng[1] % 180)
+			}
 			// Destroy existing markers marker (or move existing one):
 			this.map.eachLayer((layer) => { if (layer instanceof L.Marker){ layer.remove(); }});
 			// ad new marker:
