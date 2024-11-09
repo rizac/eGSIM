@@ -245,45 +245,27 @@ EGSIM.component('gsim-select', {
 			</i>
 			<i
 				v-show="selectedModels.length && !inputElementText"
-				title="Remove all models from selection"
+				title="Remove all selected models"
 				class="fa fa-times-circle ms-2"
-				style="cursor: pointer;"
+				style="cursor: pointer"
 				@click="removeSelectedModels()">
 			</i>
 		</div>
 		<div style='overflow: auto; flex: 1 1 auto'
 			class='rounded-bottom-0 flex-column form-control'
 			:class="selectedModels.length ? 'd-flex': 'd-none'">
-			<div class='d-flex flex-row'>
-				<!-- div with cancel icons stacked vertically -->
-				<div class='d-flex flex-column'>
-					<div
-						v-for="model in selectedModels"
-						class='me-1'
-						:class="errors[model] ? 'text-danger' : warnings[model] ? 'text-warning' : ''"
-						title="Remove from selection"
+			<div class='d-flex flex-column'>
+				<div v-for="model in selectedModels" class='d-flex align-items-baseline gap-1'
+					:title="(errors[model] || []).concat(warnings[model] || []).join('<br>')"
+					:class="errors[model] ? 'text-danger' : warnings[model] ? 'text-warning' : ''">
+					<span title="Remove from selection"
+						style="cursor: pointer"
 						@click="selectedModels.splice(selectedModels.indexOf(model), 1)">
 						<i class='fa fa-times-circle'></i>
-					</div>
-				</div>
-				<!-- div with selected model names stacked vertically -->
-				<div class='d-flex flex-column ms-1'>
-					<div
-						v-for="model in selectedModels"
-						:title="(errors[model] || []).concat(warnings[model] || []).join('<br>')"
-						:class="errors[model] ? 'text-danger' : warnings[model] ? 'text-warning' : ''"
-						>
-						{{ model }}
-					</div>
-				</div>
-				<!-- div with warning icons stacked vertically -->
-				<div class='d-flex flex-column ms-1'>
-					<span
-						v-for="model in selectedModels"
-						:title="(errors[model] || []).concat(warnings[model] || []).join('<br>')"
-						:style='{visibility: errors[model] || warnings[model] ? "visible" : "hidden"}'
-						:class="errors[model] ? 'text-danger' : warnings[model] ? 'text-warning' : ''"
-						class='me-1'>
+					</span>
+					<span>{{ model }}</span>
+					<span v-show='errors[model] || warnings[model]'
+						:title="(errors[model] || []).concat(warnings[model] || []).join('<br>')">
 						<i class='fa fa-exclamation-triangle'></i>
 					</span>
 				</div>
