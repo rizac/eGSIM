@@ -242,6 +242,8 @@ class ResidualsVisualizeForm(ResidualsForm):
         # Plotly.get_layout (see below) handles this automatically
 
         dataframe = super().output()
+        if not self.is_valid():
+            return {}
         col_x = self.cleaned_data.get('x', "")
         likelihood = self.cleaned_data.get('likelihood', False)
         c_cycle = colors_cycle()
