@@ -133,8 +133,8 @@ class PredictionsVisualizeForm(PredictionsForm):
     def get_plot_traces_and_layout(x, y: dict[str, tuple], x_label, y_label,
                                    colors: dict[str, str]) -> tuple[list[dict], dict]:
         """
-        Return the traces and layout for displaying prediction plots (using the
-        JavaScript Plotly library). Traces is a list, where each Trace is a dict
+        Return the traces and layout of a prediction plot (to be displayed using the
+        JavaScript library Plotly). Traces is a list, where each Trace is a dict
         holding the data points and other data info (e.g. legend name, data name),
         layout is a dict of layout configuration, such as plot title, x- or y-axis
         range and type (log/linear)
@@ -242,7 +242,7 @@ class ResidualsVisualizeForm(ResidualsForm):
         # Plotly.get_layout (see below) handles this automatically
 
         dataframe = super().output()
-        if not self.is_valid():
+        if dataframe is None:
             return {}
         col_x = self.cleaned_data.get('x', "")
         likelihood = self.cleaned_data.get('likelihood', False)
@@ -321,8 +321,8 @@ class ResidualsVisualizeForm(ResidualsForm):
     def get_plot_traces_and_layout(model: str, imt: str, x, y, likelihood: bool,
                                    xlabel: str, color: str) -> tuple[list[dict], dict]:
         """
-        Return the traces and layout for displaying prediction plots (using the
-        JavaScript Plotly library). Traces is a list, where each Trace is a dict
+        Return the traces and layout of a residuals plot (to be displayed using the
+        JavaScript library Plotly). Traces is a list, where each Trace is a dict
         holding the data points and other data info (e.g. legend name, data name),
         layout is a dict of layout configuration, such as plot title,
         x- y-axis range and type (log/linear)
@@ -536,8 +536,8 @@ class FlatfileVisualizeForm(APIForm, FlatfileForm):
     def get_plot_traces_and_layout(x, y, x_label: str, y_label: str,
                                    color: str) -> tuple[list[dict], dict]:
         """
-        Return the traces and layout for displaying prediction plots (using the
-        JavaScript Plotly library). Traces is a list, where each Trace is a dict
+        Return the traces and layout of a flatfile plot (to be displayed using the
+        JavaScript library Plotly). Traces is a list, where each Trace is a dict
         holding the data points and other data info (e.g. legend name, data name),
         layout is a dict of layout configuration, such as plot title,
         x- y-axis range and type (log/linear)
