@@ -238,8 +238,8 @@ def validate_flatfile_dataframe(
 
 def optimize_flatfile_dataframe(dfr: pd.DataFrame):
     """Optimize the given dataframe by replacing str column with
-    categorical (if memory is saved with the conversion) and reseting
-    the dataframe index to"""
+    categorical (if the conversion saves memory)
+    """
     for c in dfr.columns:
         if get_dtype_of(dfr[c]) == ColumnDtype.str:
             cat_dtype = dfr[c].astype('category')
