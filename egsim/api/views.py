@@ -13,12 +13,11 @@ import pandas as pd
 from django.http import (JsonResponse, HttpRequest, QueryDict, FileResponse)
 from django.http.response import HttpResponse
 from django.views.generic.base import View
-from django.forms.fields import MultipleChoiceField
 
 from ..smtk.converters import dataframe2dict
+from ..smtk.registry import gsim_info
 from .forms import APIForm, EgsimBaseForm
-from .forms.scenarios import PredictionsForm, ArrayField
-from .forms.flatfile import FlatfileForm
+from .forms.scenarios import PredictionsForm
 from .forms.residuals import ResidualsForm
 
 
@@ -38,78 +37,15 @@ class MimeType:  # noqa
     # GZIP = "application/gzip"
 
 
-class RESTAPIView(View):
-    """Base view for every eGSIM REST API endpoint. Typical usage:
+class EgsimView(View):
 
-    1. For usage as view in `urls.py`: subclass and provide the relative `formclass`
-    2. For usage inside a `views.py` function, to process data with a `APIForm`
-       class `form_cls` (note: class not object):
-       ```
-       def myview(request):
-           return RESTAPIView.as_view(formclass=form_cls)(request)
-       ```
-    """
-    # The APIForm of this view, to be set in subclasses:
-    formclass: Type[APIForm] = None
-    # error codes for general client and server errors:
-    CLIENT_ERR_CODE, SERVER_ERR_CODE = 400, 500
-
-    def parse_query_dict(self, querydict: QueryDict, nulls=("null",)) \
-            -> dict[str, Union[str, list[str]]]:
-        """parse the given query dict and returns a Python dict
-
-        :param querydict: a QueryDict resulting from an `HttpRequest.POST` or
-            `HttpRequest.GET`, with percent-encoded characters already decoded
-        :param nulls: tuple/list/set of strings to be converted to None. Defaults
-            to `("null", )`
-        """
-        form_cls = self.formclass
-
-        default_multi_value_fields = {'gsim', 'imt', 'regionalization'}
-        multi_value_params = set()
-        for field_name, field in form_cls.base_fields.items():
-            if field_name in default_multi_value_fields or \
-                    isinstance(field, (MultipleChoiceField, ArrayField)):
-                multi_value_params.update(form_cls.param_names_of(field_name))
-
-        ret = {}
-        for param_name, values in querydict.lists():
-            if param_name in multi_value_params:
-                values = [None if v in nulls else v for val in values
-                          for v in self.split_string(val)]
-            else:
-                values = [None if v in nulls else v for v in values]
-                if len(values) == 1:
-                    values = values[0]
-            ret[param_name] = values
-        return ret
-
-    @staticmethod
-    def split_string(string: str) -> list[str]:
-        """
-        :param string: a query-string value (e.g. '6' in '?param=6&...')
-        :return: a list of chunks by comma-splitting the given string
-        """
-        _string = string.strip()
-        if not _string:
-            return []
-        return re.split(r"\s*,\s*|\s+", _string)
-
-    def get(self, request: HttpRequest):
-        """Process a GET request and return a Django Response.
-        All parameters that accept multiple values can be input by either
-        specifying the parameter more than once, or by typing commas or spaces as value
-        separator. All parameter values are returned as string except the string
-        'null' that will be converted to None
-        """
+    def get(self, request: HttpRequest) -> HttpResponse:
+        """Process a GET request and return a Django Response"""
         return self.response(data=self.parse_query_dict(request.GET))
 
-    def post(self, request: HttpRequest):
+    def post(self, request: HttpRequest) -> HttpResponse:
         """Process a POST request and return a Django Response"""
         if request.FILES:
-            if not issubclass(self.formclass, FlatfileForm):
-                return error_response("The given URL does not support "
-                                      "uploaded files", self.CLIENT_ERR_CODE)
             # requests.FILE: https://docs.djangoproject.com/en/dev/ref/request-response/#django.http.HttpRequest.FILES  # noqa
             return self.response(data=self.parse_query_dict(request.POST),
                                  files=request.FILES)
@@ -117,16 +53,69 @@ class RESTAPIView(View):
             stream = StringIO(request.body.decode('utf-8'))
             return self.response(data=yaml.safe_load(stream))
 
-    def response(self, **form_kwargs):
+    def response(self, data: dict, files: Optional[dict] = None) -> HttpResponse:
+        """Return a Django HttpResponse from the given arguments extracted from a GET
+        or POST request.
+
+        :param data: the data of the GET or POST request
+        :param files: the files of the GET or POST request, or None
+        """
+        raise
+
+    def parse_query_dict(
+            self,
+            query_dict: QueryDict, *,
+            nulls=("null",),
+            literal_comma: Optional[set] = frozenset()
+    ) -> dict[str, Union[str, list[str]]]:
+        """parse the given query dict and returns a Python dict. This method parses
+        GET and POST request data and can be overwritten in subclasses.
+
+        :param query_dict: a QueryDict resulting from an `HttpRequest.POST` or
+            `HttpRequest.GET`, with percent-encoded characters already decoded
+        :param nulls: tuple/list/set of strings to be converted to None. Defaults
+            to `("null", )`
+        :param literal_comma: set (defaults to empty set) of the parameter names for
+            which "," in the value has to be treated as a normal character (By default,
+            a comma acts as multi-value separator)
+        """
+        ret = {}
+        for param_name, values in query_dict.lists():
+            if param_name not in literal_comma and any(',' in v for v in values):
+                values = [v for val in values for v in re.split(r"\s*,\s*|\s+", val)]
+            for i in range(len(values)):
+                if values[i] in nulls:
+                    values[i] = None
+            ret[param_name] = values[0] if len(values) == 1 else values
+
+        return ret
+
+
+class APIFormView(EgsimView):
+    """Base view for every eGSIM API endpoint using an API Form to parse and process
+    a request. Typical usage:
+
+    1. For usage as view in `urls.py`: subclass and provide the relative `formclass`
+    2. For usage inside a `views.py` function, to process data with a `APIForm`
+       class `form_cls` (note: class not object):
+       ```
+       def myview(request):
+           return APIFormView.as_view(formclass=form_cls)(request)
+       ```
+    """
+    # The APIForm of this view, to be set in subclasses:
+    formclass: Type[APIForm] = None
+    # error codes for general client and server errors:
+    CLIENT_ERR_CODE, SERVER_ERR_CODE = 400, 500
+
+    def response(self, data: dict, files: Optional[dict] = None):
         """Return a Django Response from the given arguments. This method first creates
         a APIForm (from `self.formclass`) and puts the Form `output` into the
-        returned Response body (or Response.content). On error, return
+        returned Response body (or `Response.content`). On error, return
         an appropriate JSON response
-
-        :param form_kwargs: keyword arguments to be passed to this class Form
         """
         try:
-            rformat = form_kwargs['data'].pop('format', 'json')
+            rformat = data.pop('format', 'json')
             try:
                 response_function = self.supported_formats()[rformat]
             except KeyError:
@@ -134,7 +123,7 @@ class RESTAPIView(View):
                     f'format: {EgsimBaseForm.ErrMsg.invalid.value}',
                     self.CLIENT_ERR_CODE
                 )
-            form = self.formclass(**form_kwargs)
+            form = self.formclass(data, files)
             if form.is_valid():
                 obj = form.output()
                 if form.is_valid():
@@ -151,7 +140,7 @@ class RESTAPIView(View):
 
     @classmethod
     def supported_formats(cls) -> \
-            dict[str, Callable[[RESTAPIView, APIForm], HttpResponse]]:
+            dict[str, Callable[[APIForm, APIForm], HttpResponse]]:
         """Return a list of supported formats (content_types) by inspecting
         this class implemented methods. Each dict key is a MimeType attr name,
         mapped to a class method used to obtain the response data in that
@@ -171,12 +160,12 @@ class RESTAPIView(View):
         return JsonResponse(form_output, **kwargs)
 
 
-class SmtkView(RESTAPIView):
-    """RESTAPIView for smtk (strong motion toolkit) output (e.g. Predictions or
+class SmtkView(APIFormView):
+    """APIFormView for smtk (strong motion toolkit) output (e.g. Predictions or
     Residuals, set in the `formclass` class attribute"""
 
     def response_csv(self, form_output: pd.DataFrame, form: APIForm, **kwargs)\
-            -> FileResponse:  # noqa
+            -> FileResponse:
         content = write_csv_to_buffer(form_output)
         content.seek(0)  # for safety
         kwargs.setdefault('content_type', MimeType.csv)
@@ -184,7 +173,7 @@ class SmtkView(RESTAPIView):
         return FileResponse(content, **kwargs)
 
     def response_hdf(self, form_output: pd.DataFrame, form: APIForm, **kwargs)\
-            -> FileResponse:  # noqa
+            -> FileResponse:
         content = write_hdf_to_buffer({'egsim': form_output})
         content.seek(0)  # for safety
         kwargs.setdefault('content_type', MimeType.hdf)
@@ -231,9 +220,9 @@ def error_response(error: Union[str, Exception, dict],
     https://google.github.io/styleguide/jsoncstyleguide.xml).
 
     :param error: dict, Exception or string:
-        - If dict, JSONResponse.content = dict (if dict['message'] is missing,
+        - If dict, `JSONResponse.content = error` (if dict['message'] is missing,
           it will be set inferred from `status`).
-        - If `str` or `Exception`, JSONResponse.content = {'message': str(error)}
+        - If `str` or `Exception`, `JSONResponse.content` = {'message': str(error)}
     :param status: the response HTTP status code (int, default: 500)
     :param kwargs: optional params for JSONResponse (except 'content' and 'status')
     """
@@ -287,7 +276,7 @@ def read_hdf_from_buffer(
                     break
             if len(keys) == 1:
                 key = keys[0]
-        # Note: top-level keys can be passed with or wothout leading slash:
+        # Note: top-level keys can be passed with or without leading slash:
         return store[key]
 
 
@@ -312,6 +301,16 @@ def read_csv_from_buffer(buffer: Union[bytes, IO],
     dframe.rename(columns=lambda c: "" if c.startswith("Unnamed:") else c,
                   inplace=True)
     return dframe
+
+
+class ModelInfo(EgsimView):
+
+    def response(self, data: dict, files: Optional[dict] = None) -> JsonResponse:
+        models = data['model']
+        try:
+            return JsonResponse({m: gsim_info(m) for m in models})
+        except Exception as exc:
+            return error_response(exc, 400)
 
 
 # Default safe characters in `as_querystring`. Letters, digits are safe by default

@@ -27,8 +27,7 @@ def gsim(model: Union[str, GMPE], raise_deprecated=True) -> GMPE:
         (the last one only if `raise_deprecated` is True, the default)
     """
     if isinstance(model, str):
-        is_table = model.startswith('GMPETable')
-        if is_table:
+        if model.startswith('GMPETable'):
             # GMPETable. raises: TypeError, ValueError, FileNotFoundError, OSError,
             # AttributeError
             filepath = re.match(r'^GMPETable\(([^)]+?)\)$', model).\
@@ -173,6 +172,21 @@ def get_ground_motion_values(model: GMPE, imts: list[IMT], ctx: np.recarray):
     phi = np.zeros_like(median)
     model.compute(ctx, imts, median, sigma, tau, phi)
     return median.T, sigma.T, tau.T, phi.T
+
+
+def gsim_info(model) -> dict:
+    """Return the model info as a dict with keys:
+     - doc: str the model source code documentation
+     - imts: list[str] the intensity measures defined for the model
+     - props: list[str] the ground motion properties required to compute the
+        model predictions
+    """
+    model = gsim(model)
+    return {
+        'doc': (model.__doc__ or "").strip(),
+        'imts': list(intensity_measures_defined_for(model) or []),
+        'props': list(ground_motion_properties_required_by(model) or [])
+    }
 
 
 class Clabel:

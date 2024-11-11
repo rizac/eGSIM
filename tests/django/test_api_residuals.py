@@ -17,7 +17,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils.datastructures import MultiValueDict
 
 from egsim.api.urls import RESIDUALS_URL_PATH
-from egsim.api.views import (ResidualsView, RESTAPIView, as_querystring,
+from egsim.api.views import (ResidualsView, APIFormView, as_querystring,
                              read_csv_from_buffer, read_hdf_from_buffer,
                              write_hdf_to_buffer)
 from egsim.smtk import read_flatfile
@@ -127,7 +127,7 @@ class Test:
             return ResidualsView().response(data=dict(inputdic2, flatfile='esm2018'),
                                             files=MultiValueDict({'flatfile': csv}))
 
-        with patch.object(RESTAPIView, 'post', fake_post):
+        with patch.object(APIFormView, 'post', fake_post):
             resp2 = client.post(self.url, data=inputdic2)
             assert resp2.status_code == 400
             assert 'flatfile' in resp2.json()['message']

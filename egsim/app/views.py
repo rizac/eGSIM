@@ -20,7 +20,7 @@ from ..api.forms.flatfile import (FlatfileMetadataInfoForm,
 from ..api.forms import GsimFromRegionForm, APIForm, EgsimBaseForm
 from ..api.forms.residuals import ResidualsForm
 from ..api.forms.scenarios import PredictionsForm
-from ..api.views import RESTAPIView, MimeType, error_response
+from ..api.views import APIFormView, MimeType, error_response
 from .forms import (ResidualsVisualizeForm, PredictionsVisualizeForm,
                     FlatfileVisualizeForm)
 
@@ -301,27 +301,27 @@ def form2dict(form: EgsimBaseForm, compact=False) -> dict:
 
 
 def get_gsims_from_region(request) -> JsonResponse:
-    return RESTAPIView.as_view(formclass=GsimFromRegionForm)(request)
+    return APIFormView.as_view(formclass=GsimFromRegionForm)(request)
 
 
 def flatfile_validate(request) -> JsonResponse:
-    return RESTAPIView.as_view(formclass=FlatfileValidationForm)(request)
+    return APIFormView.as_view(formclass=FlatfileValidationForm)(request)
 
 
 def flatfile_meta_info(request) -> JsonResponse:
-    return RESTAPIView.as_view(formclass=FlatfileMetadataInfoForm)(request)
+    return APIFormView.as_view(formclass=FlatfileMetadataInfoForm)(request)
 
 
 def flatfile_visualize(request) -> JsonResponse:
-    return RESTAPIView.as_view(formclass=FlatfileVisualizeForm)(request)
+    return APIFormView.as_view(formclass=FlatfileVisualizeForm)(request)
 
 
 def predictions_visualize(request) -> JsonResponse:
-    return RESTAPIView.as_view(formclass=PredictionsVisualizeForm)(request)
+    return APIFormView.as_view(formclass=PredictionsVisualizeForm)(request)
 
 
 def residuals_visualize(request) -> JsonResponse:
-    return RESTAPIView.as_view(formclass=ResidualsVisualizeForm)(request)
+    return APIFormView.as_view(formclass=ResidualsVisualizeForm)(request)
 
 
 def plots_image(request) -> HttpResponseBase:
