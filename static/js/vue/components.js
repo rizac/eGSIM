@@ -152,7 +152,8 @@ EGSIM.component('gsim-select', {
 	props: {
 		modelValue: {type: Array},  // [NOTE: VUE model] Array of selected ground motion model names
 		models: {type: Array},  // [Note: Ground Motion models] Array of available models. Each model is an objects with keys: name, warning, imts
-		selectedImts: {type: Array, default: []} // field of selected IMTs (strings)
+		selectedImts: {type: Array, default: []}, // field of selected IMTs (strings)
+		modelInfoUrl: {type: Array, default: ""}
 	},
 	emits: ['update:modelValue'],
 	data() {
@@ -228,7 +229,6 @@ EGSIM.component('gsim-select', {
 			class='d-flex flex-row align-items-baseline mb-2'
 			style='border-bottom:0 !important;border-bottom-left-radius:0 !important; border-bottom-right-radius:0 !important'>
 			<span style="flex: 1 1 auto;" class='text-start'>Model ({{ selectedModels.length }} selected)</span>
-			<span v-show='inputElementText' class='text-muted small'> [ESC]: clear text and hide popup</span>
 			<i v-show="Object.keys(warnings).length && !inputElementText"
 				title="Remove models with warnings (for details, hover mouse on each model icon)"
 				class="fa fa-exclamation-triangle ms-2 text-warning"
@@ -278,24 +278,58 @@ EGSIM.component('gsim-select', {
 			title="you can also type imt: followed by an intensity measure (e.g. imt:SA) to show only models defined for that imt"
 			:placeholder="'Type name (' + models.length + ' models available) or select by region (click on map)'" />
 		<div class='position-relative'style='overflow:visible'>
-			<select
-				title="Highlight models: Click or [&uarr;][&darr;] (with [Shift] or [Ctrl]: multi highlight)\nSelect highlighted models: Double click, [Return] or [Enter]\nClear text and hide popup: [ESC]"
-				multiple
-				ref="selectElement"
-				v-show='!!selectableModels.length'
-				class='border position-absolute shadow'
+			<select multiple ref="selectElement" v-show='!!selectableModels.length'
+				class='border position-absolute shadow start-0 end-0'
 				style='z-index:10000; outline: 0px !important;'
 				@dblclick.prevent="addModelsToSelection( Array.from($refs.selectElement.selectedOptions).map(o => o.value) )"
 				@keydown.enter.prevent="addModelsToSelection( Array.from($refs.selectElement.selectedOptions).map(o => o.value) )"
 				@keydown.up="$evt => { if( $refs.selectElement.selectedIndex == 0 ){ focusHTMLInputElement(); $evt.preventDefault(); } }"
+				@keydown.space="$evt => { showInfo(); $evt.preventDefault(); }"
 				@keydown.esc.prevent="inputElementText=''">
 				<option v-for="m in selectableModels" :value='m.name'>
 					{{ m.name.match(displayRegex).join(" ") }}
 				</option>
 			</select>
+			<div ref='keystrokes'
+				:class='selectableModels.length ? "d-flex" : "d-none"'
+				class='gap-3 p-1 text-muted small bg-white position-fixed bottom-0 start-0 text-nowrap'>
+				<div><i class='fa fa-info'></i> Popup: </div>
+				<div>Double click or [Enter] <span class='text-primary'>select</span></div>
+				<div>[ESC] <span class='text-primary'>Clear text and hide popup</div>
+				<div>[Space bar] <span class='text-primary'> model info</div>
+			</div>
+			<div ref='modelInfo' class='form-control position:fixed' style='max-width:50vw; left:1rem;'>
+			</div>
 		</div>
 	</div>`,
 	methods: {
+		showInfo(){
+			// fetch and show info on the highlighted selectable models
+			var models = this.highlightedSelectableModels;
+			var popup = this.$refs.infoElement;
+			popup.innerHTML = 'Loading info ... ';
+			fetch(this.modelInfoUrl, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({'model': models}),
+			}).then(response => {
+				var json = response.json().then(obj => {
+					var arr = Object.keys(obj).map(k =>
+						`<h5 class='text-nowrap text-primary'>${k}</h5>
+						<ul class='ps-4 mb-2'>
+						<li><b>Supported intensity measures:</b> ${obj[k]['imts'].join(', ')}</li>
+						<li><b>Required Ground motion properties:</b> ${obj[k]['props'].join(', ')}</li>
+						</ul>
+						<p class='ps-4'>${obj[k]['doc'].trim().replaceAll(/\.\s*\n\s*/g, ".<br>")}</p>
+					`);
+					popup.innerHTML = arr.join('');
+				});
+			}).catch((error) => {
+				popup.innerHTML = 'No info available';
+			});
+		},
 		removeSelectedModelsWithWarnings(){
 			// this function filters the selectedModels Array without creating a new one:
 			this.selectedModels.splice(0,
@@ -333,9 +367,11 @@ EGSIM.component('gsim-select', {
 		},
 		resizeHTMLSelectElement(optionsLength){
 			var rect = this.$refs.inputElement.getBoundingClientRect();
-			this.$refs.selectElement.style.width = (rect.right - rect.left) + 'px';
+			// this.$refs.selectElement.style.width = (rect.right - rect.left) + 'px';
 			this.$refs.selectElement.size = optionsLength;
-			this.$refs.selectElement.style.maxHeight = (.95 * (document.documentElement.clientHeight - rect.bottom)) + 'px';
+			// this.$refs.selectElement.style.maxHeight = (.90 * (document.documentElement.clientHeight - rect.bottom)) + 'px';
+			var h = 100*(document.documentElement.clientHeight - rect.bottom)/document.documentElement.clientHeight;
+			this.$refs.selectElement.style.maxHeight = `calc(${h}vh - 3rem)`;  // (.90 * (document.documentElement.clientHeight - rect.bottom)) + 'px';
 		}
 	}
 });

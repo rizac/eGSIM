@@ -2,7 +2,7 @@
 from django.urls import re_path, path
 from django.views.generic.base import RedirectView
 
-from egsim.api.views import PredictionsView, ResidualsView
+from egsim.api.views import PredictionsView, ResidualsView, ModelInfoView
 from .views import (main, get_gsims_from_region, flatfile_meta_info,
                     flatfile_visualize, flatfile_validate, URLS,
                     predictions_response_tutorial,
@@ -43,6 +43,7 @@ urlpatterns = [
     path(URLS.FLATFILE_VALIDATE, flatfile_validate),
     path(URLS.FLATFILE_META_INFO, flatfile_meta_info),
     path(URLS.GET_GSIMS_FROM_REGION, get_gsims_from_region),
+    path(URLS.GET_GSIMS_INFO, ModelInfoView.as_view()),
 
     # test stuff:
     re_path(r'error_test', error_test_response)

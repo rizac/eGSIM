@@ -47,6 +47,7 @@ class URLS:  # noqa
     # Misc (URLs shared between forms)
     GET_GSIMS_FROM_REGION = 'gui/get_models_from_region'
     FLATFILE_VALIDATE = 'gui/flatfile_validation'
+    GET_GSIMS_INFO = 'gui/get_models_info'
 
     # webpage URLs:
     HOME_PAGE = 'home'
@@ -174,6 +175,7 @@ def _get_init_data_json(debug=False) -> dict:
             'residuals_plot_img': [
                 f'{URLS.RESIDUALS_PLOT_IMG}.{ext}' for ext in img_ext
             ],
+            'get_gsim_info': URLS.GET_GSIMS_INFO,
             'residuals_response_tutorial': URLS.RESIDUALS_RESPONSE_TUTORIAL,
             'get_gsim_from_region': URLS.GET_GSIMS_FROM_REGION,
             'flatfile_meta_info': URLS.FLATFILE_META_INFO,

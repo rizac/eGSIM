@@ -303,7 +303,7 @@ def read_csv_from_buffer(buffer: Union[bytes, IO],
     return dframe
 
 
-class ModelInfo(EgsimView):
+class ModelInfoView(EgsimView):
 
     def response(self, data: dict, files: Optional[dict] = None) -> JsonResponse:
         models = data['model']
