@@ -153,13 +153,13 @@ EGSIM.component('gsim-select', {
 		modelValue: {type: Array},  // [NOTE: VUE model] Array of selected ground motion model names
 		models: {type: Array},  // [Note: Ground Motion models] Array of available models. Each model is an objects with keys: name, warning, imts
 		selectedImts: {type: Array, default: []}, // field of selected IMTs (strings)
-		modelInfoUrl: {type: Array, default: ""}
+		modelInfoUrl: {type: String, default: ""}
 	},
 	emits: ['update:modelValue'],
 	data() {
 		return {
 			inputElementText: "",
-			displayRegex: /[A-Z]+[^A-Z0-9]+|[0-9_]+|.+/g  //NOTE safari does not support lookbehind/aheads!
+			displayRegex: /[A-Z]+[^A-Z0-9]+|[0-9_]+|.+/g,  //NOTE safari does not support lookbehind/aheads!
 		}
 	},
 	computed: {
@@ -281,10 +281,10 @@ EGSIM.component('gsim-select', {
 			<select multiple ref="selectElement" v-show='!!selectableModels.length'
 				class='border position-absolute shadow start-0 end-0'
 				style='z-index:10000; outline: 0px !important;'
-				@dblclick.prevent="addModelsToSelection( Array.from($refs.selectElement.selectedOptions).map(o => o.value) )"
-				@keydown.enter.prevent="addModelsToSelection( Array.from($refs.selectElement.selectedOptions).map(o => o.value) )"
-				@keydown.up="$evt => { if( $refs.selectElement.selectedIndex == 0 ){ focusHTMLInputElement(); $evt.preventDefault(); } }"
-				@keydown.space="$evt => { showInfo(); $evt.preventDefault(); }"
+				@dblclick.prevent="addModelsToSelection()"
+				@keydown.enter.prevent="addModelsToSelection()"
+				@keydown.up="if( $event.target.selectedIndex == 0 ){ focusHTMLInputElement(); $event.preventDefault(); }"
+				@keydown.space="showInfo(); $event.preventDefault();"
 				@keydown.esc.prevent="inputElementText=''">
 				<option v-for="m in selectableModels" :value='m.name'>
 					{{ m.name.match(displayRegex).join(" ") }}
@@ -292,20 +292,27 @@ EGSIM.component('gsim-select', {
 			</select>
 			<div ref='keystrokes'
 				:class='selectableModels.length ? "d-flex" : "d-none"'
-				class='gap-3 p-1 text-muted small bg-white position-fixed bottom-0 start-0 text-nowrap'>
-				<div><i class='fa fa-info'></i> Popup: </div>
+				class='gap-3 p-1 text-muted small bg-white position-fixed bottom-0 start-0 text-nowrap text-info'>
+				<div><i class='fa fa-info-circle'></i> Popup: </div>
 				<div>Double click or [Enter] <span class='text-primary'>select</span></div>
-				<div>[ESC] <span class='text-primary'>Clear text and hide popup</div>
-				<div>[Space bar] <span class='text-primary'> model info</div>
+				<div>[ESC] <span class='text-primary'>Clear text and hide popup</span></div>
+				<div>[Spacebar] <span class='text-primary'> model info</span></div>
 			</div>
-			<div ref='modelInfo' class='form-control position:fixed' style='max-width:50vw; left:1rem;'>
+			<div ref='infoElement' class='form-control position-fixed bg-white lh-g'
+				style='max-width:30vw; top: 10vh; bottom: 10vh; left: 60vw; overflow:auto'>
 			</div>
 		</div>
 	</div>`,
 	methods: {
+		highlightedSelectableModels(){
+			// for some reason, v-model="highlightedSelectableModels" on the <select>
+			// does not properly select the first item when we focus it from the input text.
+			// so we compute it here
+			return Array.from(this.$refs.selectElement.selectedOptions).map(o => o.value);
+		},
 		showInfo(){
 			// fetch and show info on the highlighted selectable models
-			var models = this.highlightedSelectableModels;
+			var models = this.highlightedSelectableModels();
 			var popup = this.$refs.infoElement;
 			popup.innerHTML = 'Loading info ... ';
 			fetch(this.modelInfoUrl, {
