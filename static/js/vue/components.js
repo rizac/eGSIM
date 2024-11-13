@@ -269,14 +269,23 @@ EGSIM.component('gsim-select', {
 			</div>
 		</div>
 		<!-- select text and relative popup/div -->
-		<input type="text"
-			v-model='inputElementText' ref="inputElement"
-			@keydown.down.prevent="focusHTMLSelectElement()"
-			@keydown.esc.prevent="inputElementText=''"
-			class='form-control'
-			:class="selectedModels.length ? 'rounded-top-0 border-top-0' : ''"
-			title="you can also type imt: followed by an intensity measure (e.g. imt:SA) to show only models defined for that imt"
-			:placeholder="'Type name (' + models.length + ' models available) or select by region (click on map)'" />
+		<div class='d-flex position-relative'>
+			<input type="text"
+				v-model='inputElementText' ref="inputElement"
+				@keydown.down.prevent="focusHTMLSelectElement()"
+				@keydown.esc.prevent="clearText()"
+				class='form-control'
+				:class="selectedModels.length ? 'rounded-top-0 border-top-0' : ''"
+				:style="!!inputElementText ? 'padding-right: 5em' : ''"
+				title="you can also type imt: followed by an intensity measure (e.g. imt:SA) to show only models defined for that imt"
+				:placeholder="'Type name (' + models.length + ' models available) or select by region (click on map)'" />
+			<button type='button' @click="clearText()" v-show="!!inputElementText"
+				title='Clear text and hide popup (alternative: ESC key)'
+				class='btn bg-transparent border-0 text-nowrap text-center position-absolute p-0 m-0 end-0 top-0 bottom-0'
+				style='z-index:10;width:5rem'>
+				<i class='fa fa-times-circle'></i> (ESC)
+			</button>
+		</div>
 		<div class='position-relative'style='overflow:visible'>
 			<select multiple ref="selectElement" v-show='!!selectableModels.length'
 				class='border position-absolute shadow start-0 end-0'
@@ -284,8 +293,8 @@ EGSIM.component('gsim-select', {
 				@dblclick.prevent="addModelsToSelection()"
 				@keydown.enter.prevent="addModelsToSelection()"
 				@keydown.up="if( $event.target.selectedIndex == 0 ){ focusHTMLInputElement(); $event.preventDefault(); }"
-				@keydown.space="showInfo(); $event.preventDefault();"
-				@keydown.esc.prevent="inputElementText=''; modelInfoText=''">
+				@keydown.space.prevent="showInfo()"
+				@keydown.esc.prevent="clearText()">
 				<option v-for="m in selectableModels" :value='m.name'>
 					{{ m.name.match(displayRegex).join(" ") }}
 				</option>
@@ -298,19 +307,17 @@ EGSIM.component('gsim-select', {
 				<div>[ESC] <span class='text-primary'>Clear text and hide popup</span></div>
 				<div>[Spacebar] <span class='text-primary'> model info</span></div>
 			</div>
-			<div ref='infoElement' v-show="!!modelInfoText" v-html="modelInfoText"
-				class='form-control position-fixed bg-white'
-				style='max-width:30vw; top: 10vh; bottom: 10vh; left: 60vw; overflow:auto'>
+			<div ref='infoElement' v-show="(!!modelInfoText) && (!!inputElementText)" v-html="modelInfoText"
+				class='form-control position-absolute bg-white rounded-0 end-100'
+				style='max-width:33vw; top: 0; bottom: 10vh; left: calc(100% + 1em); overflow:auto; height: min-content;'>
+			</div>
+			<div v-show="(!!modelInfoText) && (!!inputElementText)"
+				class='position-absolute border border-end-0 border-top-0 bg-white'
+				style='width: .75rem;height: .75rem;left: calc(100% + 1em - 0.75em/2 + .5px);top:.75em;transform: rotate(45deg);transform-origin: center;'>
 			</div>
 		</div>
 	</div>`,
 	methods: {
-		highlightedSelectableModels(){
-			// for some reason, v-model="highlightedSelectableModels" on the <select>
-			// does not properly select the first item when we focus it from the input text.
-			// so we compute it here
-			return Array.from(this.$refs.selectElement.selectedOptions).map(o => o.value);
-		},
 		showInfo(){
 			// fetch and show info on the highlighted selectable models
 			var models = this.highlightedSelectableModels();
@@ -337,6 +344,11 @@ EGSIM.component('gsim-select', {
 				this.modelInfoText = 'No info available';
 			});
 		},
+		clearText(){
+			this.inputElementText = "";
+			this.modelInfoText = "";
+			this.focusHTMLInputElement();
+		},
 		removeSelectedModelsWithWarnings(){
 			// this function filters the selectedModels Array without creating a new one:
 			this.selectedModels.splice(0,
@@ -362,16 +374,22 @@ EGSIM.component('gsim-select', {
 			this.$refs.selectElement.selectedIndex=-1;
 			this.$refs.inputElement.focus();
 		},
-		addModelsToSelection(modelNames){
-			if (!modelNames){
+		addModelsToSelection(){
+			var modelNames = Array.from(new Set(this.highlightedSelectableModels()).
+				difference(new Set(this.selectedModels)));
+			if (!modelNames.length){
 				return;
 			}
-			modelsNames = Array.from(new Set(modelNames).difference(new Set(this.selectedModels)));
 			this.selectedModels.push(...modelNames);
 			this.$nextTick(() => {
-				this.inputElementText = "";
-				this.focusHTMLInputElement();
+				this.clearText();
 			});
+		},
+		highlightedSelectableModels(){
+			// for some reason, v-model="highlightedSelectableModels" on the <select>
+			// does not properly select the first item when we focus it from the input text.
+			// so we compute it here
+			return Array.from(this.$refs.selectElement.selectedOptions).map(o => o.value);
 		},
 		resizeHTMLSelectElement(optionsLength){
 			var rect = this.$refs.inputElement.getBoundingClientRect();
@@ -380,6 +398,7 @@ EGSIM.component('gsim-select', {
 			// this.$refs.selectElement.style.maxHeight = (.90 * (document.documentElement.clientHeight - rect.bottom)) + 'px';
 			var h = 100*(document.documentElement.clientHeight - rect.bottom)/document.documentElement.clientHeight;
 			this.$refs.selectElement.style.maxHeight = `calc(${h}vh - 3rem)`;  // (.90 * (document.documentElement.clientHeight - rect.bottom)) + 'px';
+			this.$refs.infoElement.style.maxHeight = `calc(${h}vh - 3rem)`;
 		}
 	}
 });
