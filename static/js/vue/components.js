@@ -160,6 +160,7 @@ EGSIM.component('gsim-select', {
 		return {
 			inputElementText: "",
 			displayRegex: /[A-Z]+[^A-Z0-9]+|[0-9_]+|.+/g,  //NOTE safari does not support lookbehind/aheads!
+			modelInfoText: ""
 		}
 	},
 	computed: {
@@ -175,13 +176,12 @@ EGSIM.component('gsim-select', {
 			var models = [];
 			var text = this.inputElementText.trim();
 			if (text){
-				var selectedModelsSet = new Set(this.selectedModels);
 				if (text.startsWith("imt:")){
 					var imt = text.substring("imt:".length);
-					models = this.models.filter(m => !selectedModelsSet.has(m.name) && m.imts.has(imt));
+					models = this.models.filter(m => m.imts.has(imt));
 				}else{
 					var regexp = new RegExp(text.replace(/\s+/, '').replace(/([^\w\*\?])/g, '\\$1').replace(/\*/g, '.*').replace(/\?/g, '.'), 'i');
-					models = this.models.filter(m => !selectedModelsSet.has(m.name) && m.name.search(regexp) > -1);
+					models = this.models.filter(m => m.name.search(regexp) > -1);
 				}
 				// adjust popup height:
 				if (models.length){
@@ -285,7 +285,7 @@ EGSIM.component('gsim-select', {
 				@keydown.enter.prevent="addModelsToSelection()"
 				@keydown.up="if( $event.target.selectedIndex == 0 ){ focusHTMLInputElement(); $event.preventDefault(); }"
 				@keydown.space="showInfo(); $event.preventDefault();"
-				@keydown.esc.prevent="inputElementText=''">
+				@keydown.esc.prevent="inputElementText=''; modelInfoText=''">
 				<option v-for="m in selectableModels" :value='m.name'>
 					{{ m.name.match(displayRegex).join(" ") }}
 				</option>
@@ -298,7 +298,8 @@ EGSIM.component('gsim-select', {
 				<div>[ESC] <span class='text-primary'>Clear text and hide popup</span></div>
 				<div>[Spacebar] <span class='text-primary'> model info</span></div>
 			</div>
-			<div ref='infoElement' class='form-control position-fixed bg-white lh-g'
+			<div ref='infoElement' v-show="!!modelInfoText" v-html="modelInfoText"
+				class='form-control position-fixed bg-white'
 				style='max-width:30vw; top: 10vh; bottom: 10vh; left: 60vw; overflow:auto'>
 			</div>
 		</div>
@@ -313,8 +314,7 @@ EGSIM.component('gsim-select', {
 		showInfo(){
 			// fetch and show info on the highlighted selectable models
 			var models = this.highlightedSelectableModels();
-			var popup = this.$refs.infoElement;
-			popup.innerHTML = 'Loading info ... ';
+			this.modelInfoText = 'Loading info ... ';
 			fetch(this.modelInfoUrl, {
 				method: "POST",
 				headers: {
@@ -331,10 +331,10 @@ EGSIM.component('gsim-select', {
 						</ul>
 						<p class='ps-4'>${obj[k]['doc'].trim().replaceAll(/\.\s*\n\s*/g, ".<br>")}</p>
 					`);
-					popup.innerHTML = arr.join('');
+					this.modelInfoText = arr.join('');
 				});
 			}).catch((error) => {
-				popup.innerHTML = 'No info available';
+				this.modelInfoText = 'No info available';
 			});
 		},
 		removeSelectedModelsWithWarnings(){
@@ -366,6 +366,7 @@ EGSIM.component('gsim-select', {
 			if (!modelNames){
 				return;
 			}
+			modelsNames = Array.from(new Set(modelNames).difference(new Set(this.selectedModels)));
 			this.selectedModels.push(...modelNames);
 			this.$nextTick(() => {
 				this.inputElementText = "";
