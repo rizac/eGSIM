@@ -299,19 +299,17 @@ EGSIM.component('gsim-select', {
 					{{ m.name.match(displayRegex).join(" ") }}
 				</option>
 			</select>
-			<div ref='keystrokes'
+			<div ref='keystrokesInfo'
 				:class='selectableModels.length ? "d-flex" : "d-none"'
-				class='gap-3 p-1 text-muted small bg-white position-fixed bottom-0 start-0 text-nowrap text-info'>
-				<div><i class='fa fa-info-circle'></i> Popup: </div>
-				<div>Double click or [Enter] <span class='text-primary'>select</span></div>
-				<div>[ESC] <span class='text-primary'>Clear text and hide popup</span></div>
-				<div>[Spacebar] <span class='text-primary'> model info</span></div>
+				class='align-items-baseline bg-body shadow gap-1 p-1 position-absolute start-0 end-0 text-nowrap border border-top-0'
+				style='z-index:10001'>
+				<i class='fa fa-info-circle'></i> Select models with double-click or Enter; get info with spacebar
 			</div>
-			<div ref='infoElement' v-show="(!!modelInfoText) && (!!inputElementText)" v-html="modelInfoText"
+			<div ref='modelInfoPopover' v-show="(!!modelInfoText) && (!!inputElementText)" v-html="modelInfoText"
 				class='form-control position-absolute bg-white rounded-0 end-100'
 				style='max-width:33vw; top: 0; bottom: 10vh; left: calc(100% + 1em); overflow:auto; height: min-content;'>
 			</div>
-			<div v-show="(!!modelInfoText) && (!!inputElementText)"
+			<div ref='modelInfoPopoverArrow' v-show="(!!modelInfoText) && (!!inputElementText)"
 				class='position-absolute border border-end-0 border-top-0 bg-white'
 				style='width: .75rem;height: .75rem;left: calc(100% + 1em - 0.75em/2 + .5px);top:.75em;transform: rotate(45deg);transform-origin: center;'>
 			</div>
@@ -398,7 +396,8 @@ EGSIM.component('gsim-select', {
 			// this.$refs.selectElement.style.maxHeight = (.90 * (document.documentElement.clientHeight - rect.bottom)) + 'px';
 			var h = 100*(document.documentElement.clientHeight - rect.bottom)/document.documentElement.clientHeight;
 			this.$refs.selectElement.style.maxHeight = `calc(${h}vh - 3rem)`;  // (.90 * (document.documentElement.clientHeight - rect.bottom)) + 'px';
-			this.$refs.infoElement.style.maxHeight = `calc(${h}vh - 3rem)`;
+			this.$refs.modelInfoPopover.style.maxHeight = `calc(${h}vh - 3rem)`;
+			this.$refs.keystrokesInfo.style.top = `calc(${h}vh - 3rem)`;
 		}
 	}
 });
