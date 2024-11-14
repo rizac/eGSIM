@@ -160,7 +160,8 @@ EGSIM.component('gsim-select', {
 		return {
 			inputElementText: "",
 			displayRegex: /[A-Z]+[^A-Z0-9]+|[0-9_]+|.+/g,  //NOTE safari does not support lookbehind/aheads!
-			modelInfoText: ""
+			modelInfoText: "",
+			highlightedModels: []
 		}
 	},
 	computed: {
@@ -187,6 +188,9 @@ EGSIM.component('gsim-select', {
 				if (models.length){
 					setTimeout( () => this.resizeHTMLSelectElement(models.length), 20 );
 				}
+			}
+			if (!models.length){
+				this.highlightedModels = [];
 			}
 			return models;
 		},
@@ -271,7 +275,7 @@ EGSIM.component('gsim-select', {
 		<!-- select text and relative popup/div -->
 		<div class='d-flex position-relative'>
 			<input type="text"
-				v-model='inputElementText' ref="inputElement"
+				v-model='inputElementText' ref="search"
 				@keydown.down.prevent="focusHTMLSelectElement()"
 				@keydown.esc.prevent="clearText()"
 				class='form-control'
@@ -287,9 +291,10 @@ EGSIM.component('gsim-select', {
 			</button>
 		</div>
 		<div class='position-relative'style='overflow:visible'>
-			<select multiple ref="selectElement" v-show='!!selectableModels.length'
+			<select multiple ref="list" v-show='!!selectableModels.length'
 				class='border position-absolute shadow start-0 end-0'
 				style='z-index:10000; outline: 0px !important;'
+				v-model='highlightedModels'
 				@dblclick.prevent="addModelsToSelection()"
 				@keydown.enter.prevent="addModelsToSelection()"
 				@keydown.up="if( $event.target.selectedIndex == 0 ){ focusHTMLInputElement(); $event.preventDefault(); }"
@@ -299,17 +304,17 @@ EGSIM.component('gsim-select', {
 					{{ m.name.match(displayRegex).join(" ") }}
 				</option>
 			</select>
-			<div ref='keystrokesInfo'
-				:class='selectableModels.length ? "d-flex" : "d-none"'
+			<div ref='keystrokes'
+				:class='highlightedModels.length ? "d-flex" : "d-none"'
 				class='align-items-baseline bg-body shadow gap-1 p-1 position-absolute start-0 end-0 text-nowrap border border-top-0'
 				style='z-index:10001'>
 				<i class='fa fa-info-circle'></i> Select models with double-click or Enter; get info with spacebar
 			</div>
-			<div ref='modelInfoPopover' v-show="(!!modelInfoText) && (!!inputElementText)" v-html="modelInfoText"
+			<div ref='info' v-show="(!!modelInfoText) && (!!inputElementText)" v-html="modelInfoText"
 				class='form-control position-absolute bg-white rounded-0 end-100'
 				style='max-width:33vw; top: 0; bottom: 10vh; left: calc(100% + 1em); overflow:auto; height: min-content;'>
 			</div>
-			<div ref='modelInfoPopoverArrow' v-show="(!!modelInfoText) && (!!inputElementText)"
+			<div ref='infoArrow' v-show="(!!modelInfoText) && (!!inputElementText)"
 				class='position-absolute border border-end-0 border-top-0 bg-white'
 				style='width: .75rem;height: .75rem;left: calc(100% + 1em - 0.75em/2 + .5px);top:.75em;transform: rotate(45deg);transform-origin: center;'>
 			</div>
@@ -318,7 +323,10 @@ EGSIM.component('gsim-select', {
 	methods: {
 		showInfo(){
 			// fetch and show info on the highlighted selectable models
-			var models = this.highlightedSelectableModels();
+			var models = this.highlightedModels;
+			if (!models.length){
+				return;
+			}
 			this.modelInfoText = 'Loading info ... ';
 			fetch(this.modelInfoUrl, {
 				method: "POST",
@@ -364,16 +372,18 @@ EGSIM.component('gsim-select', {
 			this.selectedModels.splice(0, this.selectedModels.length)
 		},
 		focusHTMLSelectElement(){
-			var sel = this.$refs.selectElement;
-			sel.selectedIndex = 0;
+			var sel = this.$refs.list;
+			if (sel.options.length && (!this.highlightedModels.length)){
+				this.highlightedModels = [sel.options[0].value];
+			}
 			sel.focus();
 		},
 		focusHTMLInputElement(){
-			this.$refs.selectElement.selectedIndex=-1;
-			this.$refs.inputElement.focus();
+			this.highlightedModels = [];
+			this.$refs.search.focus();
 		},
 		addModelsToSelection(){
-			var modelNames = Array.from(new Set(this.highlightedSelectableModels()).
+			var modelNames = Array.from(new Set(this.highlightedModels).
 				difference(new Set(this.selectedModels)));
 			if (!modelNames.length){
 				return;
@@ -383,21 +393,13 @@ EGSIM.component('gsim-select', {
 				this.clearText();
 			});
 		},
-		highlightedSelectableModels(){
-			// for some reason, v-model="highlightedSelectableModels" on the <select>
-			// does not properly select the first item when we focus it from the input text.
-			// so we compute it here
-			return Array.from(this.$refs.selectElement.selectedOptions).map(o => o.value);
-		},
 		resizeHTMLSelectElement(optionsLength){
-			var rect = this.$refs.inputElement.getBoundingClientRect();
-			// this.$refs.selectElement.style.width = (rect.right - rect.left) + 'px';
-			this.$refs.selectElement.size = optionsLength;
-			// this.$refs.selectElement.style.maxHeight = (.90 * (document.documentElement.clientHeight - rect.bottom)) + 'px';
+			var rect = this.$refs.search.getBoundingClientRect();
+			this.$refs.list.size = optionsLength;
 			var h = 100*(document.documentElement.clientHeight - rect.bottom)/document.documentElement.clientHeight;
-			this.$refs.selectElement.style.maxHeight = `calc(${h}vh - 3rem)`;  // (.90 * (document.documentElement.clientHeight - rect.bottom)) + 'px';
-			this.$refs.modelInfoPopover.style.maxHeight = `calc(${h}vh - 3rem)`;
-			this.$refs.keystrokesInfo.style.top = `calc(${h}vh - 3rem)`;
+			this.$refs.list.style.maxHeight = `calc(${h}vh - 3rem)`;  // (.90 * (document.documentElement.clientHeight - rect.bottom)) + 'px';
+			this.$refs.info.style.maxHeight = `calc(${h}vh - 3rem)`;
+			this.$refs.keystrokes.style.top = `calc(${h}vh - 3rem)`;
 		}
 	}
 });
@@ -532,8 +534,8 @@ EGSIM.component('gsim-map', {
 				var html = `<button class="border-0" type="button"
 								onclick='this.parentNode.querySelector("._panel").classList.toggle("d-none");this.querySelectorAll("._arrow").forEach(e => e.classList.toggle("d-none"))'
 								style='width:100%; background-color:transparent'>
-								<span class='_arrow'>&#9207;</span>
-								<span class="_arrow d-none">&#9206;</span>
+								<span class='_arrow'><i class='fa fa-chevron-down'></i></span>
+								<span class="_arrow d-none"><i class='fa fa-chevron-up'></i></span>
 							</button>
 							<div class='_panel d-none'>`;
 				// Add title:
