@@ -109,7 +109,8 @@
 			</gsim-map>
 
 			<form novalidate @submit.prevent=""
-				  class='position-absolute d-flex flex-column p-3 gap-3' style='position:absolute;top:0px;max-height:100%;z-index:10'>
+				  class='position-absolute d-flex flex-column p-3 gap-3'
+				  style='position: absolute; top: 0px; min-width: min(50vw, 33rem); max-width: 50vw; max-height: 100%; z-index: 1;'>
 
 				<gsim-select v-model="forms.flatfile_meta_info.gsim"
 							 :models="models"

@@ -234,19 +234,19 @@ EGSIM.component('gsim-select', {
 			style='border-bottom:0 !important;border-bottom-left-radius:0 !important; border-bottom-right-radius:0 !important'>
 			<span style="flex: 1 1 auto;" class='text-start'>Model ({{ selectedModels.length }} selected)</span>
 			<i v-show="Object.keys(warnings).length && !inputElementText"
-				title="Remove models with warnings (for details, hover mouse on each model icon)"
+				title="Unselect models with warnings (for details, hover mouse on each model)"
 				class="fa fa-exclamation-triangle ms-2 text-warning"
 				style="cursor: pointer;"
 				@click="removeSelectedModelsWithWarnings()">
 			</i>
 			<i v-show="Object.keys(errors).length && !inputElementText"
-				title="Remove models with errors (for details, hover mouse on each model icon)"
+				title="Unselect models with errors (for details, hover mouse on each model)"
 				class="fa fa-exclamation-triangle ms-2 text-danger"
 				style="cursor: pointer;"
 				@click="removeSelectedModelsWithErrors()">
 			</i>
 			<i v-show="selectedModels.length && !inputElementText"
-				title="Remove all selected models"
+				title="Unselect all models"
 				class="fa fa-times-circle ms-2"
 				style="cursor: pointer"
 				@click="removeSelectedModels()">
@@ -284,7 +284,7 @@ EGSIM.component('gsim-select', {
 				title="you can also type imt: followed by an intensity measure (e.g. imt:SA) to show only models defined for that imt"
 				:placeholder="'Type name (' + models.length + ' models available) or select by region (click on map)'" />
 			<button type='button' @click="clearText()" v-show="!!inputElementText"
-				title='Clear text and hide popup (alternative: ESC key)'
+				title='Clear text and hide popup (ESC key on keyboard)'
 				class='btn bg-transparent border-0 text-nowrap text-center position-absolute p-0 m-0 end-0 top-0 bottom-0'
 				style='z-index:10;width:5rem'>
 				<i class='fa fa-times-circle'></i> (ESC)
@@ -307,7 +307,7 @@ EGSIM.component('gsim-select', {
 			<div ref='keystrokes'
 				:class='highlightedModels.length ? "d-flex" : "d-none"'
 				class='align-items-baseline bg-body shadow gap-1 p-1 position-absolute start-0 end-0 text-nowrap border border-top-0'
-				style='z-index:10001'>
+				style='z-index:10001; overflow: auto;'>
 				<i class='fa fa-info-circle'></i> Select models with double-click or Enter; get info with spacebar
 			</div>
 			<div ref='info' v-show="(!!modelInfoText) && (!!inputElementText)" v-html="modelInfoText"
