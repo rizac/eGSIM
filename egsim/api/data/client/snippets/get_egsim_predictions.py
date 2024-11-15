@@ -35,18 +35,19 @@ def get_egsim_predictions(
     Returns:
 
     A [pandas DataFrame](https://pandas.pydata.org/docs/user_guide/dsintro.html#dataframe)
-    where each row contains the input data and
-    the computed predictions for a given scenario (i.e., a combination
-    of a configured Rupture and Site properties).
+    where each row contains the input data and the computed predictions for a given 
+    scenario (i.e., a combination of a configured Rupture and Site properties).
 
-    The DataFrame column labels are composed of 3 hierarchical rows indicating:
-
-    | Header row |  Each 'predictions' cell indicates:                    | Each 'input data' cell indicates:                                    |
-    |------------|--------------------------------------------------------|----------------------------------------------------------------------|
-    | 1          | the requested intensity measure, e.g. "PGA", "SA(1.0)" | the string "input_data"                                              |
-    | 2          | the metric type (e.g. "median", "stddev")              | the input data type (e.g. "distance", "rupture" "intensity", "site") |
-    | 3          | the requested model name                               | the input data name (e.g. "mag", "rrup")                             |
-    |            | data ...                                               | data ...                                                             |
+    Each DataFrame column label is composed of 3 space-separated chunks, indicating:
+    
+    - A computed prediciton if the first chunk is an intensity measure type 
+      (e.g. "PGA median BindiEtAl2014Rjb"): in this case, the second chunk is the metric 
+      type (e.g. "median") and the third the predicting model ("BindiEtAl2014Rjb")
+    
+    - The scenario configuration relative to the computed prediction if the first chunk
+      is litarally "input_data" (e.g. "input_data distance_measure rrup"): in this case,
+      the second chunk is the configuration data type ("distance_measure") and the
+      third is the configuration data name ("rrup")
 
     The DataFrame row labels report a unique row identifier (incremental and starting from 0)
     """  # noqa

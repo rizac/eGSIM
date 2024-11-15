@@ -42,17 +42,18 @@ def get_egsim_residuals(
     Returns:
 
     A [pandas DataFrame](https://pandas.pydata.org/docs/user_guide/dsintro.html#dataframe)
-    where each row contains the
-    input data and the computed residuals for a given flatfile record.
+    where each row contains the input data and the computed residuals for a given 
+    flatfile record.
 
-    The DataFrame column labels are composed of 3 hierarchical rows indicating:
-
-    | Header row | Each 'residuals' cell indicates:                                  | Each 'input data' cell indicates:                                        |
-    |------------|-------------------------------------------------------------------|--------------------------------------------------------------------------|
-    | 1          | the requested intensity measure, e.g. "PGA", "SA(1.0)"            | the string "input_data"                                                  |
-    | 2          | the residual type (e.g. "total_residual", "intra_event_residual") | the flatfile field type (e.g. "distance", "rupture" "intensity", "site") |
-    | 3          | the requested model name                                          | the flatfile field name (e.g. "mag", "rrup")                             |
-    |            | data ...                                                          | data ...                                                                 |
+    Each DataFrame column label is composed of 3 space-separated chunks, indicating:
+    
+    - A computed residual or prediciton, if the first chunk is an intensity measure type 
+      (e.g. "PGA total_residual BindiEtAl2014Rjb"): in this case, the second chunk is 
+      the metric type (e.g. "total_residual") and the third the predicting model ("BindiEtAl2014Rjb")
+    
+    - The flatfile data relative to the computed prediction if the first chunk is litarally 
+      "input_data" (e.g. "input_data distance_measure rrup"): in this case, the second 
+      chunk is the flatfile data type (e.g. "distance_measure") and the third the data name ("rrup")
 
     The DataFrame row labels report the row position (starting from 0) in the original flatfile
     """  # noqa

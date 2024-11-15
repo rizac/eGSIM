@@ -386,37 +386,25 @@ def residuals_response_tutorial(request):
 def _get_download_tutorial(request, key: str, api_form: APIForm, api_client_function):
     import re
     doc = api_client_function.__doc__
+    # replace bold with <b>s:
+    doc = re.sub(r'\*\*(.*?)\*\*', f'<b>\\1</b>', doc, flags=re.DOTALL)
     # replace italic with <em>s:
     doc = re.sub(r'\*(.*?)\*', f'<em>\\1</em>', doc, flags=re.DOTALL)
 
-    doc = doc[doc.index('Returns'):].strip()
-    doc = doc.split('\n\n')[1:]
-    doc[1] = doc[1].replace('indicating:',
-                            'indicating (cf. table representation above):')
-    tbl = doc[2].strip().split("\n")
     table_cls = 'table table-bordered table-light my-2'
-    doc[2] = (
-        f"<table class=\"{table_cls}\">"
-        f"<thead>"
-        f"<tr><td>{'</td><td>'.join(tbl[0].split('|')[1:-1])}</td></tr>"
-        f"</thead>"
-        f"<tbody>"
-        f"<tr><td>{'</td><td>'.join(tbl[2].split('|')[1:-1])}</td></tr>"
-        f"<tr><td>{'</td><td>'.join(tbl[3].split('|')[1:-1])}</td></tr>"
-        f"<tr><td>{'</td><td>'.join(tbl[4].split('|')[1:-1])}</td></tr>"
-        "</tbody>"
-        "</table>"
-    )
+
+    dataframe_headers_info = doc[doc.index('Each DataFrame column '):].strip()
+    dataframe_headers_info = re.sub("\n\s*\n", "<br>", dataframe_headers_info)
 
     s = StringIO()
     if api_form.is_valid():
         api_form.output().to_html(s, index=True, classes=table_cls, border=0, max_rows=3)
+    htm = re.sub(r"<t([dh])\s*>", r"<t\1 style='white-space: nowrap;'>", s.getvalue())
     return render(request, 'downloaded-data-tutorial.html',
                   context={
                       'key': key,
-                      'dataframe_html': s.getvalue(),
-                      'docstring_intro': doc[0][doc[0].index('where each row'):],
-                      'docstring_headers_intro': "\n\n".join(doc[1:])
+                      'dataframe_html': htm,
+                      'dataframe_headers_info': dataframe_headers_info
                   })
 
 
