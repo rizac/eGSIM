@@ -2,9 +2,8 @@
 
 model: ['BindiEtAl2011', 'BindiEtAl2014Rjb']
 imt: ['SA(0.2)', 'PGA', 'PGV']
-
 flatfile: 'esm2018'
-
 data-query: '(vs30 >= 730) & ((mag <=4) | (mag>=7))'
+multi_header: true
 
 # dist: 'repi'  # could be also distance_type (see forms)

@@ -647,7 +647,7 @@ Create the so-called service <i>unit file</i> (<code>touch</code> or
 </p>
 <pre><code class="language-bash">/etc/systemd/system/$DJANGO_PROJECT.service</code></pre>
 <p>
-with the following content:
+with the following content (please READ NOTES BELOW before deploying):
 </p>
 
 <pre><code class="language-bash">
@@ -663,6 +663,7 @@ WorkingDirectory=$EGSIM_CWD
 ExecStart=$VENV_PATH/bin/gunicorn \
 	--workers=4 \
 	--log-file=$EGSIM_LOG_DIR/gunicorn.log \
+	--timeout=180 \
 	--bind=127.0.0.1:$GUNICORN_PORT --bind=[::1]:$GUNICORN_PORT \
 	egsim.wsgi:application
 
@@ -677,12 +678,18 @@ WantedBy=multi-user.target
 	We will then tell Nginx (see below) to proxy each request to localhost
 	(see <code>proxy_pass</code> argument) delegating Gunicorn for everything that is not a
 	static file (everything not in media or static directories)
-
+	</li>
+	<li>--timeout argument: this is the timeout after which a request is interrupted. It should
+		be equal to the timeout configured for Nginx (see config file in this page).
+		Timeout errors will result in a 502 error (Gunicorn) and - theoretically -
+		a 504 (Nginx)
+	</li>
 	<li>The URL port of the <code>--bind</code> arguments is set as
 	<input type='number' step="1" id='GUNICORN_PORT' style="width:6rem"/>, you can change
 	the value in the field to automatically update the templates below. Changing the port
 	is useful if you want to run several Gunicorn instances from Nginx (e.g., previous
 	versions alongside the current)
+	</li>
 </ul>
 
 <p>Stop all running egsim services</p>
@@ -752,7 +759,7 @@ Create the config file (<code>touch</code> or
 </code></pre>
 
 <p>
-with the following content (checking <code>proxy_pass</code>, see notes below):
+with the following content (Please READ NOTES BELOW before deploying):
 </p>
 
 <pre><code class="language-nginx">
@@ -762,6 +769,7 @@ server {
 	server_name $DOMAIN www.$DOMAIN;
 	location / {
 		proxy_pass http://localhost:$GUNICORN_PORT;
+		proxy_read_timeout 180s;
 	}
 	location /static/ {
 		alias /var/cache/$DJANGO_PROJECT/static/;
@@ -778,6 +786,12 @@ server {
 is the line that forwards to Gunicorn all locations starting with '/' and not
 matching '/static/' or '/media/'. As such, <code>proxy_pass</code> must point to the Gunicorn
 URL just configured in the service unit file (see above)
+</li>
+<li>The line <code>proxy_read_timeout</code> defines a timeout for reading a response from the proxied server.
+It is optional but if given, it should match the proxy server timeout (gunicorn in our case).
+<b>Note that timed out requests from the proxy server return a 502 error, and from nginx a 504</b>:
+if you encounter these errors after waiting for a long time, it is likely that you need to
+increase the timeout settings
 </li>
 </ul>
 

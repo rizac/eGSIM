@@ -34,6 +34,8 @@ class PredictionsVisualizeForm(PredictionsForm):
         if not self.has_error('plot_type') and cleaned_data['plot_type'] == 's':
             if not (all(_.startswith('SA(') for _ in cleaned_data['imt'])):
                 self.add_error('imt', 'Only SA with period(s) allowed')
+        # make super().output() return a multi-index dataframe (legacy code):
+        cleaned_data['multi_header'] = True
         return cleaned_data
 
     def output(self) -> dict:
@@ -222,6 +224,8 @@ class ResidualsVisualizeForm(ResidualsForm):
         if not self.has_error('flatfile') and cleaned_data.get('x', None) \
                 and cleaned_data['x'] not in cleaned_data['flatfile'].columns:
             self.add_error('x', 'not a flatfile column')
+        # make super().output() return a multi-index dataframe (legacy code):
+        cleaned_data['multi_header'] = True
         return cleaned_data
 
     def output(self) -> dict:

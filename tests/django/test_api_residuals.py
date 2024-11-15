@@ -22,6 +22,7 @@ from egsim.api.views import (ResidualsView, APIFormView, as_querystring,
                              write_hdf_to_buffer)
 from egsim.smtk import read_flatfile
 from egsim.smtk.converters import dataframe2dict
+from egsim.smtk.registry import Clabel
 
 
 @pytest.mark.django_db
@@ -237,7 +238,8 @@ class Test:
         inputdic2 = {
             'model': 'BindiEtAl2017Rhypo',
             'imt' : 'PGA',
-            'flatfile':csv
+            'flatfile': csv,
+            'multi_header': True
         }
         resp2 = client.post(self.url, data=inputdic2)
         assert resp2.status_code == 200
@@ -252,6 +254,7 @@ class Test:
             'model': ['BindiEtAl2014Rjb', 'BooreEtAl2014'],
             'imt': ['PGA', 'SA(1.0)'],
             'flatfile': csv,
+            'multi_header': True
         }
         resp2 = client.post(self.url, data=inputdic2)
         assert resp2.status_code == 200
@@ -322,16 +325,40 @@ class Test:
             if format is None:  # format defaults to JSON
                 resp_json = resp1.json()
                 continue
-            dfr2 = read_csv_from_buffer(content) if format == 'csv' \
+            dfr2 = read_csv_from_buffer(content, header=[0, 1, 2]) \
+                if format == 'csv' \
                 else read_hdf_from_buffer(content)
             new_json = dataframe2dict(dfr2)
             assert np.allclose(
-                resp_json['SA(0.2)']['total_residual']['BindiEtAl2011'],
-                new_json['SA(0.2)']['total_residual']['BindiEtAl2011'])
+                resp_json['SA(0.2)'][Clabel.total_res]['BindiEtAl2011'],
+                new_json['SA(0.2)'][Clabel.total_res]['BindiEtAl2011'])
             assert np.allclose(
-                resp_json['PGA']['total_residual']['BindiEtAl2014Rjb'],
-                new_json['PGA']['total_residual']['BindiEtAl2014Rjb'])
+                resp_json['PGA'][Clabel.total_res]['BindiEtAl2014Rjb'],
+                new_json['PGA'][Clabel.total_res]['BindiEtAl2014Rjb'])
             # assert resp_json == dataframe2dict(dfr2)
+
+    def test_residuals_service_single_multi_header(self,
+                                                   # pytest fixtures:
+                                                   client):
+        with open(self.request_filepath) as _:
+            inputdic = yaml.safe_load(_)
+        inputdic['data-query'] = '(vs30 >= 1000) & (mag>=7)'
+
+        inputdic['format'] = 'hdf'
+        resp = client.post(self.url, data=inputdic, content_type='application/json')
+        assert resp.status_code == 200
+        result_hdf = read_hdf_from_buffer(BytesIO(b''.join(resp.streaming_content)))
+
+        inputdic.pop('multi_header')
+        resp = client.post(self.url, data=inputdic, content_type='application/json')
+        assert resp.status_code == 200
+        result_hdf_single_header = read_hdf_from_buffer(BytesIO(b''.join(resp.streaming_content)))
+
+        # check two dataframes are equal
+        assert len(result_hdf.columns) == len(result_hdf_single_header.columns)
+        result_hdf.columns = [Clabel.sep.join(c) for c in result_hdf.columns]  # noqa
+        pd.testing.assert_frame_equal(result_hdf, result_hdf_single_header)
+
 
     def test_residuals_invalid_get(self,
                                    # pytest fixtures:
@@ -381,7 +408,8 @@ class Test:
             ],
             'flatfile': 'esm2018',
             'flatfile-query': 'rjb < 200',
-            'format': 'hdf'
+            'format': 'hdf',
+            'multi_header': True
         }
         resp1 = client.get(self.url, data=inputdict,
                            content_type='application/json')

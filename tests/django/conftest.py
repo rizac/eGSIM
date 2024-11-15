@@ -45,7 +45,7 @@ def client() -> Client:
     return Client(enforce_csrf_checks=True)
 
 
-@pytest.mark.django_db
+# @pytest.mark.django_db
 @pytest.fixture(scope='session')
 def django_db_setup(django_db_setup, django_db_blocker):  # noqa
     """Set up the database and populates it with eGSIM data. This fixture is

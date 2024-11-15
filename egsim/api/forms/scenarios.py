@@ -11,7 +11,7 @@ from django.forms.fields import BooleanField, FloatField, ChoiceField, Field
 
 from egsim.api.forms import APIForm, GsimImtForm
 from egsim.smtk import get_scenarios_predictions
-from egsim.smtk.scenarios import RuptureProperties, SiteProperties
+from egsim.smtk.scenarios import RuptureProperties, SiteProperties, Clabel
 
 
 _mag_scalerel = get_available_magnitude_scalerel()
@@ -153,6 +153,14 @@ class PredictionsForm(GsimImtForm, APIForm):
     )
     backarc = BooleanField(help_text='Backarc Path', initial=False, required=False)
 
+    # multi_header has no initial value because its default will vary: here is
+    # `CLabel.sep` (see `output`), but this will change in subclasses:
+    multi_header = BooleanField(help_text='Return a table with 3-rows column header '
+                                          '(imt, type, model). Otherwise (the default), '
+                                          'return a table with a single column header '
+                                          'imt+" "+type+" "+model',
+                                required=False)
+
     @property
     def site_fields(self) -> dict[str, Field]:
         fields = set(SiteProperties.__annotations__) & set(self.base_fields)
@@ -206,9 +214,11 @@ class PredictionsForm(GsimImtForm, APIForm):
         site = SiteProperties(**{p: cleaned_data[p] for p in
                                  self.site_fields
                                  if p in cleaned_data})
+        header_sep = Clabel.sep if not cleaned_data.get('multi_header') else None
         return get_scenarios_predictions(cleaned_data['gsim'],
                                          cleaned_data['imt'],
                                          cleaned_data['magnitude'],
                                          cleaned_data['distance'],
                                          rupture_properties=rup,
-                                         site_properties=site)
+                                         site_properties=site,
+                                         header_sep=header_sep)

@@ -24,7 +24,7 @@ def test_create_predictions_is_consistent_with_preexecuted_output():
     gets outdated, delete it, execute this test (that will simply save the file to disk)
     and git-commit the changed file
     """
-    dfr = get_scenarios_predictions(models, imts, [4, 5], [1, 10, 100])
+    dfr = get_scenarios_predictions(models, imts, [4, 5], [1, 10, 100], header_sep=None)
     file = join(test_data_dir, 'predictions.hdf')
     if not isfile(file):
         dfr.to_hdf(file, key='data')
@@ -48,7 +48,7 @@ def test_create_residuals_is_consistent_with_preexecuted_output():
                'SA(0.032)', 'SA(0.035)', 'PGA'}
     ffile = ffile[[c for c in ffile.columns if c in columnz]]
 
-    dfr = get_residuals(models, imts, ffile, likelihood=False)
+    dfr = get_residuals(models, imts, ffile, likelihood=False, header_sep=None)
     file = join(test_data_dir, 'residuals.hdf')
     if not isfile(file):
         dfr.to_hdf(file, key='data')

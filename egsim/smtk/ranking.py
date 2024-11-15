@@ -34,6 +34,17 @@ def get_measures_of_fit(
         dict[str, dict[str, float]] (measures of fit names mapped to a dict where model
         names are mapped to their measure of fit value
     """
+    # legacy code: if the dataframe is not a multiindex, create it, assuming
+    # Clabel.sep is the separator:
+    if not isinstance(residuals.columns, pd.MultiIndex):
+        cols = [tuple(c.split(Clabel.sep)) for c in residuals.columns]
+        if all(len(c) == 3 for c in cols):
+            residuals = residuals.copy()
+            residuals.columns = pd.MultiIndex.from_tuples(cols)
+        else:
+            raise TypeError('The passed DataFrame does not seem to be issued from '
+                            'residuals computation')
+
     result = {}
     for res in [
         get_residuals_stats(gsims, imts, residuals),

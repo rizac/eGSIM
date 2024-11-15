@@ -12,8 +12,7 @@ from scipy.interpolate import interp1d
 
 from egsim.smtk.registry import Clabel
 from egsim.smtk.flatfile import ColumnType, FlatfileMetadata
-from egsim.smtk.scenarios import (get_scenarios_predictions, RuptureProperties,
-                                  SiteProperties)
+from egsim.smtk import scenarios
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), "data")
 
@@ -59,6 +58,25 @@ def allclose(actual, expected, *, q=None,
     return np.allclose(actual, expected, atol=atol, rtol=rtol, equal_nan=equal_nan)
 
 
+def get_scenarios_predictions(gsims, imts, magnitudes, distances, rup_props, site_props):
+    """Run get_scenario_predictions with both multi- and single- header option,
+    assuring that the two dataframes are equal. Return the multi-header dataframe
+    because tests here rely on that
+    """
+    df_single_header = scenarios.get_scenarios_predictions(gsims, imts, magnitudes,
+                                                           distances, rup_props,
+                                                           site_props)
+    df_multi_header = scenarios.get_scenarios_predictions(gsims, imts, magnitudes,
+                                                           distances, rup_props,
+                                                           site_props,
+                                                           header_sep=None)
+    df_multi_header2 = df_single_header.rename(
+        columns={c: tuple(c.split(Clabel.sep)) for c in df_single_header.columns})
+    df_multi_header2.columns = pd.MultiIndex.from_tuples(df_multi_header2.columns)
+    pd.testing.assert_frame_equal(df_multi_header, df_multi_header2)
+    return df_multi_header
+
+
 def test_distance_imt_trellis():
     """test trellis vs distance"""
     distances = np.arange(0, 250.5, 1)
@@ -69,8 +87,9 @@ def test_distance_imt_trellis():
         imts,
         magnitude,
         distances,
-        RuptureProperties(dip=60.0, aspect=1.5, hypocenter_location=(0.5, 0.5)),
-        SiteProperties(vs30=800))
+        scenarios.RuptureProperties(dip=60.0, aspect=1.5,
+                                    hypocenter_location=(0.5, 0.5)),
+        scenarios.SiteProperties(vs30=800))
     # convert medians to np.exp(medians) as in legacy smtk:
     medians_cols = (
         [k[0] for k in dfr.columns if k[0] != Clabel.input_data],
@@ -142,8 +161,8 @@ def test_magnitude_imt_trellis():
         imts,
         magnitudes,
         distance,
-        RuptureProperties(dip=60.0, aspect=1.5, rake=-90),
-        SiteProperties(vs30=800, z1pt0=50., z2pt5=1.)
+        scenarios.RuptureProperties(dip=60.0, aspect=1.5, rake=-90),
+        scenarios.SiteProperties(vs30=800, z1pt0=50., z2pt5=1.)
     )
     # convert medians to np.exp(medians) as in legacy smtk:
     medians_cols = (
@@ -206,8 +225,8 @@ def test_magnitude_distance_spectra_trellis():
         list(periods) + [4.001, 5.0, 7.5, 10.0],
         magnitudes,
         distances,
-        RuptureProperties(dip=60., rake=-90., aspect=1.5, ztor=0.0),
-        SiteProperties(vs30=800.0, backarc=False, z1pt0=50.0,
+        scenarios.RuptureProperties(dip=60., rake=-90., aspect=1.5, ztor=0.0),
+        scenarios.SiteProperties(vs30=800.0, backarc=False, z1pt0=50.0,
                        z2pt5=1.0)
     )
     # (no need to convert medians to np.exp(medians for the test below)
@@ -223,8 +242,8 @@ def test_magnitude_distance_spectra_trellis():
         periods,
         magnitudes,
         distances,
-        RuptureProperties(dip=60., rake=-90., aspect=1.5, ztor=0.0),
-        SiteProperties(vs30=800.0, backarc=False, z1pt0=50.0, z2pt5=1.0)
+        scenarios.RuptureProperties(dip=60., rake=-90., aspect=1.5, ztor=0.0),
+        scenarios.SiteProperties(vs30=800.0, backarc=False, z1pt0=50.0, z2pt5=1.0)
     )
     # convert medians to np.exp(medians) as in legacy smtk:
     medians_cols = (

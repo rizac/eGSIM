@@ -6,7 +6,8 @@ Django Forms for eGSIM model-to-data comparison (residuals computation)
 import pandas as pd
 from django.forms import BooleanField
 
-from egsim.smtk import get_residuals, FlatfileError, get_measures_of_fit
+from egsim.smtk.residuals import get_residuals, FlatfileError, Clabel
+from egsim.smtk.ranking import get_measures_of_fit
 from egsim.api.forms import APIForm
 from egsim.api.forms import GsimImtForm
 from egsim.api.forms.flatfile import FlatfileForm
@@ -29,6 +30,13 @@ class ResidualsForm(GsimImtForm, FlatfileForm, APIForm):
                                      'median, loglikelihood, EDR). With ranking, '
                                      'the parameters likelihood and normalize are '
                                      'set to true by default')
+    # multi_header has no initial value because its default will vary: here is
+    # `CLabel.sep` (see `output`), but this will change in subclasses:
+    multi_header = BooleanField(help_text='Return a table with 3-rows column header '
+                                          '(imt, type, model). Otherwise (the default), '
+                                          'return a table with a single column header '
+                                          'imt+" "+type+" "+model',
+                                required=False)
 
     # Custom API param names (see doc of `EgsimBaseForm._field2params` for details):
     _field2params = {}
@@ -45,13 +53,15 @@ class ResidualsForm(GsimImtForm, FlatfileForm, APIForm):
             cleaned_data = self.cleaned_data
             gsims, imts = cleaned_data["gsim"], cleaned_data["imt"]
             is_ranking = cleaned_data['ranking']
+            header_sep = Clabel.sep if not cleaned_data.get('multi_header') else None
             residuals = get_residuals(
                 cleaned_data["gsim"],
                 cleaned_data["imt"],
                 cleaned_data['flatfile'],
                 likelihood=True if is_ranking else cleaned_data['likelihood'],
                 mean=is_ranking,
-                normalise=True if is_ranking else cleaned_data['normalize'])
+                normalise=True if is_ranking else cleaned_data['normalize'],
+                header_sep=None if is_ranking else header_sep)
             if is_ranking:
                 return get_measures_of_fit(gsims, imts, residuals)
             return residuals

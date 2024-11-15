@@ -58,7 +58,8 @@ def get_scenarios_predictions(
         magnitudes: Union[float, Collection[float]],
         distances: Union[float, Collection[float]],
         rupture_properties: Optional[RuptureProperties] = None,
-        site_properties: Optional[SiteProperties] = None
+        site_properties: Optional[SiteProperties] = None,
+        header_sep: Union[str, None] = Clabel.sep
 ) -> pd.DataFrame:
     """
     Calculate the ground motion values from different scenarios to be used, e.g.
@@ -72,6 +73,11 @@ def get_scenarios_predictions(
         class RuptureProperties)
     :param site_properties: the optional Site properties (see class
         SiteProperties)
+    :param header_sep: str or None (default: " "): the separator used to concatenate
+        each column header into one string (e.g. "PGA median BindiEtAl2014Rjb"). Set
+        to "" or None to return a multi-level column header composed of the first 3
+        dataframe rows (e.g. ("PGA", "median", "BindiEtAl2014Rjb"). See
+        "MultiIndex / advanced indexing" in the pandas doc for details)
 
     :return: pandas DataFrame
     """
@@ -135,7 +141,10 @@ def get_scenarios_predictions(
     expected_cols = \
         list(product(imts, [Clabel.median, Clabel.std], gsims)) + columns[-2:]
     output = output[[c for c in expected_cols if c in computed_cols]].copy()
-    output.columns = pd.MultiIndex.from_tuples(output.columns)
+    if header_sep:
+        output.columns = [header_sep.join(c) for c in output.columns]
+    else:
+        output.columns = pd.MultiIndex.from_tuples(output.columns)  # noqa
     return output
 
 

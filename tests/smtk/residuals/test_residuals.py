@@ -4,6 +4,7 @@ test residuals computations (standard and likelihood)
 import json
 import numpy as np
 import os
+import pandas as pd
 
 from egsim.smtk import residuals
 from egsim.smtk.flatfile import read_flatfile, ColumnType
@@ -35,6 +36,22 @@ label_mapping_res = {
 }
 
 
+def get_residuals(gsims, imts, flatfile, likelihood=False):
+    """Run get_residuals with both multi- and single- header option, assuring that the
+    two dataframes are equal. Return the multi-header dataframe because tests here
+    rely on that
+    """
+    ff = flatfile.copy()
+    df_single_header = residuals.get_residuals(gsims, imts, ff, likelihood)
+    df_multi_header = residuals.get_residuals(gsims, imts, ff, likelihood,
+                                              header_sep=None)
+    df_multi_header2 = df_single_header.rename(
+        columns={c: tuple(c.split(Clabel.sep)) for c in df_single_header.columns})
+    df_multi_header2.columns = pd.MultiIndex.from_tuples(df_multi_header2.columns)
+    pd.testing.assert_frame_equal(df_multi_header, df_multi_header2)
+    return df_multi_header
+
+
 def test_residuals_execution():
     """
     Tests basic execution of residuals - not correctness of values
@@ -46,8 +63,11 @@ def test_residuals_execution():
 
     # compute data
     gsims, imts, flatfile = get_gsims_imts_flatfile()
-    res_df = residuals.get_residuals(gsims, imts, flatfile.copy())
-    # old data:
+    # legacy code
+    res_df = get_residuals(gsims, imts, flatfile)
+
+    # now test res_df (multi-level col header - legacy code) against old data to asure
+    # consistency:
     file = "residual_tests_esm_data_old_smtk.json"
     with open(os.path.join(BASE_DATA_PATH, file)) as _:
         exp_dict = json.load(_)
@@ -105,7 +125,7 @@ def test_residuals_execution_lh():
 
     # compute data
     gsims, imts, flatfile = get_gsims_imts_flatfile()
-    res_df = residuals.get_residuals(gsims, imts, flatfile, likelihood=True)
+    res_df = get_residuals(gsims, imts, flatfile, likelihood=True)
     # load old data:
     file = "residual_tests_esm_data_old_smtk_lh.json"
     with open(os.path.join(BASE_DATA_PATH, file)) as _:

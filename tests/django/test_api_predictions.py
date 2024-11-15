@@ -8,6 +8,8 @@ Created on 2 Jun 2018
 from os.path import dirname, join, abspath
 
 from io import BytesIO
+
+import pandas as pd
 import yaml
 
 import pytest
@@ -44,6 +46,8 @@ class Test:
         """test trellis distance and distance stdev"""
         with open(self.request_filepath) as _:
             inputdic = dict(yaml.safe_load(_))
+
+        # and from now on,
         resp1 = client.get(self.querystring(inputdic))
         resp2 = client.post(self.url, data=inputdic,
                             content_type=MimeType.json)
@@ -60,17 +64,18 @@ class Test:
         assert len(mags) == len(dists) == 12
         result_json = result
 
-        # test the text response:
-        resp = client.post(self.url, data=dict(inputdic, format="csv"),
-                            content_type=MimeType.csv)
-        assert resp.status_code == 200
-        result_csv = read_csv_from_buffer(BytesIO(b''.join(resp.streaming_content)))
-
         # test the hdf response:
         resp = client.post(self.url, data=dict(inputdic, format="hdf"),
-                            content_type=MimeType.hdf)
+                           content_type=MimeType.hdf)
         assert resp.status_code == 200
         result_hdf = read_hdf_from_buffer(BytesIO(b''.join(resp.streaming_content)))
+
+        # test the text/csv response:
+        resp = client.post(self.url, data=dict(inputdic, format="csv"),
+                           content_type=MimeType.csv)
+        assert resp.status_code == 200
+        result_csv = read_csv_from_buffer(BytesIO(b''.join(resp.streaming_content)),
+                                          header=[0,1,2])
 
         assert sorted(result_csv.columns) == sorted(result_hdf.columns)
 
@@ -86,6 +91,31 @@ class Test:
             assert (result_csv[col] == result_json_col).all() or \
                 np.allclose(result_csv[col], result_json_col,
                             rtol=1.e-12, atol=0, equal_nan=True)
+
+    def test_trellis_single_multi_header(
+            self,
+            # pytest fixtures:
+            client):
+        with open(self.request_filepath) as _:
+            inputdic = dict(yaml.safe_load(_))
+        inputdic['format'] = 'hdf'
+
+        # test the hdf response:
+        resp = client.post(self.url, data=dict(inputdic, format="hdf"),
+                           content_type=MimeType.json)
+        assert resp.status_code == 200
+        result_hdf = read_hdf_from_buffer(BytesIO(b''.join(resp.streaming_content)))
+
+        inputdic.pop('multi_header')
+        resp = client.post(self.url, data=inputdic, content_type=MimeType.json)
+        assert resp.status_code == 200
+        result_hdf_single_header = read_hdf_from_buffer(
+            BytesIO(b''.join(resp.streaming_content)))
+
+        # check two dataframes are equal
+        assert len(result_hdf.columns) == len(result_hdf_single_header.columns)
+        result_hdf.columns = [Clabel.sep.join(c) for c in result_hdf.columns]  # noqa
+        pd.testing.assert_frame_equal(result_hdf, result_hdf_single_header)
 
     def test_400_invalid_param_names(self,
             # pytest fixtures:

@@ -114,18 +114,18 @@ def validate_inputs(gsims: dict[str, GMPE], imts: dict[str, IMT]):
     return gsims, imts
 
 
-def validate_imt_sa_limits(gsim: GMPE, imts: dict[str, IMT]) -> dict[str, IMT]:
+def validate_imt_sa_limits(model: GMPE, imts: dict[str, IMT]) -> dict[str, IMT]:
     """Return a dict of IMT names mapped to the IMT instances that are either not SA,
     or have a period within the model SA period limits
 
-    :param gsim: a model instance
+    :param model: a Ground motion model instance
     :param imts: an iterable of str (e.g. 'SA(0.1)', 'PGA') mapped to IMT the
         instance, as output from `harmonize_input_imts`
 
-    :return a subset of the passed `imts` dict, or `imts` unchanged if all its IMT
+    :return: a subset of the passed `imts` dict or `imts` unchanged if all its IMT
         are valid for the given model
     """
-    model_sa_p_lim = get_sa_limits(gsim)
+    model_sa_p_lim = get_sa_limits(model)
     if model_sa_p_lim is None:
         return imts
     imt_periods = {i: sa_period(v) for i, v in imts.items()}

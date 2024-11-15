@@ -1,10 +1,13 @@
 from os.path import dirname, abspath, join, isdir, isfile
 import pandas as pd
-# import pytest
+
+
+from egsim.smtk.registry import Clabel
 
 from egsim.api.data.client.snippets.get_egsim_predictions import get_egsim_predictions
 from egsim.api.data.client.snippets.get_egsim_residuals import get_egsim_residuals
 from egsim.api.urls import PREDICTIONS_URL_PATH, RESIDUALS_URL_PATH
+
 
 test_data_dir = join(dirname(dirname(abspath(__file__))), 'data')
 
@@ -31,6 +34,9 @@ def create_residuals(base_url):
     file = join(test_data_dir, 'residuals.hdf')
     if isfile(file):
         dfr2:pd.DataFrame = pd.read_hdf(file) # noqa
+        # legacy code: serie now returns flatten header, so reformat input
+        if isinstance(dfr2.columns, pd.MultiIndex):
+            dfr2.columns = [Clabel.sep.join(c) for c in dfr2.columns]  # noqa
         # dfr2 has only required columns for performance reasons,
         # so check those are the same:
         dfr = dfr[[c for c in dfr.columns if c in dfr2.columns]]
@@ -48,6 +54,9 @@ def create_predictions(base_url):
     file = join(test_data_dir, 'predictions.hdf')
     if isfile(file):
         dfr2 = pd.read_hdf(file)
+        # legacy code: serie now returns flatten header, so reformat input
+        if isinstance(dfr2.columns, pd.MultiIndex):
+            dfr2.columns = [Clabel.sep.join(c) for c in dfr2.columns]  # noqa
         pd.testing.assert_frame_equal(
             dfr, dfr2, check_exact=False, atol=0, rtol=1e-3
         )

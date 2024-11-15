@@ -394,7 +394,7 @@ def test_trellis_rupture_site_fields():
                 rem_fields -= set(super_cls.base_fields)  # noqa
             except AttributeError:
                 pass
-    assert sorted(rem_fields) == ['distance', 'magnitude']
+    assert sorted(rem_fields) == ['distance', 'magnitude', 'multi_header']
 
 
 def check_egsim_form(new_class:Type[EgsimBaseForm]):

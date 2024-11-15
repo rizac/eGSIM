@@ -34,7 +34,8 @@ def get_residuals(
         flatfile: pd.DataFrame,
         likelihood=False,
         normalise=True,
-        mean=False
+        mean=False,
+        header_sep: Union[str, None] = Clabel.sep
 ) -> pd.DataFrame:
     """
     Calculate the residuals from a given flatfile gsim(s) and imt(s)
@@ -54,6 +55,13 @@ def get_residuals(
     :param normalise: boolean (default True) normalize the random effects residuals
         (calculated using the inter-event residual formula described in
          Abrahamson & Youngs (1992) Eq. 10)
+    :param header_sep: str or None (default: " "): the separator used to concatenate
+        each column header into one string (e.g. "PGA median BindiEtAl2014Rjb"). Set
+        to "" or None to return a multi-level column header composed of the first 3
+        dataframe rows (e.g. ("PGA", "median", "BindiEtAl2014Rjb"). See
+        "MultiIndex / advanced indexing" in the pandas doc for details)
+
+    :return: pandas DataFrame
     """
     # 1. prepare models and imts:
     gsims = harmonize_input_gsims(gsims)
@@ -87,7 +95,10 @@ def get_residuals(
     flatfile_r.sort_index(axis=1, inplace=True)
     # concat residuals and observations
     residuals = pd.concat([residuals, flatfile_r], axis=1)
-    residuals.columns = pd.MultiIndex.from_tuples(residuals.columns)
+    if header_sep:
+        residuals.columns = [header_sep.join(c) for c in residuals.columns]
+    else:
+        residuals.columns = pd.MultiIndex.from_tuples(residuals.columns)
     return residuals
 
 

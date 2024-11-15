@@ -290,16 +290,19 @@ def write_csv_to_buffer(data: pd.DataFrame, **csv_kwargs) -> BytesIO:
 def read_csv_from_buffer(buffer: Union[bytes, IO],
                          header: Optional[Union[int, list[int]]] = None) -> pd.DataFrame:
     """
-    Read from a file-like object containing CSV data. Do not supply header
-    for buffer resulting from residuals/ predictions computation (3 header rows),
-    pass 0 for rankings / measures of fit computation (1 header row).
+    Read from a file-like object containing CSV data.
+
+    :param header: the header rows. Leave None or pass [0] explicitly for CSV with one
+        row header, Pass a list (e.g. [0, 1, 2]) to indicate the indices of the rows
+        to be used as  header (first row 0)
     """
     content = BytesIO(buffer) if isinstance(buffer, bytes) else buffer
     if header is None:
-        header = [0, 1, 2]
+        header = [0]
     dframe = pd.read_csv(content, header=header, index_col=0)
-    dframe.rename(columns=lambda c: "" if c.startswith("Unnamed:") else c,
-                  inplace=True)
+    if header and len(header) > 1:  # multi-index, in case of "Unnamed:" column, replace:
+        dframe.rename(columns=lambda c: "" if c.startswith("Unnamed:") else c,
+                      inplace=True)
     return dframe
 
 
