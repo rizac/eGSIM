@@ -410,7 +410,7 @@ def _get_download_tutorial(request, key: str, api_form: APIForm, api_client_func
 
     s = StringIO()
     if api_form.is_valid():
-        api_form.output().to_html(s, index=True, classes=table_cls, border=0, max_rows=6)
+        api_form.output().to_html(s, index=True, classes=table_cls, border=0, max_rows=3)
     return render(request, 'downloaded-data-tutorial.html',
                   context={
                       'key': key,

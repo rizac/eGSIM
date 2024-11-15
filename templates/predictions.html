@@ -174,10 +174,10 @@
 
 			<div class="d-flex flex-row align-items-center gap-1">
 				<span class='text-start' style='flex: 1 1 auto'>Predictions</span>
-				<button type='button'
-						onclick='var elm=document.getElementById("predictions_tutorial"); elm.src=elm.getAttribute("data-src");elm.classList.toggle("d-none")'
-						class='btn btn-outline-primary btn-sm border-0'>
-					<img style="height:1.5rem" src="{% static 'img/logos/jupyter.svg' %}" />
+				<button type='button' class='btn btn-outline-primary btn-sm border-0'
+						title='how to open the downloaded table in your code (short tutorial)'
+						onclick='var elm=document.getElementById("predictions_tutorial"); elm.src=elm.getAttribute("data-src");elm.classList.toggle("d-none")'>
+					<i class='fa fa-question-circle-o'></i>
 				</button>
 			</div>
 

@@ -23,31 +23,50 @@ A typical representation might be:</div>
 
 <div style='overflow:auto'>{{ dataframe_html | safe }}</div>
 
-
-<div class='mt-4'>
-In Python code (e.g. standard module, Jupyter notebook) you can easily read
-the data with the pandas library (see snippets below) into a
-<a href="https://pandas.pydata.org/docs/user_guide/dsintro.html#dataframe" target="_blank">DataFrame</a>,
-a 2-dimensional labeled data structure with columns of different types
-(e.g., float, str, int).
-</div>
-
 <div style='overflow:auto'>{{ docstring_headers_intro | safe }}</div>
 
+<script type="text/javascript">
+	function tutorial(key){
+		var anchor = document.querySelector(`a[data-tutorial="${key}"]`);
+		if (!anchor || anchor.classList.contains('disabled') || anchor.disabled ){ return; }
+		var anchors = document.querySelectorAll("a[data-tutorial]");
+		anchors.forEach(e => e.classList.remove("active"));
+		anchor.classList.add('active');
+		var div = document.querySelector(`div[data-tutorial="${key}"]`);
+		if (!div){ return; }
+		var divs = document.querySelectorAll("div[data-tutorial]");
+		divs.forEach(e => e.classList.add("d-none"));
+		div.classList.remove('d-none');
+	}
+</script>
 
-<div class='mt-4 d-flex flex-row align-items-baseline'>
-	<b>Read/Write a downloaded HDF file</b>
-	<div style='flex:1 1 auto'></div>
-	<div>Pandas doc:</div>
-	<a class='mx-2'
-	   href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_hdf.html"
-	   target="_blank"><i class='fa fa-external-link'></i>Read HDF</a>
-	<a href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.to_hdf.html"
-	   target="_blank"><i class='fa fa-external-link'></i>Write HDF</a>
-</div>
+<ul class="nav nav-tabs mt-5">
+  <li class="nav-item">
+    <a class="nav-link active" data-tutorial="python" href="#"
+		onclick='tutorial(this.getAttribute("data-tutorial"))'>
+		Python</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" data-tutorial="r" href="#"
+		onclick='tutorial(this.getAttribute("data-tutorial"))'>
+		R
+	</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link disabled" data-tutorial="matlab" href="#"
+		onclick='tutorial(this.getAttribute("data-tutorial"))'>
+		Matlab
+	</a>
+  </li>
+</ul>
 
-<i>Note: also requires pytables (pip install tables)</i>
+<!---->
+<!-- PYTHON CODE SNIPPETS -->
+<!---->
 
+<div data-tutorial="python">
+
+HDF
 <pre><code class="language-python">import pandas as pd  # if not installed: pip/conda install pandas tables
 
 # To read data, provide a string path to an existing file (file_path):
@@ -58,52 +77,152 @@ dataframe = pd.read_hdf(file_path)
 dataframe.to_hdf(file_path, key=table_key, format="table")
 </code></pre>
 
-
-<div class='mt-4 d-flex flex-row align-items-baseline'>
-	<b>Read/Write a downloaded CSV file</b>
-	<div style='flex:1 1 auto'></div>
-	<div>Pandas doc:</div>
-	<a class='mx-2'
-	   href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_csv.html"
-	   target="_blank"><i class='fa fa-external-link'></i>Read CSV</i></a>
-	<a href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.to_csv.html"
-	   target="_blank"><i class='fa fa-external-link'></i>Read CSV</a>
-</div>
-
+CSV
+<details><summary>Disclaimer: We discourage the use of CSV files (click for details)</summary>
 <i>
-	Disclaimer: We discourage the use of CSV files. The format is much less performant than
-	HDF, resulting in bigger files size and slower download, and does not store all required
-	information: as such, you might need to fix potential issues with additional code
-	(see the pandas doc at the link above in case), especially when reading or writing
-	DataFrames with missing data or non-standard column types (e.g. categorical).
+	CSV is much less performant than HDF, meaning bigger files size and slower download,
+	and potential information loss: as such, you might need to fix potential issues with
+	additional code (see the pandas doc in case), especially when reading or writing
+	DataFrames with missing data or non-standard column types (e.g. categorical)
 </i>
+</details>
 
 <pre><code class="language-python">import pandas as pd  # if not installed: pip/conda install pandas
 
 # To read data, provide a string path to an existing file (file_path)
 dataframe = pd.read_csv(file_path, header=[0, 1, 2], index_col=0)
 
+# To read data with only one header row (residuals -> ranking):
+dataframe = pd.read_csv(file_path, header=[0], index_col=0)
+
 # To write data, provide a string path to a destination file (file_path):
 dataframe.to_csv(file_path)
 </code></pre>
 
+Useful links
+<ul>
+	<li><a href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_hdf.html"
+	   target="_blank"><i class='fa fa-external-link'></i>Read HDF</a></li>
+	<li><a href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.to_hdf.html"
+		   target="_blank"><i class='fa fa-external-link'></i>Write HDF</a></li>
+	<li><a href="https://pandas.pydata.org/docs/user_guide/10min.html">
+		<i class='fa fa-external-link'></i>pandas short intro
+	</a></li>
+	<li><a href="https://pandas.pydata.org/docs/user_guide/indexing.html">
+		<i class='fa fa-external-link'></i>indexing and selecting data
+	</a></li>
+	<li><a href="https://pandas.pydata.org/docs/user_guide/advanced.html">
+		<i class='fa fa-external-link'></i>indexing and selecting data (multi-index - i.e. multi-level - row or column)</a></li>
+	<li><a href="https://pandas.pydata.org/docs/user_guide/visualization.html#visualization">
+		<i class='fa fa-external-link'></i>plot with pandas
+	</a></li>
+</ul>
 
-<div class='mt-4'>
-From here on, you can easily and
-efficiently manipulate the data in your DataFrame. For further reading, see this
-<a href="https://pandas.pydata.org/docs/user_guide/10min.html">
-	<i class='fa fa-external-link'></i>short intro
-</a>, or how to
-<a href="https://pandas.pydata.org/docs/user_guide/indexing.html">
-	<i class='fa fa-external-link'></i>index and select data
-</a> (also with a
-<a href="https://pandas.pydata.org/docs/user_guide/advanced.html">
-	<i class='fa fa-external-link'></i>multi-index row or column, the case at hand</a>
-), or
-<a href="https://pandas.pydata.org/docs/user_guide/visualization.html#visualization">
-	<i class='fa fa-external-link'></i>plot the data
-</a>.
 </div>
+
+
+<!---->
+<!-- R CODE SNIPPETS -->
+<!---->
+
+<div data-tutorial="r" class="d-none">
+
+Disclaimer: R does not natively support multi-level column headers. However,
+you can simulate multi-level headers by creating custom column names with separators
+like "__", <b>Please look at the last code snippet for details</b>
+
+HDF
+<pre><code class="language-r">
+# Install Bioconductor package manager if not installed (one-time operation)
+if (!requireNamespace("BiocManager", quietly = TRUE)) {
+  install.packages("BiocManager")
+}
+
+# Install rhdf5 package from Bioconductor (one-time operation)
+BiocManager::install("rhdf5")
+
+# Load the rhdf5 package
+library(rhdf5)
+
+# Define the path to your HDF5 file
+file_path <- "your_hdf5_file.h5"
+
+# Open the HDF5 file in read-only mode
+h5file <- H5Fopen(file_path, "r")
+
+# List the contents of the HDF5 file to explore its structure (optional)
+h5ls(h5file)
+
+# Read the dataset from the file into R. The table is stored under the path "/egsim"
+data <- h5read(h5file, "/egsim")
+
+# Convert the data to a DataFrame (if it's not already one)
+# If the data is a matrix or array, convert it to a data frame
+df <- as.data.frame(data)
+
+# Close the HDF5 file when you're done
+H5Fclose(h5file)
+</code></pre>
+
+CSV
+
+<pre><code class="language-r">
+# Define the path to your CSV file
+file_path <- "your_file.csv"
+
+# Read the CSV file into a DataFrame
+df <- read.csv(file_path)
+</code></pre>
+
+How to merge first 3 rows ino a single row
+
+<pre><code class="language-r"># Step 1: Extract the first 3 rows to be the new header
+new_header <- df[1:3, ]
+
+# Step 2: Remove the first 3 rows from the DataFrame
+df_new <- df[-(1:3), ]
+
+# Step 3: Assign the new header (combine the rows as a new header with "__")
+#         You can change the separator (__ in this case) do not use alphanumeric characters, "_" or "."
+colnames(df_new) <- apply(new_header, 2, paste, collapse = "__")
+
+# Step 4: Optionally reset row names
+rownames(df_new) <- NULL
+</code></pre>
+
+</div>
+
+<!---->
+<!-- MATLAB CODE SNIPPETS -->
+<!---->
+
+<div data-tutorial="matlab" class="d-none">
+HDF
+<pre><code class="language-matlab">
+% Define the file path
+file_path = 'your_file.h5';
+
+% Get the structure of the HDF5 file
+info = h5info(file_path);
+
+% Display the structure to find your dataset path
+disp(info);
+
+% Read the data from the dataset
+data = h5read(file_path, "/egsim");
+
+% Assuming the first row of data contains the column names
+column_names = data(1, :);   % Get the first row as column names
+data = data(2:end, :);        % Remove the first row (now column names)
+
+% Convert the data into a MATLAB table
+data_table = array2table(data, 'VariableNames', column_names);
+
+% Display the table
+disp(data_table);
+</code></pre>
+
+
 
 </div>
 {% endblock %}

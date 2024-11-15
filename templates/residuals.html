@@ -51,8 +51,9 @@
 					<input type='checkbox' v-model="forms.residuals.ranking" class="me-1" />ranking
 				</label>
 				<button type='button' class='btn btn-outline-primary btn-sm border-0'
+						title='how to open the downloaded table in your code (short tutorial)'
 						onclick='var elm=document.getElementById("residuals_tutorial"); elm.src=elm.getAttribute("data-src");elm.classList.toggle("d-none")'>
-					<img style="height:1.5rem" src="{% static 'img/logos/jupyter.svg' %}" />
+					<i class='fa fa-question-circle-o'></i>
 				</button>
 			</div>
 
