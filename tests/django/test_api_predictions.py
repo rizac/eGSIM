@@ -18,8 +18,8 @@ from django.http import HttpResponse
 from openquake.hazardlib.gsim.akkar_2014 import AkkarEtAlRjb2014
 
 from egsim.api.urls import PREDICTIONS_URL_PATH
-from egsim.api.views import (MimeType, read_hdf_from_buffer,
-                             read_csv_from_buffer, as_querystring)
+from egsim.api.views import (MimeType, read_df_from_hdf_stream,
+                             read_df_from_csv_stream, as_querystring)
 from egsim.api.forms.scenarios import PredictionsForm
 
 from unittest.mock import patch  # ok in py3.8  # noqa
@@ -72,14 +72,16 @@ class Test:
         resp = client.post(self.url, data=dict(inputdic, format="hdf"),
                            content_type=MimeType.hdf)
         assert resp.status_code == 200
-        result_hdf = read_hdf_from_buffer(BytesIO(b''.join(resp.streaming_content)))
+        result_hdf = read_df_from_hdf_stream(BytesIO(b''.join(resp.streaming_content)))
 
         # test the text/csv response:
         resp = client.post(self.url, data=dict(inputdic, format="csv"),
                            content_type=MimeType.csv)
         assert resp.status_code == 200
-        result_csv = read_csv_from_buffer(BytesIO(b''.join(resp.streaming_content)),
-                                          header=[0,1,2])
+        result_csv = read_df_from_csv_stream(
+            BytesIO(b''.join(resp.streaming_content)),
+            header=[0, 1, 2]
+        )
 
         assert sorted(result_csv.columns) == sorted(result_hdf.columns)
 
@@ -108,12 +110,12 @@ class Test:
         resp = client.post(self.url, data=dict(inputdic, format="hdf"),
                            content_type=MimeType.json)
         assert resp.status_code == 200
-        result_hdf = read_hdf_from_buffer(BytesIO(b''.join(resp.streaming_content)))
+        result_hdf = read_df_from_hdf_stream(BytesIO(b''.join(resp.streaming_content)))
 
         inputdic.pop('multi_header')
         resp = client.post(self.url, data=inputdic, content_type=MimeType.json)
         assert resp.status_code == 200
-        result_hdf_single_header = read_hdf_from_buffer(
+        result_hdf_single_header = read_df_from_hdf_stream(
             BytesIO(b''.join(resp.streaming_content)))
 
         # check two dataframes are equal

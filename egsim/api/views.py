@@ -250,7 +250,7 @@ class SmtkView(APIFormView):
 
     def response_csv(self, form_output: pd.DataFrame, form: APIForm, **kwargs)\
             -> FileResponse:
-        content = write_csv_to_buffer(form_output)
+        content = write_df_to_csv_stream(form_output)
         content.seek(0)  # for safety
         kwargs.setdefault('content_type', MimeType.csv)
         kwargs.setdefault('status', 200)
@@ -258,7 +258,7 @@ class SmtkView(APIFormView):
 
     def response_hdf(self, form_output: pd.DataFrame, form: APIForm, **kwargs)\
             -> FileResponse:
-        content = write_hdf_to_buffer({'egsim': form_output})
+        content = write_df_to_hdf_stream({'egsim': form_output})
         content.seek(0)  # for safety
         kwargs.setdefault('content_type', MimeType.hdf)
         kwargs.setdefault('status', 200)
@@ -300,8 +300,8 @@ class ResidualsView(SmtkView):
 # (https://github.com/pandas-dev/pandas/issues/9246#issuecomment-74041497):
 
 
-def write_hdf_to_buffer(frames: dict[str, pd.DataFrame], **kwargs) -> BytesIO:
-    """Write in HDF format to a BytesIO the passed DataFrame(s)"""
+def write_df_to_hdf_stream(frames: dict[str, pd.DataFrame], **kwargs) -> BytesIO:
+    """Write pandas DataFrame(s) to a HDF BytesIO"""
     if any(k == 'table' for k in frames.keys()):
         raise ValueError('Key "table" invalid (https://stackoverflow.com/a/70467886)')
     with pd.HDFStore(
@@ -317,10 +317,13 @@ def write_hdf_to_buffer(frames: dict[str, pd.DataFrame], **kwargs) -> BytesIO:
         return BytesIO(out._handle.get_file_image())  # noqa
 
 
-def read_hdf_from_buffer(
-        buffer: Union[bytes, IO], key: Optional[str] = None) -> pd.DataFrame:
-    """Read from a BytesIO containing HDF data"""
-    content = buffer if isinstance(buffer, bytes) else buffer.read()
+def read_df_from_hdf_stream(stream: Union[bytes, IO], **kwargs) -> pd.DataFrame:
+    """Read pandas DataFrame from a HDF BytesIO or bytes sequence
+
+    :param stream: the stream / file-like (e.g. open file content)
+    :param kwargs: additional arguments to be passed to pandas `read_hdf`
+    """
+    content = stream if isinstance(stream, bytes) else stream.read()
     # https://www.pytables.org/cookbook/inmemory_hdf5_files.html
     with pd.HDFStore(
             "data.h5",  # apparently unused for in-memory data
@@ -328,39 +331,31 @@ def read_hdf_from_buffer(
             driver="H5FD_CORE",  # create in-memory file
             driver_core_backing_store=0,  # for safety, just in case
             driver_core_image=content) as store:
-        if key is None:
-            keys = []
-            for k in store.keys():
-                if not any(k.startswith(_) for _ in keys):
-                    keys.append(k)
-                if len(keys) > 1:
-                    break
-            if len(keys) == 1:
-                key = keys[0]
-        # Note: top-level keys can be passed with or without leading slash:
-        return store[key]
+        return pd.read_hdf(store, **kwargs)  # noqa
 
 
-def write_csv_to_buffer(data: pd.DataFrame, **csv_kwargs) -> BytesIO:
-    """Write in CSV format to a BytesIO the passed DataFrame(s)"""
+def write_df_to_csv_stream(data: pd.DataFrame, **csv_kwargs) -> BytesIO:
+    """Write pandas DataFrame to a CSV BytesIO"""
     content = BytesIO()
     data.to_csv(content, **csv_kwargs)  # noqa
     return content
 
 
-def read_csv_from_buffer(buffer: Union[bytes, IO],
-                         header: Optional[Union[int, list[int]]] = None) -> pd.DataFrame:
+def read_df_from_csv_stream(stream: Union[bytes, IO], **kwargs) -> pd.DataFrame:
     """
-    Read from a file-like object containing CSV data.
+    Read pandas DataFrame from a CSV BytesIO or bytes sequence
 
-    :param header: the header rows. Leave None or pass [0] explicitly for CSV with one
-        row header, Pass a list (e.g. [0, 1, 2]) to indicate the indices of the rows
-        to be used as  header (first row 0)
+    :param stream: the stream / file-like (e.g. open file content)
+    :param kwargs: additional keyword arguments to be passed to pandas `read_csv`.
+        NOTE the following keyword arguments WILL BE SET BY DEFAULT if not given:
+        header=[0] (the first row contain the dataframe columns.
+                    Pass a list (e.g. [0, 1, 2]) for multi-level header)
+        index_col=0 (the first column is the dataframe index)
     """
-    content = BytesIO(buffer) if isinstance(buffer, bytes) else buffer
-    if header is None:
-        header = [0]
-    dframe = pd.read_csv(content, header=header, index_col=0)
+    content = BytesIO(stream) if isinstance(stream, bytes) else stream
+    header = kwargs.setdefault('header', [0])
+    kwargs.setdefault('index_col', 0)
+    dframe = pd.read_csv(content, **kwargs)
     if header and len(header) > 1:  # multi-index, in case of "Unnamed:" column, replace:
         dframe.rename(columns=lambda c: "" if c.startswith("Unnamed:") else c,
                       inplace=True)

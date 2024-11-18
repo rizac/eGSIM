@@ -19,8 +19,8 @@ from django.utils.datastructures import MultiValueDict
 
 from egsim.api.urls import RESIDUALS_URL_PATH
 from egsim.api.views import (ResidualsView, APIFormView, as_querystring,
-                             read_csv_from_buffer, read_hdf_from_buffer,
-                             write_hdf_to_buffer)
+                             read_df_from_csv_stream, read_df_from_hdf_stream,
+                             write_df_to_hdf_stream)
 from egsim.smtk import read_flatfile
 from egsim.smtk.converters import dataframe2dict
 from egsim.smtk.registry import Clabel
@@ -169,7 +169,7 @@ class Test:
         # FIRST we test that the current pandas version does NOT support
         # upload from file
         dfr = pd.read_csv(BytesIO(self.flatfile_tk_content))
-        bytes_io = write_hdf_to_buffer({'egsim': dfr})
+        bytes_io = write_df_to_hdf_stream({'egsim': dfr})
         with pytest.raises(Exception) as exc:
             read_flatfile(bytes_io)
 
@@ -329,9 +329,9 @@ class Test:
             if format is None:  # format defaults to JSON
                 resp_json = resp1.json()
                 continue
-            dfr2 = read_csv_from_buffer(content, header=[0, 1, 2]) \
+            dfr2 = read_df_from_csv_stream(content, header=[0, 1, 2]) \
                 if format == 'csv' \
-                else read_hdf_from_buffer(content)
+                else read_df_from_hdf_stream(content)
             new_json = dataframe2dict(dfr2)
             assert np.allclose(
                 resp_json['SA(0.2)'][Clabel.total_res]['BindiEtAl2011'],
@@ -351,12 +351,14 @@ class Test:
         inputdic['format'] = 'hdf'
         resp = client.post(self.url, data=inputdic, content_type='application/json')
         assert resp.status_code == 200
-        result_hdf = read_hdf_from_buffer(BytesIO(b''.join(resp.streaming_content)))
+        result_hdf = read_df_from_hdf_stream(BytesIO(b''.join(resp.streaming_content)))
 
         inputdic.pop('multi_header')
         resp = client.post(self.url, data=inputdic, content_type='application/json')
         assert resp.status_code == 200
-        result_hdf_single_header = read_hdf_from_buffer(BytesIO(b''.join(resp.streaming_content)))
+        result_hdf_single_header = (
+            read_df_from_hdf_stream(BytesIO(b''.join(resp.streaming_content)))
+        )
 
         # check two dataframes are equal
         assert len(result_hdf.columns) == len(result_hdf_single_header.columns)
@@ -417,7 +419,7 @@ class Test:
         resp1 = client.get(self.url, data=inputdict,
                            content_type='application/json')
         assert resp1.status_code == 200
-        dfr = read_hdf_from_buffer(BytesIO(resp1.getvalue()))
+        dfr = read_df_from_hdf_stream(BytesIO(resp1.getvalue()))
         inter_ev_values = dfr[('SA(0.1)', 'inter_event_residual', 'BooreEtAl2014')]
         # this was before comnverting SA to g:
         # assert 13 < inter_ev_values.median() < 14
@@ -429,7 +431,7 @@ class Test:
         resp1 = client.get(self.url, data=inputdict | {'normalize': False},
                            content_type='application/json')
         assert resp1.status_code == 200
-        dfr = read_hdf_from_buffer(BytesIO(resp1.getvalue()))
+        dfr = read_df_from_hdf_stream(BytesIO(resp1.getvalue()))
         inter_ev_values = dfr[('SA(0.1)', 'inter_event_residual', 'BooreEtAl2014')]
         q1_nonorm, m_nonomr, q9_nonorm =  inter_ev_values.quantile([.1, .5, .9])
         assert -1 < m_nonomr < -.5
@@ -469,9 +471,9 @@ class Test:
             #     prev_content = content
             # else:
             #     assert prev_content == content
-            dfr2 = read_csv_from_buffer(BytesIO(content), header=0) \
+            dfr2 = read_df_from_csv_stream(BytesIO(content), header=0) \
                 if format == 'csv' \
-                else read_hdf_from_buffer(BytesIO(content))
+                else read_df_from_hdf_stream(BytesIO(content))
 
             assert sorted(dfr2.columns) == sorted(resp_json.keys())
             for k in resp_json.keys():
