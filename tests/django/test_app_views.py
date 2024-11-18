@@ -54,22 +54,23 @@ class Test:
                                                 'request_trellis.yaml'))
 
     def test_from_to_json_dict(self):
-        def_ = { GSIM: ['CauzziEtAl2014'], IMT: ['PGA']}
+        m_ = {GSIM: ['CauzziEtAl2014']}
+        i_ = {IMT: ['PGA']}
         f_ = {'flatfile': 'esm_2018'}
 
         # REMEMBER THAT FORMS MODIFY INPLACE THE DICTS SO PASS dict({...}) as
         # 1ST ARGUMENT OTHERWISE THE FOLLOWING FORMS WILL HAVE UNDESIRED ARGS.
         # Test this (remove if in the future the form will copy its dicts):
-        tmp = dict(def_)
+        tmp = m_ | i_
         keyz = len(tmp)
         PredictionsForm(tmp)
         assert len(tmp) > keyz
 
         # Now check that forms are json serializable:
         for form in [
-            PredictionsForm(dict(def_)),
-            ResidualsForm(def_ | f_),
-            FlatfileMetadataInfoForm(dict(def_)),
+            PredictionsForm(m_ | i_),
+            ResidualsForm(m_ | i_ | f_),
+            FlatfileMetadataInfoForm(dict(m_)),
             FlatfileValidationForm(dict(f_)),
             FlatfileVisualizeForm(f_ | {'x': 'mag'})
         ]:

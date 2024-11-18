@@ -5,7 +5,7 @@ from django.views.decorators.clickjacking import xframe_options_exempt
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic.base import RedirectView
 
-from egsim.api.views import (PredictionsView, ResidualsView, ModelInfoView, NotFound,
+from egsim.api.views import (PredictionsView, ResidualsView, GsimInfoView, NotFound,
                              APIFormView)
 from egsim.api.forms import GsimFromRegionForm
 from egsim.api.forms.flatfile import FlatfileValidationForm, FlatfileMetadataInfoForm
@@ -83,7 +83,7 @@ urlpatterns = [
         URLS.GET_GSIMS_FROM_REGION,
         APIFormView.as_view(formclass=GsimFromRegionForm)
     ),
-    path(URLS.GET_GSIMS_INFO, ModelInfoView.as_view()),
+    path(URLS.GET_GSIMS_INFO, GsimInfoView.as_view()),
 
     # test code returning specific response (in this case, no EgsimView required):
     path("test_response/<int:code>",

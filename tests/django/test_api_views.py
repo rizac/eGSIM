@@ -53,7 +53,7 @@ def test_model_info():
                            json.dumps(data),
                            content_type="application/json")
     assert response.status_code == 400
-    assert error_message(response) == 'Unknown GSIM: x'
+    assert error_message(response) == 'model: invalid model(s) x'
 
 
 def test_not_found(client):

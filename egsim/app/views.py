@@ -290,6 +290,8 @@ def form2dict(form: EgsimBaseForm, compact=False) -> dict:
     for field_name, value in form.data.items():
         if compact:
             field = form.declared_fields.get(field_name, None)
+            if field is None:
+                continue
             is_field_optional = not field.required or field.initial is not None
             if field is not None and is_field_optional:
                 if field.initial == value:

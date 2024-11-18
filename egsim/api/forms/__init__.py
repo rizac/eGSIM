@@ -16,6 +16,7 @@ from django.forms.fields import Field, FloatField
 from egsim.api import models
 from egsim.smtk import (validate_inputs, harmonize_input_gsims,
                         harmonize_input_imts, gsim)
+from egsim.smtk.registry import gsim_info
 from egsim.smtk.validators import IncompatibleModelImtError, ImtError, ModelError
 
 _base_singleton_renderer = BaseRenderer()  # singleton no-op renderer, see below
@@ -251,15 +252,14 @@ class SHSRForm(EgsimBaseForm):
         return gsims
 
 
-class GsimImtForm(SHSRForm):
-    """Base abstract-like form for any form requiring Gsim+Imt selection"""
+class GsimForm(SHSRForm):
+    """Base abstract-like form for any form requiring Gsim selection"""
 
     # Custom API param names (see doc of `EgsimBaseForm._field2params` for details):
     _field2params: dict[str, list[str]] = {'gsim': ('model', 'gsim', 'gmm')}
 
     # Set simple Fields and perform validation in `clean_gsim` and `clean_imt`:
     gsim = Field(required=False, help_text="Ground shaking intensity Model(s)")
-    imt = Field(required=False, help_text='Intensity Measure type(s)')
 
     def clean_gsim(self) -> dict[str, GMPE]:
         """Custom gsim clean.
@@ -283,6 +283,16 @@ class GsimImtForm(SHSRForm):
         except ModelError as err:
             self.add_error(key, str(err))
         return ret
+
+
+class GsimImtForm(GsimForm):
+    """Base abstract-like form for any form requiring Gsim+Imt selection"""
+
+    # Custom API param names (see doc of `EgsimBaseForm._field2params` for details):
+    _field2params: dict[str, list[str]] = {'gsim': ('model', 'gsim', 'gmm')}
+
+    # Set simple Fields and perform validation in `clean_gsim` and `clean_imt`:
+    imt = Field(required=False, help_text='Intensity Measure type(s)')
 
     def clean_imt(self) -> dict[str, IMT]:
         """Custom imt clean.
@@ -346,3 +356,18 @@ class GsimFromRegionForm(SHSRForm, APIForm):
         :return: any Python object (e.g., a JSON-serializable dict)
         """
         return {'models': sorted(self.get_region_selected_model_names())}
+
+
+class GsimInfoForm(GsimForm, APIForm):
+    """API Form returning a info for a list of selected of models. Info is a dict
+    containing the supported imt(s), the input ground motion parameters,
+    and the OpenQuake documentation
+    """
+
+    def output(self) -> dict:
+        """Compute and return the output from the input data (`self.cleaned_data`).
+        This method must be called after checking that `self.is_valid()` is True
+
+        :return: any Python object (e.g., a JSON-serializable dict)
+        """
+        return {m: gsim_info(m) for m in self.cleaned_data['gsim']}

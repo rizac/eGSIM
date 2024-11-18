@@ -13,7 +13,7 @@ from egsim.smtk import (ground_motion_properties_required_by, FlatfileError,
 from egsim.smtk.flatfile import (read_flatfile, get_dtype_of, FlatfileMetadata,
                                  query as flatfile_query, EVENT_ID_COLUMN_NAME)
 from egsim.api import models
-from egsim.api.forms import EgsimBaseForm, APIForm, GsimImtForm
+from egsim.api.forms import EgsimBaseForm, APIForm, GsimForm
 
 
 # Let's provide uploaded flatfile Field in a separate Form as the Field is not
@@ -158,30 +158,12 @@ class FlatfileValidationForm(APIForm, FlatfileForm):
         return {'columns': columns}
 
 
-class FlatfileMetadataInfoForm(GsimImtForm, APIForm):
+class FlatfileMetadataInfoForm(GsimForm, APIForm):
     """Form for querying the necessary metadata columns from a given selection
     of models"""
 
-    def clean_imt(self) -> set[str]:
-        """
-        intensity measures should be given as type / class name (e.g. SA not "SA(P)").
-        If empty, this parameter will default to all available IMTs
-        """
-        value = self.cleaned_data.get('imt', None)
-        aval_imts = FlatfileMetadata.get_intensity_measures()
-        if not value:
-            return aval_imts
-        if type(value) not in (list, tuple):
-            value = [value]
-        if set(value) - aval_imts:
-            self.add_error('imt', self.ErrMsg.invalid)
-        return value
-
     def clean(self):
-        """skip the superclass `clean` method because we do not want to check
-        imt and gsim compatibility
-        """
-        unique_imts = self.cleaned_data['imt']
+        unique_imts = FlatfileMetadata.get_intensity_measures()
 
         for m_name, model in self.cleaned_data['gsim'].items():
             imts = intensity_measures_defined_for(model)

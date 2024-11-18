@@ -15,8 +15,7 @@ from django.http.response import HttpResponse
 from django.views.generic.base import View
 
 from ..smtk.converters import dataframe2dict
-from ..smtk.registry import gsim_info
-from .forms import APIForm, EgsimBaseForm
+from .forms import APIForm, EgsimBaseForm, GsimInfoForm
 from .forms.scenarios import PredictionsForm
 from .forms.residuals import ResidualsForm
 
@@ -38,7 +37,31 @@ class MimeType:  # noqa
 
 
 class EgsimView(View):
-
+    """Base View class for serving eGSIM HttpResponse. All views should inherits from this 
+    class. Instance of this class handle GET and POST requests by parsing 
+    request data and calling the abstract-like method `response`. Any exception raised 
+    during the process will be caught and returned as 500 HttpResponse with the exception 
+    string in the response body / content.
+    
+    Usage:
+    ======
+    
+    Simply implement the abstract-like method `response`:
+    ```
+    class MyEgsimView(EgsimView):
+    
+        def response(self, request: HttpRequest, data: dict, files: Optional[dict] = None) -> HttpResponseBase:
+            ...
+    ```
+    And then bind as usual this class view to an endpoint in `urls.py`, .e.g.:
+    ```
+    urlpatterns = [
+        ...
+        re_path(...endpoint..., MyEgsimView.as_view()),
+        ...
+    ]
+    ```
+    """  # noqa
     # error codes for general client and server errors:
     CLIENT_ERR_CODE, SERVER_ERR_CODE = 400, 500
 
@@ -65,9 +88,8 @@ class EgsimView(View):
                 if data:  # the request contains form data
                     return self.response(request, data=self.parse_query_dict(data))
                 # not form data, so assume we have JSON (stored in request.body):
-                data = request.body
-                return self.response(request,
-                                     data=yaml.safe_load(StringIO(data.decode('utf-8'))))
+                data = StringIO(request.body.decode('utf-8'))
+                return self.response(request, data=yaml.safe_load(data))
         except Exception as exc:
             return self.handle_exception(exc, request)
 
@@ -76,7 +98,15 @@ class EgsimView(View):
                  data: dict,
                  files: Optional[dict] = None) -> HttpResponseBase:
         """Return a Django HttpResponse from the given arguments extracted from a GET
-        or POST request.
+        or POST request. Any Exception raised here will be returned as 500 HttpResponse
+        with `str(excpetion)` as Response body / content. Other specific error responses
+        need to be returned in try except clauses, as usual:
+        ```
+        try:
+            ...
+        except ValueError as exc:
+            return self.error_response(exc, status=400)
+        ```
 
         :param request: the original HttpRequest
         :param data: the data extracted from the given request
@@ -84,29 +114,32 @@ class EgsimView(View):
         """
         raise NotImplementedError()
 
-    def handle_exception(self, exc: Exception, request) -> HttpResponse:
-        """Handles any exception raised in `self.get` or self.post` returning a
-        server error with some info in the response body / content
+    def handle_exception(self, exc: Exception, request) -> HttpResponse:  # noqa
         """
-        msg = (
+        Handles any exception raised in `self.get` or self.post` returning a
+        server error (HttpResponse 500) with the exception string representation
+        as response body / content
+        """
+        return self.error_response((
                 f'Server error ({exc.__class__.__name__}) {exc}'.strip() +
                 f'. Please contact the server administrator '
                 f'if you think this error is due to a code bug'
-        )
-        return self.error_response(msg, status=self.SERVER_ERR_CODE)
+        ), status=self.SERVER_ERR_CODE)
 
     def error_response(self,
                        message: Union[str, Exception, bytes] = '',
                        **kwargs) -> HttpResponse:
         """
-        Return a HttpResponse with status default to self.CLIENT_ERR_CODE
-        and custom message. For custom status, provide the `status` keyword param.
-        explicitly
+        Return a HttpResponse with default status set to self.CLIENT_ERR_CODE
+        and custom message in the response body / content. For custom status,
+        provide the `status` keyword param. explicitly
         """
         kwargs.setdefault('status', self.CLIENT_ERR_CODE)
-        return HttpResponse(content=str(message), **kwargs)
+        if not isinstance(message, (str, bytes)):
+            message = str(message)
+        return HttpResponse(message, **kwargs)
 
-    def parse_query_dict(
+    def parse_query_dict(  # noqa
             self,
             query_dict: QueryDict, *,
             nulls=("null",),
@@ -136,6 +169,7 @@ class EgsimView(View):
 
 
 class NotFound(EgsimView):
+    """View for the 404 Not Found HttpResponse"""
 
     def response(self,
                  request: HttpRequest,
@@ -145,17 +179,18 @@ class NotFound(EgsimView):
 
 
 class APIFormView(EgsimView):
-    """Base view for every eGSIM API endpoint using an API Form to parse and process
-    a request. Typical usage:
+    """EgsimView serving any APIForm output.
 
-    1. For usage as view in `urls.py`: subclass and provide the relative `formclass`
-    2. For usage inside a `views.py` function, to process data with a `APIForm`
-       class `form_cls` (note: class not object):
-       ```
-       def myview(request):
-           return APIFormView.as_view(formclass=form_cls)(request)
-       ```
+    When called, this class first instantiate a new instance of this class Form
+    (`self.formclass`) with the request input, and then serializes `Form.output()`
+    (Python object) into Response body (bytes sequence) by calling the user-implemented
+    "response_[format]" method (e.g. "response_json") matching the format parameter in
+    the request (see subclasses for details).
+
+    Parameter errors as well as code exceptions will be handled and returned
+    in an appropriate HttpResponse object
     """
+
     # The APIForm of this view, to be set in subclasses:
     formclass: Type[APIForm] = None
 
@@ -163,10 +198,10 @@ class APIFormView(EgsimView):
                  request: HttpRequest,
                  data: dict,
                  files: Optional[dict] = None):
-        """Return a HttpResponse from the given arguments. This method first creates
-        a APIForm (from `self.formclass`) and puts the Form `output` into the
-        returned Response body (or `Response.content`). On error, return
-        an appropriate JSON response
+        """Return a HttpResponse from the given arguments. The Response body / content
+        will be populated with the output of this class Form
+        (`self.formclass(...).output()`) serialized into the appropriate bytes sequence
+        according to the 'format' parameter in 'data'.
         """
         rformat = data.pop('format', 'json')
         try:
@@ -201,6 +236,12 @@ class APIFormView(EgsimView):
     def response_json(self, form_output: Any, form: APIForm, **kwargs) -> JsonResponse:
         kwargs.setdefault('status', 200)
         return JsonResponse(form_output, **kwargs)
+
+
+class GsimInfoView(APIFormView):
+    """ApiFormView subclass for getting ground shaking model(s) info"""
+
+    formclass = GsimInfoForm
 
 
 class SmtkView(APIFormView):
@@ -245,8 +286,8 @@ class ResidualsView(SmtkView):
 
     def response_json(self, form_output: pd.DataFrame, form: APIForm, **kwargs) \
             -> JsonResponse:
-        """Return a JSON response. This method is overwritten because the JSON
-        data differs if we computed measures of fit (param. `ranking=True`) or not
+        """Return a JSON response. This method is overwritten because the dataframe to
+        JSON conversion differs if we computed measures of fit (param. `ranking=True`)
         """
         orient = 'dict' if form.cleaned_data['ranking'] else 'list'
         json_data = dataframe2dict(form_output, as_json=True,
@@ -324,19 +365,6 @@ def read_csv_from_buffer(buffer: Union[bytes, IO],
         dframe.rename(columns=lambda c: "" if c.startswith("Unnamed:") else c,
                       inplace=True)
     return dframe
-
-
-class ModelInfoView(EgsimView):
-
-    def response(self,
-                 request: HttpRequest,
-                 data: dict,
-                 files: Optional[dict] = None) -> HttpResponse:
-        try:
-            models = data['model']
-            return JsonResponse({m: gsim_info(m) for m in models})
-        except KeyError as exc:
-            return self.error_response(exc)
 
 
 # Default safe characters in `as_querystring`. Letters, digits are safe by default
