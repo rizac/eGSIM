@@ -14,6 +14,7 @@ import pytest
 
 from unittest.mock import patch
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.http import HttpResponse
 from django.utils.datastructures import MultiValueDict
 
 from egsim.api.urls import RESIDUALS_URL_PATH
@@ -48,6 +49,10 @@ class Test:
     def querystring(self, data):
         return f'{self.url}?{as_querystring(data)}'
 
+    @staticmethod
+    def error_message(response: HttpResponse):
+        return response.content.decode(response.charset)
+
     def test_uploaded_flatfile(self,
                                # pytest fixtures:
                                client):
@@ -62,8 +67,7 @@ class Test:
         # test wrong flatfile:
         resp2 = client.post(self.url, data=inputdic2)
         assert resp2.status_code == 400
-        assert resp2.json()['message'] == \
-               "data-query: name 'vs30' is not defined"
+        assert self.error_message(resp2) == "data-query: name 'vs30' is not defined"
 
         # 1b no rows matching query:
         csv = SimpleUploadedFile("file.csv", b"PGA,vs30,mag,b,c,d\n1.1,,,",
@@ -72,7 +76,7 @@ class Test:
         # test wrong flatfile:
         resp2 = client.post(self.url, data=inputdic2)
         assert resp2.status_code == 400
-        assert resp2.json()['message'] == "data-query: no rows matching query"
+        assert self.error_message(resp2) == "data-query: no rows matching query"
 
         # 1c missing ground motion properties:
         csv = SimpleUploadedFile("file.csv", b"PGA,vs30,mag,b,c,d\n1.1,,,",
@@ -82,8 +86,7 @@ class Test:
         # test wrong flatfile:
         resp2 = client.post(self.url, data=inputdic2)
         assert resp2.status_code == 400
-        assert resp2.json()['message'] == \
-               "flatfile: missing column(s) PGV"
+        assert self.error_message(resp2) == "flatfile: missing column(s) PGV"
 
         # 1d missing ground motion properties (2):
         csv = SimpleUploadedFile("file.csv", b"PGA,PGV,vs30,mag,b,c,d\n1.1,,,",
@@ -93,7 +96,7 @@ class Test:
         # test wrong flatfile:
         resp2 = client.post(self.url, data=inputdic2)
         assert resp2.status_code == 400
-        assert resp2.json()['message'] == \
+        assert self.error_message(resp2) == \
                ("flatfile: missing column(s) SA(period_in_s) (columns found: 0, "
                 f'at least two are required)')
 
@@ -105,7 +108,7 @@ class Test:
         # test wrong flatfile:
         resp2 = client.post(self.url, data=inputdic2)
         assert resp2.status_code == 400
-        assert resp2.json()['message'] == \
+        assert self.error_message(resp2) == \
                "flatfile: missing column(s) rake, rjb"
 
         # 3 dupes:
@@ -116,7 +119,7 @@ class Test:
         resp2 = client.post(self.url, data=inputdic2)
         assert resp2.status_code == 400
         # account for different ordering in error columns:
-        assert resp2.json()['message'] in \
+        assert self.error_message(resp2) in \
                ("flatfile: column names conflict evt_lat, hypo_lat",
                 "flatfile: column names conflict hypo_lat, evt_lat")
 
@@ -125,13 +128,14 @@ class Test:
             # whereas Django expects two different arguments, `data` and `files`
             # this method simply bypasses the files renaming (from the user provided
             # flatfile into 'uploaded_flatfile' in the Form) and calls directly :
-            return ResidualsView().response(data=dict(inputdic2, flatfile='esm2018'),
+            return ResidualsView().response(request,
+                                            data=dict(inputdic2, flatfile='esm2018'),
                                             files=MultiValueDict({'flatfile': csv}))
 
         with patch.object(APIFormView, 'post', fake_post):
             resp2 = client.post(self.url, data=inputdic2)
             assert resp2.status_code == 400
-            assert 'flatfile' in resp2.json()['message']
+            assert 'flatfile' in self.error_message(resp2)
 
         # 4 missing column error (PGV):
         csv = SimpleUploadedFile("file.csv", (b"PGA;rake;rjb;vs30;hypo_lat;mag\n"
@@ -143,7 +147,7 @@ class Test:
         resp2 = client.post(self.url, data=inputdic2)
         assert resp2.status_code == 400
         # account for different ordering in error columns:
-        assert resp2.json()['message'] == 'flatfile: missing column(s) PGV'
+        assert self.error_message(resp2) == 'flatfile: missing column(s) PGV'
 
         # 5 missing column error (event id):
         csv = SimpleUploadedFile("file.csv", (b"PGA;PGV;SA(0.2);rake;rjb;vs30;hypo_lat;mag\n"
@@ -155,7 +159,7 @@ class Test:
         resp2 = client.post(self.url, data=inputdic2)
         assert resp2.status_code == 400
         # account for different ordering in error columns:
-        assert resp2.json()['message'] == 'flatfile: missing column(s) evt_id'
+        assert self.error_message(resp2) == 'flatfile: missing column(s) evt_id'
 
     def test_upload_hdf(self, client, settings):  # <- both pytest-django fixutures
         """As of pandas 2.2.2, HDF cannot be read from buffer but only from file.
@@ -274,20 +278,20 @@ class Test:
                             content_type='application/json')
         resp1 = client.get(self.querystring(inputdic2))
         assert resp1.status_code == resp2.status_code == 400
-        assert resp1.json()['message'] == 'flatfile: missing parameter is required'
+        assert self.error_message(resp1) == 'flatfile: missing parameter is required'
 
         # test conflicting values:
         resp1 = client.get(self.querystring({**inputdic,
                                              'selection-expression': '(vs30 > 800) & (vs30 < 1200)',
                                              'data-query': '(vs30 > 1000) & (vs30 < 1010)'}))
         assert resp1.status_code == 400
-        assert 'data-query' in resp1.json()['message']
+        assert 'data-query' in self.error_message(resp1)
 
         inputdic['data-query'] = '(magnitude >5'
         resp2 = client.post(self.url, data=inputdic, content_type='application/json')
         resp1 = client.get(self.querystring(inputdic))
         assert resp1.status_code == resp2.status_code == 400
-        err_msg = resp1.json()['message']
+        err_msg = self.error_message(resp1)
         assert 'data-query' in err_msg
         assert 'data-query' in err_msg
 
@@ -359,7 +363,6 @@ class Test:
         result_hdf.columns = [Clabel.sep.join(c) for c in result_hdf.columns]  # noqa
         pd.testing.assert_frame_equal(result_hdf, result_hdf_single_header)
 
-
     def test_residuals_invalid_get(self,
                                    # pytest fixtures:
                                    client):
@@ -370,8 +373,8 @@ class Test:
                            ('?gsim=BindiEtAl2014Rjb&flatfile=wrong_flatfile_name'
                             '&imt=PGA&plot=res&plot=llh'),
                            content_type='application/json')
-        assert resp1.json()['message'] == 'plot: unknown parameter'
         assert resp1.status_code == 400
+        assert self.error_message(resp1) == 'plot: unknown parameter'
 
     def test_allen2012(self,
                        # pytest fixtures:

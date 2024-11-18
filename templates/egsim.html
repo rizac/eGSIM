@@ -97,11 +97,11 @@ window.fetch = function() {
 		origFetch.apply(this, args).then((response) => {
 			if (!response.ok){
 				// HTTP error (status code 4xx or 5xx):
-				response.clone().json().then(
-					// eGSIM error (JSON serializable, show the error message):
-					data => showFetchError(data.message)
+				response.clone().text().then(
+					// response has a text message (e.g. eGSIM input error) show it:
+					text => showFetchError(text)
 				).catch(
-					// standard HTTP error (non JSON serializable, show statusText and code):
+					// response has no text message, show statusText and code:
 					error => showFetchError(`${response.statusText}${response.status ? " (status code: " + response.status +")" : ""}`)
 				);
 				reject(response);

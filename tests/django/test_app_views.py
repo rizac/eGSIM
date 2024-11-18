@@ -18,6 +18,8 @@ import json
 import pytest
 import urllib.request
 
+from django.http import HttpResponse
+
 from egsim.api.forms.flatfile import FlatfileMetadataInfoForm, FlatfileValidationForm
 from egsim.api.forms.residuals import ResidualsForm
 from egsim.api.forms.scenarios import PredictionsForm
@@ -180,6 +182,10 @@ class Test:
         cols2 = response.json()['columns']
         assert sorted(_['name'] for _ in cols1) == sorted(_['name'] for _ in cols2)
 
+    @staticmethod
+    def error_message(response: HttpResponse):
+        return response.content.decode(response.charset)
+
     def test_flatfile_visualize(self):
         url = URLS.FLATFILE_VISUALIZE
 
@@ -189,7 +195,7 @@ class Test:
         # to disable CSRF Token check
         response = client.post("/" + url, data=data)
         assert response.status_code == 400  # no x and y
-        msg = response.json()['message']
+        msg = self.error_message(response)
         assert "x" in msg and 'y' in msg
 
         for data in [
@@ -248,7 +254,7 @@ class Test:
             if form is PredictionsVisualizeForm and additional_data['plot_type'] == 's':
                 # only SA(period) allowed, response has also other IMTs, so:
                 assert response.status_code == 400
-                assert 'SA' in response.json()['message']
+                assert 'SA' in self.error_message(response)
             else:
                 assert response.status_code == 200
                 assert len(response.json())
@@ -277,7 +283,7 @@ class Test:
                                    json.dumps(data),
                                    content_type="application/json")
             assert response.status_code == 400
-            assert len(response.json())
+            assert len(self.error_message(response))
 
         # test a case where the flatfile has only one row, it should not raise:
         client = Client()

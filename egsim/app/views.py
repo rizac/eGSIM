@@ -2,27 +2,23 @@
 Django views for the eGSIM app (web app with frontend)
 """
 from io import BytesIO, StringIO
-import json
 from os.path import splitext
+from typing import Optional
+
 from shapely.geometry import shape
 
-from django.http import FileResponse, HttpResponseBase
-from django.views.decorators.clickjacking import xframe_options_exempt
-from django.http.response import JsonResponse
+from django.http import FileResponse, HttpResponseBase, HttpRequest
 from django.shortcuts import render
 from django.conf import settings
-
-# from django.views.decorators.clickjacking import xframe_options_sameorigin
 
 from ..api import models
 from ..api.forms.flatfile import (FlatfileMetadataInfoForm,
                                   FlatfileValidationForm)
-from ..api.forms import GsimFromRegionForm, APIForm, EgsimBaseForm
+from ..api.forms import APIForm, EgsimBaseForm
 from ..api.forms.residuals import ResidualsForm
 from ..api.forms.scenarios import PredictionsForm
-from ..api.views import APIFormView, MimeType, error_response
-from .forms import (ResidualsVisualizeForm, PredictionsVisualizeForm,
-                    FlatfileVisualizeForm)
+from ..api.views import MimeType, EgsimView
+from .forms import PredictionsVisualizeForm, FlatfileVisualizeForm
 
 
 img_ext = ('png', 'pdf', 'svg')
@@ -302,88 +298,78 @@ def form2dict(form: EgsimBaseForm, compact=False) -> dict:
     return ret
 
 
-def get_gsims_from_region(request) -> JsonResponse:
-    return APIFormView.as_view(formclass=GsimFromRegionForm)(request)
+class PlotsImgDownloader(EgsimView):
 
-
-def flatfile_validate(request) -> JsonResponse:
-    return APIFormView.as_view(formclass=FlatfileValidationForm)(request)
-
-
-def flatfile_meta_info(request) -> JsonResponse:
-    return APIFormView.as_view(formclass=FlatfileMetadataInfoForm)(request)
-
-
-def flatfile_visualize(request) -> JsonResponse:
-    return APIFormView.as_view(formclass=FlatfileVisualizeForm)(request)
-
-
-def predictions_visualize(request) -> JsonResponse:
-    return APIFormView.as_view(formclass=PredictionsVisualizeForm)(request)
-
-
-def residuals_visualize(request) -> JsonResponse:
-    return APIFormView.as_view(formclass=ResidualsVisualizeForm)(request)
-
-
-def plots_image(request) -> HttpResponseBase:
-    """Return the image from the given request built in the frontend GUI
-    according to the chosen plots
-    """
-    try:
+    def response(self,
+                 request: HttpRequest,
+                 data: dict,
+                 files: Optional[dict] = None) -> HttpResponseBase:
+        """Process the response from a given request and the data / files
+        extracted from it"""
         filename = request.path[request.path.rfind('/')+1:]
         img_format = splitext(filename)[1][1:].lower()
         try:
             content_type = getattr(MimeType, img_format)
         except AttributeError:
-            return error_response(f'Invalid format "{img_format}"', 400)
-        jsondata = json.loads(request.body.decode('utf-8'))
-        data, layout, width, height = (jsondata['data'],
-                                       jsondata['layout'],
-                                       jsondata['width'],
-                                       jsondata['height'])
+            return self.error_response(f'Invalid format "{img_format}"')
+
         from plotly import graph_objects as go, io as pio
-        fig = go.Figure(data=data, layout=layout)
+        fig = go.Figure(data=data['data'], layout=data['layout'])
         # fix for https://github.com/plotly/plotly.py/issues/3469:
         pio.full_figure_for_development(fig, warn=False)
-        bytestr = fig.to_image(format=img_format, width=width, height=height, scale=5)
-        return FileResponse(BytesIO(bytestr), content_type=content_type,
+        img_bytes = fig.to_image(
+            format=img_format, width=data['width'], height=data['height'], scale=5
+        )
+        return FileResponse(BytesIO(img_bytes), content_type=content_type,
                             filename=filename, as_attachment=True)
-    except Exception as exc:
-        return error_response(str(exc), 500)
 
 
-@xframe_options_exempt
-def predictions_response_tutorial(request):
-    from egsim.api.data.client.snippets.get_egsim_predictions import \
-        get_egsim_predictions
-    api_form = PredictionsForm({
-        'gsim': ['CauzziEtAl2014', 'BindiEtAl2014Rjb'],
-        'imt': ['PGA', 'SA(0.1)'],
-        'magnitude': [4, 5, 6],
-        'distance': [10, 100]
-    })
-    return _get_download_tutorial(
-        request, 'predictions', api_form, get_egsim_predictions
-    )
+class PredictionsHtmlTutorial(EgsimView):
+
+    def response(self,
+                 request: HttpRequest,
+                 data: dict,
+                 files: Optional[dict] = None) -> HttpResponseBase:
+        """Process the response from a given request and the data / files
+        extracted from it"""
+        from egsim.api.data.client.snippets.get_egsim_predictions import \
+            get_egsim_predictions
+        api_form = PredictionsForm({
+            'gsim': ['CauzziEtAl2014', 'BindiEtAl2014Rjb'],
+            'imt': ['PGA', 'SA(0.1)'],
+            'magnitude': [4, 5, 6],
+            'distance': [10, 100]
+        })
+        return get_html_tutorial(
+            request, 'predictions', api_form, get_egsim_predictions
+        )
 
 
-@xframe_options_exempt
-def residuals_response_tutorial(request):
-    from egsim.api.data.client.snippets.get_egsim_residuals import \
-        get_egsim_residuals
-    api_form = ResidualsForm({
-        'gsim': ['CauzziEtAl2014', 'BindiEtAl2014Rjb'],
-        'imt': ['PGA', 'PGV'],
-        'data-query': 'mag > 7',
-        'flatfile': 'esm2018'
-    })
-    return _get_download_tutorial(
-        request, 'residuals', api_form, get_egsim_residuals
-    )
+class ResidualsHtmlTutorial(EgsimView):
+
+    def response(self,
+                 request: HttpRequest,
+                 data: dict,
+                 files: Optional[dict] = None) -> HttpResponseBase:
+        """Process the response from a given request and the data / files
+        extracted from it"""
+        from egsim.api.data.client.snippets.get_egsim_residuals import \
+            get_egsim_residuals
+        api_form = ResidualsForm({
+            'gsim': ['CauzziEtAl2014', 'BindiEtAl2014Rjb'],
+            'imt': ['PGA', 'PGV'],
+            'data-query': 'mag > 7',
+            'flatfile': 'esm2018'
+        })
+        return get_html_tutorial(
+            request, 'residuals', api_form, get_egsim_residuals
+        )
 
 
-def _get_download_tutorial(request, key: str, api_form: APIForm, api_client_function):
+def get_html_tutorial(request,
+                      key: str,
+                      api_form: APIForm,
+                      api_client_function) -> HttpResponseBase:
     import re
     doc = api_client_function.__doc__
     # replace bold with <b>s:
@@ -394,7 +380,7 @@ def _get_download_tutorial(request, key: str, api_form: APIForm, api_client_func
     table_cls = 'table table-bordered table-light my-2'
 
     dataframe_headers_info = doc[doc.index('Each DataFrame column '):].strip()
-    dataframe_headers_info = re.sub("\n\s*\n", "<br>", dataframe_headers_info)
+    dataframe_headers_info = re.sub(r"\n\s*\n", "<br>", dataframe_headers_info)
 
     s = StringIO()
     if api_form.is_valid():
@@ -406,11 +392,3 @@ def _get_download_tutorial(request, key: str, api_form: APIForm, api_client_func
                       'dataframe_html': htm,
                       'dataframe_headers_info': dataframe_headers_info
                   })
-
-
-def error_test_response(request):  # noqa
-    """Dummy function raising for front end test purposes"""
-
-    raise ValueError('this is a test error with a very very long line to '
-                     'check also text overflows in case this message has to be '
-                     'displayed in dynamic sized dialog windows or popups')

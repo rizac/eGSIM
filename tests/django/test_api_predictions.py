@@ -14,6 +14,7 @@ import yaml
 
 import pytest
 import numpy as np
+from django.http import HttpResponse
 from openquake.hazardlib.gsim.akkar_2014 import AkkarEtAlRjb2014
 
 from egsim.api.urls import PREDICTIONS_URL_PATH
@@ -37,6 +38,9 @@ class Test:
 
     def querystring(self, data):
         return f'{self.url}?{as_querystring(data)}'
+    @staticmethod
+    def error_message(response: HttpResponse):
+        return response.content.decode(response.charset)
 
     # @pytest.mark.parametrize('st_dev', [False, True])
     def test_trellis(
@@ -51,8 +55,8 @@ class Test:
         resp1 = client.get(self.querystring(inputdic))
         resp2 = client.post(self.url, data=inputdic,
                             content_type=MimeType.json)
+        assert resp1.status_code == resp2.status_code == 200
         result = resp1.json()
-        assert resp1.status_code == 200
         assert result == resp2.json()
         form = PredictionsForm(data=dict(inputdic))
         assert form.is_valid()
@@ -144,7 +148,6 @@ class Test:
         }
         resp = client.post(self.url, data=data,
                            content_type='application/json')
-        result = resp.json()
         assert resp.status_code == 400
 
     def test_error(self,
@@ -176,8 +179,8 @@ class Test:
         resp2 = client.post(self.url, data=inputdic,
                             content_type='application/json')
         assert resp1.status_code == 400
-        assert resp1.json() == resp2.json()
-        assert resp1.json()['message'] == 'gsim: invalid model(s) AkkarEtAl2013'
+        assert self.error_message(resp1) == self.error_message(resp2)
+        assert self.error_message(resp1) == 'gsim: invalid model(s) AkkarEtAl2013'
 
     @patch('egsim.api.views.PredictionsForm.output', side_effect=ValueError())
     def test_500_err(self, mocked_output_method, client):
@@ -186,8 +189,7 @@ class Test:
         resp1 = client.post(self.url, data=inputdic,
                             content_type='application/json')
         assert resp1.status_code == 500
-        msg = resp1.json()['message']
-        assert 'ValueError' in msg
+        assert 'ValueError' in self.error_message(resp1)
 
     def test_empty_gsim(self,
                         # pytest fixtures:
@@ -228,10 +230,9 @@ class Test:
         resp1 = client.get(self.querystring(inputdic))
         resp2 = client.post(self.url, data=inputdic,
                             content_type='application/json')
-        result = resp1.json()
         # WARNING THIS SHOULD BE A BUG FIXED IN FUTURE OPENQUAKE VERSIONS:
         assert resp1.status_code == 500
-        assert 'AkkarBommer2010SWISS01' in resp2.json()['message']
+        assert 'AkkarBommer2010SWISS01' in self.error_message(resp2)
 
     def test_mismatching_imt_gsim(self,
                                   # pytest fixtures:
@@ -265,8 +266,7 @@ class Test:
             resp1 = client.get(self.querystring(inputdic))
             resp2 = client.post(self.url, data=inputdic,
                                 content_type='application/json')
-            result = resp1.json()
             assert resp1.status_code == 400
-            assert result == resp2.json()
-            assert 'gsim' in resp1.json()['message'] and \
-                   'imt' in resp1.json()['message']
+            assert self.error_message(resp1) == self.error_message(resp2)
+            assert 'gsim' in self.error_message(resp1) and \
+                   'imt' in self.error_message(resp1)

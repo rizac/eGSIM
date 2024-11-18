@@ -80,13 +80,11 @@ def get_egsim_residuals(
     # POST request to eGSIM
     response = requests.post(base_url, **args)
 
-    # eGSIM might return response denoting an error. Treat these response as
-    # Python exceptions and output the original eGSIM message
-    try:
-        response.raise_for_status()
-    except requests.exceptions.HTTPError as exc:
-        msg = exc.response.json()['message']  # eGSIM detailed error message
-        raise ValueError(f"eGSIM error: {msg} ({exc.response.url}) ") from None
+    # check HTTPErrors (status_code >= 400):
+    if response.status_code >= 400 and response.text:
+        raise requests.exceptions.HTTPError(response.text)
+    else:
+        response.raise_for_status()  # raises if status >= 400 (with a default message)
 
     # `response.content` is the computed data, as in-memory file (bytes sequence)
     # in CSV or HDF format. Read it into a pandas.DataFrame:

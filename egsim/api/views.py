@@ -1,7 +1,6 @@
 """Module with the views for the web API (no GUI)"""
 from __future__ import annotations
 from collections.abc import Callable, Iterable
-from http.client import responses
 from datetime import date, datetime
 import re
 from io import StringIO, BytesIO
@@ -10,7 +9,8 @@ from urllib.parse import quote as urlquote
 
 import yaml
 import pandas as pd
-from django.http import (JsonResponse, HttpRequest, QueryDict, FileResponse)
+from django.http import (JsonResponse, HttpRequest, QueryDict, FileResponse,
+                         HttpResponseBase)
 from django.http.response import HttpResponse
 from django.views.generic.base import View
 
@@ -39,28 +39,72 @@ class MimeType:  # noqa
 
 class EgsimView(View):
 
-    def get(self, request: HttpRequest) -> HttpResponse:
+    # error codes for general client and server errors:
+    CLIENT_ERR_CODE, SERVER_ERR_CODE = 400, 500
+
+    def get(self, request: HttpRequest) -> HttpResponseBase:
         """Process a GET request and return a Django Response"""
-        return self.response(data=self.parse_query_dict(request.GET))
+        try:
+            return self.response(request, data=self.parse_query_dict(request.GET))
+        except Exception as exc:
+            return self.handle_exception(exc, request)
 
-    def post(self, request: HttpRequest) -> HttpResponse:
+    def post(self, request: HttpRequest) -> HttpResponseBase:
         """Process a POST request and return a Django Response"""
-        if request.FILES:
-            # requests.FILE: https://docs.djangoproject.com/en/dev/ref/request-response/#django.http.HttpRequest.FILES  # noqa
-            return self.response(data=self.parse_query_dict(request.POST),
-                                 files=request.FILES)
-        else:
-            stream = StringIO(request.body.decode('utf-8'))
-            return self.response(data=yaml.safe_load(stream))
+        try:
+            if request.FILES:
+                # request.content_type='multipart/form-data' (see link below for details)
+                # https://docs.djangoproject.com/en/stable/ref/request-response/#django.http.HttpRequest.FILES  # noqa
+                return self.response(request,
+                                     data=self.parse_query_dict(request.POST),
+                                     files=request.FILES)
+            else:
+                # request.content_type might be anything (most likely
+                # 'application/json' or 'application/x-www-form-urlencoded')
+                data = request.POST
+                if data:  # the request contains form data
+                    return self.response(request, data=self.parse_query_dict(data))
+                # not form data, so assume we have JSON (stored in request.body):
+                data = request.body
+                return self.response(request,
+                                     data=yaml.safe_load(StringIO(data.decode('utf-8'))))
+        except Exception as exc:
+            return self.handle_exception(exc, request)
 
-    def response(self, data: dict, files: Optional[dict] = None) -> HttpResponse:
+    def response(self,
+                 request: HttpRequest,
+                 data: dict,
+                 files: Optional[dict] = None) -> HttpResponseBase:
         """Return a Django HttpResponse from the given arguments extracted from a GET
         or POST request.
 
-        :param data: the data of the GET or POST request
-        :param files: the files of the GET or POST request, or None
+        :param request: the original HttpRequest
+        :param data: the data extracted from the given request
+        :param files: the files extracted from the given request, or None
         """
-        raise
+        raise NotImplementedError()
+
+    def handle_exception(self, exc: Exception, request) -> HttpResponse:
+        """Handles any exception raised in `self.get` or self.post` returning a
+        server error with some info in the response body / content
+        """
+        msg = (
+                f'Server error ({exc.__class__.__name__}) {exc}'.strip() +
+                f'. Please contact the server administrator '
+                f'if you think this error is due to a code bug'
+        )
+        return self.error_response(msg, status=self.SERVER_ERR_CODE)
+
+    def error_response(self,
+                       message: Union[str, Exception, bytes] = '',
+                       **kwargs) -> HttpResponse:
+        """
+        Return a HttpResponse with status default to self.CLIENT_ERR_CODE
+        and custom message. For custom status, provide the `status` keyword param.
+        explicitly
+        """
+        kwargs.setdefault('status', self.CLIENT_ERR_CODE)
+        return HttpResponse(content=str(message), **kwargs)
 
     def parse_query_dict(
             self,
@@ -91,6 +135,15 @@ class EgsimView(View):
         return ret
 
 
+class NotFound(EgsimView):
+
+    def response(self,
+                 request: HttpRequest,
+                 data: dict,
+                 files: Optional[dict] = None) -> HttpResponse:
+        return self.error_response(status=404)
+
+
 class APIFormView(EgsimView):
     """Base view for every eGSIM API endpoint using an API Form to parse and process
     a request. Typical usage:
@@ -105,38 +158,28 @@ class APIFormView(EgsimView):
     """
     # The APIForm of this view, to be set in subclasses:
     formclass: Type[APIForm] = None
-    # error codes for general client and server errors:
-    CLIENT_ERR_CODE, SERVER_ERR_CODE = 400, 500
 
-    def response(self, data: dict, files: Optional[dict] = None):
-        """Return a Django Response from the given arguments. This method first creates
+    def response(self,
+                 request: HttpRequest,
+                 data: dict,
+                 files: Optional[dict] = None):
+        """Return a HttpResponse from the given arguments. This method first creates
         a APIForm (from `self.formclass`) and puts the Form `output` into the
         returned Response body (or `Response.content`). On error, return
         an appropriate JSON response
         """
+        rformat = data.pop('format', 'json')
         try:
-            rformat = data.pop('format', 'json')
-            try:
-                response_function = self.supported_formats()[rformat]
-            except KeyError:
-                return error_response(
-                    f'format: {EgsimBaseForm.ErrMsg.invalid.value}',
-                    self.CLIENT_ERR_CODE
-                )
-            form = self.formclass(data, files)
+            response_function = self.supported_formats()[rformat]
+        except KeyError:
+            return self.error_response(f'format: {EgsimBaseForm.ErrMsg.invalid.value}')
+
+        form = self.formclass(data, files)
+        if form.is_valid():
+            obj = form.output()
             if form.is_valid():
-                obj = form.output()
-                if form.is_valid():
-                    return response_function(self, obj, form)  # noqa
-            return error_response(form.errors_json_data(), self.CLIENT_ERR_CODE)
-        except Exception as server_err:
-            msg = (
-                f'Server error ({server_err.__class__.__name__})' +
-                ("" if not str(server_err) else str(server_err)) +
-                f'. Please contact the server administrator '
-                f'if you think this error is due to a code bug'
-            )
-            return error_response(msg, self.SERVER_ERR_CODE)
+                return response_function(self, obj, form)  # noqa
+        return self.error_response(form.errors_json_data()['message'])
 
     @classmethod
     def supported_formats(cls) -> \
@@ -212,29 +255,6 @@ class ResidualsView(SmtkView):
         return JsonResponse(json_data, **kwargs)
 
 
-def error_response(error: Union[str, Exception, dict],
-                   status=500, **kwargs) -> JsonResponse:
-    """Return a JSON response from the given error. The response body/content will be
-    a dict with (at least) the key 'message' (If missing, the key value will be
-    inferred and added to the dict. The dict format is inspired from:
-    https://google.github.io/styleguide/jsoncstyleguide.xml).
-
-    :param error: dict, Exception or string:
-        - If dict, `JSONResponse.content = error` (if dict['message'] is missing,
-          it will be set inferred from `status`).
-        - If `str` or `Exception`, `JSONResponse.content` = {'message': str(error)}
-    :param status: the response HTTP status code (int, default: 500)
-    :param kwargs: optional params for JSONResponse (except 'content' and 'status')
-    """
-    if isinstance(error, dict):
-        content = dict(error)
-        content.setdefault('message', f'{responses[status]} (status code: {status})')
-    else:
-        content = {'message': str(error)}
-    kwargs.setdefault('content_type', MimeType.json)
-    return JsonResponse(content, status=status, **kwargs)
-
-
 # functions to read from BytesIO:
 # (https://github.com/pandas-dev/pandas/issues/9246#issuecomment-74041497):
 
@@ -308,12 +328,15 @@ def read_csv_from_buffer(buffer: Union[bytes, IO],
 
 class ModelInfoView(EgsimView):
 
-    def response(self, data: dict, files: Optional[dict] = None) -> JsonResponse:
-        models = data['model']
+    def response(self,
+                 request: HttpRequest,
+                 data: dict,
+                 files: Optional[dict] = None) -> HttpResponse:
         try:
+            models = data['model']
             return JsonResponse({m: gsim_info(m) for m in models})
-        except Exception as exc:
-            return error_response(exc, 400)
+        except KeyError as exc:
+            return self.error_response(exc)
 
 
 # Default safe characters in `as_querystring`. Letters, digits are safe by default
