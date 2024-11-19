@@ -92,7 +92,7 @@ def test_distance_imt_trellis():
         scenarios.SiteProperties(vs30=800))
     # convert medians to np.exp(medians) as in legacy smtk:
     medians_cols = (
-        [k[0] for k in dfr.columns if k[0] != Clabel.input_data],
+        [k[0] for k in dfr.columns if k[0] != Clabel.input],
         Clabel.median,
         slice(None)
     )
@@ -111,7 +111,7 @@ def test_distance_imt_trellis():
 
     # Now compare trellis values:
     for c in dfr.columns:
-        if c[0] == Clabel.input_data:
+        if c[0] == Clabel.input:
             if c[-1] == 'rrup':
                 # distances are messed up, let's just test they are
                 # both monotonically increasing:
@@ -132,7 +132,7 @@ def test_distance_imt_trellis():
                     # then decrease. Remove first 20 values
                     values = dfr[c][20:]
                 assert (np.diff(values) <= 0).all()
-            dist_col = (Clabel.input_data, ColumnType.distance.value, 'rrup')
+            dist_col = (Clabel.input, ColumnType.distance.value, 'rrup')
             # create interpolation function from new data
             interp = interp1d(dfr[dist_col].values, dfr[c].values,
                               fill_value="extrapolate", kind="cubic")
@@ -166,7 +166,7 @@ def test_magnitude_imt_trellis():
     )
     # convert medians to np.exp(medians) as in legacy smtk:
     medians_cols = (
-        [k[0] for k in dfr.columns if k[0] != Clabel.input_data],
+        [k[0] for k in dfr.columns if k[0] != Clabel.input],
         Clabel.median,
         slice(None)
     )
@@ -178,7 +178,7 @@ def test_magnitude_imt_trellis():
 
     # Now compare trellis values:
     for c in dfr.columns:
-        if c[0] == Clabel.input_data:
+        if c[0] == Clabel.input:
             assert (dfr[c] == ref[c]).all()  # noqa
             continue
 
@@ -192,7 +192,7 @@ def test_magnitude_imt_trellis():
                     # (hacky test heuristically calculated):
                     assert (np.diff(dfr[c]) >= 0).sum() > 0.92 * len(dfr[c])
             # create interpolation function from new data
-            mag_col = (Clabel.input_data, ColumnType.rupture.value, 'mag')
+            mag_col = (Clabel.input, ColumnType.rupture.value, 'mag')
             interp = interp1d(dfr[mag_col].values, dfr[c].values,
                               fill_value="extrapolate", kind="cubic")
             # interpolate the old values
@@ -247,7 +247,7 @@ def test_magnitude_distance_spectra_trellis():
     )
     # convert medians to np.exp(medians) as in legacy smtk:
     medians_cols = (
-        [k[0] for k in dfr.columns if k[0] != Clabel.input_data],
+        [k[0] for k in dfr.columns if k[0] != Clabel.input],
         Clabel.median,
         slice(None)
     )
@@ -260,7 +260,7 @@ def test_magnitude_distance_spectra_trellis():
 
     # compare trellis values:
     for c in dfr.columns:
-        if c[0] == Clabel.input_data:
+        if c[0] == Clabel.input:
             assert (dfr[c] == ref[c]).all()  # noqa
             continue
 
@@ -287,7 +287,7 @@ def open_ref_hdf(file_name) -> pd.DataFrame:
         else:
             try:
                 c_mapping[c] = (
-                    Clabel.input_data,
+                    Clabel.input,
                     str(FlatfileMetadata.get_type(c[0]).value),
                     c[0])
             except Exception as exc:

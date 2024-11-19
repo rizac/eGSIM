@@ -86,7 +86,7 @@ def test_residuals_execution():
             # (otherwise its an Inter event residuals per-site e.g. Chiou
             # & Youngs (2008; 2014) case)
             _computed = []
-            key = (Clabel.input_data, ColumnType.rupture.value, 'event_id')
+            key = (Clabel.input, ColumnType.rupture.value, 'event_id')
             for ev_id, dfr in res_df.groupby([key]):
                 vals = dfr[lbl].values
                 if ((vals - vals[0]) < 1.0E-12).all():
@@ -144,7 +144,7 @@ def test_residuals_execution_lh():
             # (otherwise its an Inter event residuals per-site e.g. Chiou
             # & Youngs (2008; 2014) case)
             _computed = []
-            key = (Clabel.input_data, ColumnType.rupture.value, 'event_id')
+            key = (Clabel.input, ColumnType.rupture.value, 'event_id')
             for ev_id, dfr in res_df.groupby([key]):
                 vals = dfr[lbl].values
                 if ((vals - vals[0]) < 1.0E-12).all():

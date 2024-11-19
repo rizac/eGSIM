@@ -61,10 +61,10 @@ class Test:
         form = PredictionsForm(data=dict(inputdic))
         assert form.is_valid()
         input_ = form.cleaned_data
-        assert sorted(result.keys()) == ['PGA', 'PGV', 'SA(0.2)', Clabel.input_data]
+        assert sorted(result.keys()) == ['PGA', 'PGV', 'SA(0.2)', Clabel.input]
         # assert list(result.keys())[1] == 'rrup'
-        mags = result[Clabel.input_data][ColumnType.rupture.value]['mag']
-        dists = result[Clabel.input_data][ColumnType.distance.value]['rrup']
+        mags = result[Clabel.input][ColumnType.rupture.value]['mag']
+        dists = result[Clabel.input][ColumnType.distance.value]['rrup']
         assert len(mags) == len(dists) == 12
         result_json = result
 

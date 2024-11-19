@@ -191,7 +191,7 @@ def gsim_info(model: Union[str, GMPE]) -> dict:
 
 class Clabel:
     """Custom column labels provided in the output Dataframes"""
-    input_data = 'input_data'
+    input = 'input'
     mean = "mean"
     median = "median"
     std = "stddev"

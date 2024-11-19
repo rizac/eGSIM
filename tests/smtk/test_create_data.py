@@ -1,6 +1,11 @@
 """
 tests that execution of prediction and residuals is consistent with pre-executed
 output. Useful after an OpenQuake upgrade
+
+IMPORTANT NOTE. These tests rely on older dataframes saved on disk - in case of
+OpenQuake upgrade, you might need to regenerate them. Ij case of eGSIM upgrade
+(e.g., column naming change) you might need to open them, rename the columns and
+save them again
 """
 
 from os.path import dirname, abspath, join, isdir, isfile
@@ -20,26 +25,18 @@ imts = ['PGA', 'SA(0.032)', 'SA(0.034)']
 def test_create_predictions_is_consistent_with_preexecuted_output():
     """
     test that executions of predictions is consistent by comparing it with pre-executed
-    output of the same test. Useful after an OpenQuake upgrade. If the file on disk
-    gets outdated, delete it, execute this test (that will simply save the file to disk)
-    and git-commit the changed file
+    output of the same test. Useful after an OpenQuake upgrade
     """
-    dfr = get_scenarios_predictions(models, imts, [4, 5], [1, 10, 100], header_sep=None)
+    dfr = get_scenarios_predictions(models, imts, [4, 5], [1, 10, 100])
     file = join(test_data_dir, 'predictions.hdf')
-    if not isfile(file):
-        dfr.to_hdf(file, key='data')
-    else:
-        dfr2 = pd.read_hdf(file)
-        # HERE YOU MIGHT WANT TO RELAX SOME CONDITIONS (see assert_frame_equal options):
-        pd.testing.assert_frame_equal(dfr, dfr2)  # noqa
+    dfr2 = pd.read_hdf(file)
+    pd.testing.assert_frame_equal(dfr, dfr2)  # noqa
 
 
 def test_create_residuals_is_consistent_with_preexecuted_output():
     """
     test that executions of residuals is consistent by comparing it with pre-executed
-    output of the same test. Useful after an OpenQuake upgrade. If the file on disk
-    gets outdated, delete it, execute this test (that will simply save the file to disk)
-    and git-commit the changed file
+    output of the same test. Useful after an OpenQuake upgrade
     """
     ffile = read_flatfile(join(test_data_dir,
                           'test_flatfile.csv'))
@@ -48,21 +45,20 @@ def test_create_residuals_is_consistent_with_preexecuted_output():
                'SA(0.032)', 'SA(0.035)', 'PGA'}
     ffile = ffile[[c for c in ffile.columns if c in columnz]]
 
-    dfr = get_residuals(models, imts, ffile, likelihood=False, header_sep=None)
+    dfr = get_residuals(models, imts, ffile, likelihood=False)
     file = join(test_data_dir, 'residuals.hdf')
-    if not isfile(file):
-        dfr.to_hdf(file, key='data')
-    else:
-        dfr2 = pd.read_hdf(file)
-        # HERE YOU MIGHT WANT TO RELAX SOME CONDITIONS (see assert_frame_equal options):
-        pd.testing.assert_frame_equal(dfr, dfr2)  # noqa
-        # this raises KeyError if not found:
-        assert not dfr.loc[:, ('SA(0.032)', slice(None), slice(None))].empty
-        assert not dfr.loc[:, ('SA(0.034)', slice(None), slice(None))].empty
-        assert not dfr.loc[:, ('PGA', slice(None), slice(None))].empty
-        assert not dfr.loc[:, (Clabel.input_data, ColumnType.intensity.value,
-                               'PGA')].empty
-        assert not dfr.loc[:, (Clabel.input_data, ColumnType.intensity.value,
-                               'SA(0.034)')].empty
-        assert not dfr.loc[:, (Clabel.input_data, ColumnType.intensity.value,
-                               'PGA')].empty
+    dfr2 = pd.read_hdf(file)
+    # HERE YOU MIGHT WANT TO RELAX SOME CONDITIONS (see assert_frame_equal options):
+    pd.testing.assert_frame_equal(dfr, dfr2)  # noqa
+    # Some outdated checks when we had multi-level columns. First restore multi-level:
+    dfr.columns = pd.MultiIndex.from_tuples(c.split(Clabel.sep) for c in dfr.columns)
+    # now run tests:
+    assert not dfr.loc[:, ('SA(0.032)', slice(None), slice(None))].empty
+    assert not dfr.loc[:, ('SA(0.034)', slice(None), slice(None))].empty
+    assert not dfr.loc[:, ('PGA', slice(None), slice(None))].empty
+    assert not dfr.loc[:, (Clabel.input, ColumnType.intensity.value,
+                           'PGA')].empty
+    assert not dfr.loc[:, (Clabel.input, ColumnType.intensity.value,
+                           'SA(0.034)')].empty
+    assert not dfr.loc[:, (Clabel.input, ColumnType.intensity.value,
+                           'PGA')].empty

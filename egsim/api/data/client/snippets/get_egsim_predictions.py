@@ -44,10 +44,10 @@ def get_egsim_predictions(
       (e.g. "PGA median BindiEtAl2014Rjb"): in this case, the second chunk is the metric 
       type (e.g. "median") and the third the predicting model ("BindiEtAl2014Rjb")
     
-    - The scenario configuration relative to the computed prediction (e.g.
-      "input_data distance_measure rrup"): in this case, the second chunk is the
-      configuration data type ("distance_measure") and the third is the configuration
-      data name ("rrup")
+    - The scenario configuration relative to the computed prediction if the first chunk
+      is the text "input" (e.g., "input distance_measure rrup"): in this case, the second
+      chunk is the configuration data type ("distance_measure") and the third is the
+      configuration data name ("rrup")
 
     The DataFrame 1st column report a unique row identifier (incremental and starting
     from 0)

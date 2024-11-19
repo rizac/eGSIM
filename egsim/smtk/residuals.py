@@ -87,7 +87,7 @@ def get_residuals(
     for c in flatfile_r.columns:
         c_type = FlatfileMetadata.get_type(c)
         col_mapping[c] = (
-            Clabel.input_data,
+            Clabel.input,
             c_type.value if c_type else Clabel.uncategorized_input,
             c)
     flatfile_r.rename(columns=col_mapping, inplace=True)

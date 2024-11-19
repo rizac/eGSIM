@@ -119,7 +119,7 @@ def get_scenarios_predictions(
 
     # distances:
     columns.append((
-        Clabel.input_data,
+        Clabel.input,
         str(FlatfileMetadata.get_type(site_properties.distance_type).value),
         site_properties.distance_type
     ))
@@ -127,7 +127,7 @@ def get_scenarios_predictions(
     data.append(np.tile(distances, len(magnitudes)).reshape(len(ctxts), 1))
     # magnitudes:
     columns.append((
-        Clabel.input_data,
+        Clabel.input,
         str(FlatfileMetadata.get_type(Clabel.mag).value),
         Clabel.mag
     ))
