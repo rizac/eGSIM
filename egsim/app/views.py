@@ -202,7 +202,8 @@ def _get_init_data_json(debug=False) -> dict:
                         PredictionsForm.param_names_of(n)[0]: f.help_text
                         for n, f in PredictionsForm.declared_fields.items()
                         if getattr(f, 'help_text', n).lower() != n.lower()
-                    }
+                    },
+                    'tutorial_page_visible': False
                 },
                 'predictions_plot': {
                     'plot_types': PredictionsVisualizeForm.
@@ -222,7 +223,8 @@ def _get_init_data_json(debug=False) -> dict:
                         ResidualsForm.param_names_of(n)[0]: f.help_text
                         for n, f in ResidualsForm.declared_fields.items()
                         if getattr(f, 'help_text', n).lower() != n.lower()
-                    }
+                    },
+                    'tutorial_page_visible': False
                 },
                 'flatfile_meta_info': {},
                 'download_formats': data_ext
