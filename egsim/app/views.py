@@ -362,7 +362,7 @@ class ResidualsHtmlTutorial(EgsimView):
         api_form = ResidualsForm({
             'gsim': ['CauzziEtAl2014', 'BindiEtAl2014Rjb'],
             'imt': ['PGA', 'PGV'],
-            'data-query': 'mag > 7',
+            'data-query': '(mag > 7) & (vs30 > 1100)',
             'flatfile': 'esm2018'
         })
         return get_html_tutorial(
@@ -370,29 +370,48 @@ class ResidualsHtmlTutorial(EgsimView):
         )
 
 
-def get_html_tutorial(request,
-                      key: str,
-                      api_form: APIForm,
-                      api_client_function) -> HttpResponseBase:
+def get_html_tutorial(
+        request,
+        key: str,
+        api_form: APIForm,
+        api_client_function
+) -> HttpResponseBase:
     import re
-    doc = api_client_function.__doc__
-    # replace bold with <b>s:
-    doc = re.sub(r'\*\*(.*?)\*\*', f'<b>\\1</b>', doc, flags=re.DOTALL)
-    # replace italic with <em>s:
-    doc = re.sub(r'\*(.*?)\*', f'<em>\\1</em>', doc, flags=re.DOTALL)
 
-    table_cls = 'table table-bordered table-light my-2'
-
-    dataframe_headers_info = doc[doc.index('Each DataFrame column '):].strip()
-    dataframe_headers_info = re.sub(r"\n\s*\n", "<br>", dataframe_headers_info)
-
+    # create dataframe htm:
     s = StringIO()
     if api_form.is_valid():
-        api_form.output().to_html(s, index=True, classes=table_cls, border=0, max_rows=3)
-    htm = re.sub(r"<t([dh])\s*>", r"<t\1 style='white-space: nowrap;'>", s.getvalue())
+        api_form.output().to_html(s, index=True,
+                                  classes='table table-bordered table-light my-2',
+                                  border=0,
+                                  max_rows=3)
+
+    if key == 'residuals':
+        s.write('Or, if ranking=True:')
+        api_form.cleaned_data['ranking'] = True
+        api_form.output().to_html(s, index=True,
+                                  classes='table table-bordered table-light my-2',
+                                  border=0,
+                                  max_rows=3)
+
+    dataframe_html = re.sub(r"<t([dh])\s*>",
+                            r"<t\1 style='white-space: nowrap;'>",
+                            s.getvalue())
+
+    # create explanation (from code snippet docstring):
+    dataframe_info = api_client_function.__doc__
+    dataframe_info = dataframe_info[dataframe_info.index('Returns:'):]
+    dataframe_info = dataframe_info.split("\n")  # split strings
+    dataframe_info = dataframe_info[3:]  # remove 1st 3 lines
+    dataframe_info = [_.strip() for _ in dataframe_info]  # strip each line
+    dataframe_info = ['</p><p>' if not _ else _ for _ in dataframe_info]
+    if any('<p>' in _ for _ in dataframe_info):
+        dataframe_info = ['<p>'] + dataframe_info + ['</p>']
+    dataframe_info = "\n".join(dataframe_info)
+
     return render(request, 'downloaded-data-tutorial.html',
                   context={
                       'key': key,
-                      'dataframe_html': htm,
-                      'dataframe_headers_info': dataframe_headers_info
+                      'dataframe_html': dataframe_html,
+                      'dataframe_info': dataframe_info
                   })

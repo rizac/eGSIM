@@ -11,7 +11,9 @@ def get_egsim_residuals(
         imt: list[str],
         flatfile: Union[io.IOBase, str],
         query_string=None,
+        ranking=False,
         likelihood=False,
+        normalize=True,
         data_format="hdf",
         base_url="https://egsim.gfz-potsdam.de/api/query/residuals"
 ) -> pd.DataFrame:
@@ -35,6 +37,12 @@ def get_egsim_residuals(
     - query_string: selection query to apply to the data (e.g. "mag>6")
     - likelihood: bool (default False): compute the residuals likelihood
       according to [Scherbaum et al. (2004)](https://doi.org/10.1785/0120030147)
+    - normalize: bool (default True): normalize the random effects residuals 
+      (Abrahamson & Youngs (1992), Eq. 10)
+    - ranking: bool (default False). Return aggregate measures from the computed 
+      residuals (e.g., median, loglikelihood, EDR). Useful in model ranking to easily 
+      assess how predictions fit the data. When True, the parameters likelihood and 
+      normalize are set to true by default
     - data_format: the requested data format. "hdf" (the default, recommended) or "csv".
       HDF is more performant and support more data types, but it requires pytables
       (`pip install tables`)
@@ -42,27 +50,31 @@ def get_egsim_residuals(
     Returns:
 
     A [pandas DataFrame](https://pandas.pydata.org/docs/user_guide/dsintro.html#dataframe)
-    where each row contains the input data and the computed residuals for a given 
-    flatfile record.
-
-    Each DataFrame column label is composed of 3 space-separated chunks, indicating:
     
-    - A computed residual or prediciton, if the first chunk is an intensity measure type 
+    If ranking is True, then each row will denote a model (reported in the 1st column)
+    and each column a measure of fit (reported in the 1st row).
+    
+    If ranking is False, then each row will denote a flatfile record (reported in the
+    first column the record position - starting from 0 - in the original flatfile),
+    and each column:
+    
+    - A computed residual or prediction, if the first chunk is an intensity measure type
       (e.g. "PGA total_residual BindiEtAl2014Rjb"): in this case, the second chunk is 
-      the metric type (e.g. "total_residual") and the third the predicting model ("BindiEtAl2014Rjb")
+      the metric type ("total_residual") and the third the predicting model
+      ("BindiEtAl2014Rjb")
     
-    - The flatfile data relative to the computed prediction if the first chunk is litarally 
-      "input_data" (e.g. "input_data distance_measure rrup"): in this case, the second 
-      chunk is the flatfile data type (e.g. "distance_measure") and the third the data name ("rrup")
-
-    The DataFrame row labels report the row position (starting from 0) in the original flatfile
-    """  # noqa
+    - The flatfile data relative to the computed prediction (e.g.
+      "input_data distance_measure rrup"): in this case, the second chunk is the
+      flatfile data type ("distance_measure") and the third the data name ("rrup")
+    """
     # request parameters:
     parameters = {
         'model': model,
         'imt': imt,
         'format': data_format,
-        'likelihood': likelihood
+        'ranking': ranking,
+        'likelihood': likelihood,  # ignored if ranking is True
+        'normalize': normalize,  # ignored (set to true) if ranking is True
     }
     if query_string:
         parameters['data-query'] = query_string

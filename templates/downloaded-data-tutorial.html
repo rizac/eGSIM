@@ -18,15 +18,16 @@
 {% block body %}
 <div style='max-width:60rem;line-height:2'>
 
-<div>eGSIM computed {{ key }} are arranged in a tabular structure. A typical representation might be:</div>
+<div>eGSIM computed {{ key }} are arranged in a tabular structure like this one:</div>
 
 <div style='overflow:auto'>{{ dataframe_html | safe }}</div>
 
-<div style='overflow:auto'>{{ dataframe_headers_info | safe }}</div>
+<div style='overflow:auto'>{{ dataframe_info | safe }}</div>
 
 <div>
-Here below some code snippets to help working with the data in your code (do not hesitate to
-provide feedback in case of errors, especially in non-Python environment):
+Here below some code snippets to help working with the data in your code (<i>Disclaimer:
+snippets have been tested in Python only. Do not hesitate to
+provide feedbacks in case of errors</i>):
 </div>
 
 <script type="text/javascript">
@@ -91,10 +92,13 @@ CSV
 </i>
 </details>
 
-<pre><code class="language-python">import pandas as pd  # if not installed: pip/conda install pandas
 
-<!--# To read data, provide a string path to an existing file (file_path)
-dataframe = pd.read_csv(file_path, header=[0, 1, 2], index_col=0) -->
+<!--
+# To read data, provide a string path to an existing file (file_path)
+dataframe = pd.read_csv(file_path, header=[0, 1, 2], index_col=0)
+-->
+
+<pre><code class="language-python">import pandas as pd  # if not installed: pip/conda install pandas
 
 # To read data with only one header row (residuals -> ranking):
 dataframe = pd.read_csv(file_path, header=[0], index_col=0)
