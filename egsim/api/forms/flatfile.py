@@ -189,6 +189,8 @@ class FlatfileMetadataInfoForm(GsimForm, APIForm):
 
         if not unique_imts:
             self.add_error('gsim', 'No intensity measure defined for all models')
+
+        self.cleaned_data['imt'] = sorted(unique_imts)
         return self.cleaned_data
 
     def output(self) -> dict:

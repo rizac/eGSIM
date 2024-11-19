@@ -191,7 +191,7 @@ def _get_init_data_json(debug=False) -> dict:
             # (keys below will take priority):
             'residuals_plot': {'x': None, 'format': 'json'},
             'flatfile_meta_info': form2dict(
-                FlatfileMetadataInfoForm({'gsim': [], 'imt': []})
+                FlatfileMetadataInfoForm({'gsim': []})
             ),
             'flatfile_visualize': form2dict(FlatfileVisualizeForm({})),
             'misc': {
