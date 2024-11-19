@@ -40,25 +40,27 @@
 			</div>
 		</div>
 
-		<div class='d-flex flex-column form-control gap-2'>
+		<div class='d-flex flex-column form-control gap-3'>
 
-			<div class="d-flex align-items-baseline gap-1">
+			<div class="d-flex align-items-baseline gap-2">
 				<span style='flex: 1 1 auto' >Residuals</span>
 				<label class='text-nowrap' :title="forms.misc.residuals.help.normalize" v-show="!forms.residuals.ranking">
 					<input type='checkbox' v-model="forms.residuals.normalize" class="me-1" />normalize
 				</label>
+				<div v-show="!forms.residuals.ranking" class='text-nowrap'>
+					<label class='text-nowrap' :title="forms.misc.residuals.help.likelihood">
+						<input type='checkbox' v-model="forms.residuals.likelihood" class='me-1' />likelihood
+					</label>
+					<a href="https://doi.org/10.1785/0120030147" target='_blank' class='ms-1'>
+						<i class='fa fa-external-link'></i>
+					</a>
+				</div>
 				<label class='text-nowrap' :title="forms.misc.residuals.help.ranking">
 					<input type='checkbox' v-model="forms.residuals.ranking" class="me-1" />ranking
 				</label>
-				<button type='button' class='btn btn-outline-primary btn-sm border-0'
-						title='how to open the downloaded table in your code (short tutorial)'
-						@click='forms.misc.residuals.tutorial_page_visible = true'>
-					<i class='fa fa-question-circle-o'></i>
-				</button>
 			</div>
 
 			<div class='d-flex flex-column gap-2'>
-
 				<div class='d-flex align-items-baseline gap-1'>
 					<div style='flex: 0 0 4.5rem' title='Download residuals (log(observed)- log(predicted))'>
 						Download
@@ -70,14 +72,11 @@
 						</option>
 					</select>
 
-					<div v-show="!forms.residuals.ranking" class='text-nowrap'>
-					<label class='text-nowrap' :title="forms.misc.residuals.help.likelihood">
-						<input type='checkbox' v-model="forms.residuals.likelihood" class='me-1' />likelihood
-					</label>
-					<a href="https://doi.org/10.1785/0120030147" target='_blank' class='ms-1'>
-						<i class='fa fa-external-link'></i>
-					</a>
-					</div>
+					<button type='button' class='btn btn-outline-primary btn-sm border-0'
+							title='how to open the downloaded table in your code (short tutorial)'
+							@click='forms.misc.residuals.tutorial_page_visible = true'>
+						<i class='fa fa-question-circle-o'></i>
+					</button>
 
 					<button type='button'
 							@click="download(`${urls.residuals}.${forms.residuals.format}`, forms.residuals)"
@@ -93,12 +92,12 @@
 						Visualize
 					</span>
 
-					<select v-model='forms.residuals_plot.x' class='form-control'
-						@change="evt => { forms.residuals_plot.likelihood = evt.target.selectedIndex == 1; }">
-						<option :value='null'>Residuals histogram (density distribution)</option>
-						<option :value='null'>Likelihood histogram (density distribution)</option>
+					<select v-model='forms.residuals_plot.x' class='form-control'>
+						<option :value='null'>
+							{% verbatim %}{{ !forms.residuals.likelihood ? 'Residuals' : 'Likelihood' }} histogram (density distribution){% endverbatim %}
+						</option>
 						<option v-for='f in forms.misc.residuals.selected_flatfile_fields.filter(f => !f.type.toLowerCase().includes("intensity"))' :value='f.name'>
-							{% verbatim %} Residuals vs. {{ f.name }} {% endverbatim %}
+							{% verbatim %} {{ !forms.residuals.likelihood ? 'Residuals' : 'Likelihood' }} vs. {{ f.name }} {% endverbatim %}
 						</option>
 					</select>
 
@@ -108,11 +107,8 @@
 							style='flex: 0 0 3.5rem'>
 						<i class='fa fa-bar-chart'></i>
 					</button>
-
 				</div>
-
 			</div>
-
 		</div>
 
 	</form>

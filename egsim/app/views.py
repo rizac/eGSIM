@@ -189,7 +189,7 @@ def _get_init_data_json(debug=False) -> dict:
             'residuals': form2dict(residuals_form),
             # in frontend, the form data below will be merged with forms.residuals above
             # (keys below will take priority):
-            'residuals_plot': {'x': None, 'likelihood': False, 'format': 'json'},
+            'residuals_plot': {'x': None, 'format': 'json'},
             'flatfile_meta_info': form2dict(
                 FlatfileMetadataInfoForm({'gsim': [], 'imt': []})
             ),

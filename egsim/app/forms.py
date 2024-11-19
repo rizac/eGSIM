@@ -345,27 +345,25 @@ class ResidualsVisualizeForm(ResidualsForm):
         """
         if y is None:  # hist (residuals or LH)
             if not likelihood:
-
                 def x_label(imt_):
                     return f'Z ({str(imt_)})'
-
-                def y_label(imt_):  # noqa
-                    return 'Frequency'
-
             else:
-
                 def x_label(imt_):
                     return f'LH ({str(imt_)})'
 
-                def y_label(imt_):  # noqa
-                    return 'Frequency'
+            def y_label(imt_):  # noqa
+                return 'Frequency'
 
         else:
             def x_label(imt_):  # noqa
                 return xlabel
 
-            def y_label(imt_):
-                return f'Z ({str(imt_)})'
+            if likelihood:
+                def y_label(imt_):
+                    return f'LH ({str(imt_)})'
+            else:
+                def y_label(imt_):
+                    return f'Z ({str(imt_)})'
 
         # c_cycle = colors_cycle()
         # colors = {}
