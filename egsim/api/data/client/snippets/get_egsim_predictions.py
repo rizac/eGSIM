@@ -46,7 +46,8 @@ def get_egsim_predictions(
     
     - The scenario configuration relative to the computed prediction if the first chunk
       is the text "input" (e.g., "input distance_measure rrup"): in this case, the second
-      chunk is the configuration data type ("distance_measure") and the third is the
+      chunk is the configuration data type ("distance_measure", "intensity_measure",
+      "rupture_parameter", "site_parameter" or "uncategorized") and the third is the
       configuration data name ("rrup")
 
     The DataFrame 1st column report a unique row identifier (incremental and starting

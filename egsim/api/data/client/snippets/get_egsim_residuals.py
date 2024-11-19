@@ -63,9 +63,10 @@ def get_egsim_residuals(
       the metric type ("total_residual") and the third the predicting model
       ("BindiEtAl2014Rjb")
     
-    - The flatfile data relative to the computed prediction  if the first chunk
+    - The flatfile data relative to the computed prediction if the first chunk
       is the text "input"  (e.g., "input distance_measure rrup"): in this case, the
-      second chunk is the flatfile data type ("distance_measure") and the third the
+      second chunk is the flatfile data type ("distance_measure", "intensity_measure",
+      "rupture_parameter", "site_parameter" or "uncategorized") and the third the
       data name ("rrup")
     """
     # request parameters:
