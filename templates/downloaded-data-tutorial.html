@@ -87,11 +87,11 @@ Read/write HDF
 file_path = "your_hdf5_file.hdf"
 
 # To read data:
-dataframe = pd.read_hdf(file_path)
+dframe = pd.read_hdf(file_path)
 
 # To write data, provide a key for the table, required because you can store several tables in a single HDF
 # (`pd.read_hdf` does not need the key as argument if the HDF contains a single table)
-dataframe.to_hdf(file_path, key="your_custom_key"", format="table")
+dframe.to_hdf(file_path, key="your_custom_key"", format="table")
 </code></pre>
 </div>
 
@@ -117,15 +117,15 @@ dataframe = pd.read_csv(file_path, header=[0, 1, 2], index_col=0)
 file_path = "your_hdf5_file.hdf"
 
 # To read data (header=[0] = 1st row has column labels, index_col=0, the 1st column has row labels):
-dataframe = pd.read_csv(file_path, header=[0], index_col=0)
+dframe = pd.read_csv(file_path, header=[0], index_col=0)
 
 # To write data:
-dataframe.to_csv(file_path)
+dframe.to_csv(file_path)
 </code></pre>
 </div>
 
 
-<div class="d-flex flex-column gap-3">
+<div class="d-flex flex-column gap-4">
 Dataframe data selection
 
 {% for py_select_snippet in py_select_snippets %}
