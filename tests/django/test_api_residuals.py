@@ -56,7 +56,7 @@ class Test:
     def test_uploaded_flatfile(self,
                                # pytest fixtures:
                                client):
-        with open(self.request_filepath) as _ :
+        with open(self.request_filepath) as _:
             inputdic = yaml.safe_load(_)
 
         # Uploaded flatfile, but not well-formed:
@@ -123,7 +123,7 @@ class Test:
                ("flatfile: column names conflict evt_lat, hypo_lat",
                 "flatfile: column names conflict hypo_lat, evt_lat")
 
-        def fake_post(self, request):
+        def fake_post(self, request):  # noqa
             # Django testing class `client` expects every data in the `data` argument
             # whereas Django expects two different arguments, `data` and `files`
             # this method simply bypasses the files renaming (from the user provided
@@ -150,8 +150,9 @@ class Test:
         assert self.error_message(resp2) == 'flatfile: missing column(s) PGV'
 
         # 5 missing column error (event id):
-        csv = SimpleUploadedFile("file.csv", (b"PGA;PGV;SA(0.2);rake;rjb;vs30;hypo_lat;mag\n"
-                                              b"1.1;1;1;1;1;1;1;1;0"),
+        csv = SimpleUploadedFile("file.csv",
+                                 (b"PGA;PGV;SA(0.2);rake;rjb;vs30;hypo_lat;mag\n"
+                                  b"1.1;1;1;1;1;1;1;1;0"),
                                  content_type="text/csv")
         inputdic2 = dict(inputdic, flatfile=csv)
         inputdic2.pop('data-query')
@@ -178,7 +179,7 @@ class Test:
                                  content_type="text/csv")
         inputdic2 = {
             'model': 'KothaEtAl2020ESHM20',
-            'imt' : 'PGA',
+            'imt': 'PGA',
             'flatfile': hdf
         }
         resp2 = client.post(self.url, data=inputdic2)
@@ -204,8 +205,8 @@ class Test:
                                  content_type="text/csv")
         inputdic2 = {
             'model': 'KothaEtAl2020ESHM20',
-            'imt' : 'PGA',
-            'flatfile':csv
+            'imt': 'PGA',
+            'flatfile': csv
         }
         resp2 = client.post(self.url, data=inputdic2)
         assert resp2.status_code == 200
@@ -216,8 +217,8 @@ class Test:
                                  content_type="text/csv")
         inputdic2 = {
             'model': 'CauzziEtAl2014',
-            'imt' : 'PGA',
-            'flatfile':csv
+            'imt': 'PGA',
+            'flatfile': csv
         }
         resp2 = client.post(self.url, data=inputdic2)
         assert resp2.status_code == 200
@@ -228,8 +229,8 @@ class Test:
                                  content_type="text/csv")
         inputdic2 = {
             'model': 'CauzziEtAl2014',
-            'imt' : 'PGA',
-            'flatfile':csv,
+            'imt': 'PGA',
+            'flatfile': csv,
         }
         resp2 = client.post(self.url, data=inputdic2)
         assert resp2.status_code == 200
@@ -241,7 +242,7 @@ class Test:
                                  content_type="text/csv")
         inputdic2 = {
             'model': 'BindiEtAl2017Rhypo',
-            'imt' : 'PGA',
+            'imt': 'PGA',
             'flatfile': csv,
             'multi_header': True
         }
@@ -281,9 +282,11 @@ class Test:
         assert self.error_message(resp1) == 'flatfile: missing parameter is required'
 
         # test conflicting values:
-        resp1 = client.get(self.querystring({**inputdic,
-                                             'selection-expression': '(vs30 > 800) & (vs30 < 1200)',
-                                             'data-query': '(vs30 > 1000) & (vs30 < 1010)'}))
+        resp1 = client.get(self.querystring({
+            **inputdic,
+            'selection-expression': '(vs30 > 800) & (vs30 < 1200)',
+            'data-query': '(vs30 > 1000) & (vs30 < 1010)'
+        }))
         assert resp1.status_code == 400
         assert 'data-query' in self.error_message(resp1)
 
@@ -398,8 +401,8 @@ class Test:
         assert resp1.status_code == 200
 
     def test_booreetal_esm(self,
-                       # pytest fixtures:
-                       client):
+                           # pytest fixtures:
+                           client):
         """test a case where we got very strange between events (intra events)
         Bug discovered in sept 2024
         Tests also normalize parameter
@@ -421,7 +424,7 @@ class Test:
         assert resp1.status_code == 200
         dfr = read_df_from_hdf_stream(BytesIO(resp1.getvalue()))
         inter_ev_values = dfr[('SA(0.1)', 'inter_event_residual', 'BooreEtAl2014')]
-        # this was before comnverting SA to g:
+        # this was before converting SA to g:
         # assert 13 < inter_ev_values.median() < 14
         # now it should be:
         q1, m, q9 = inter_ev_values.quantile([.1, .5, .9])
@@ -433,7 +436,7 @@ class Test:
         assert resp1.status_code == 200
         dfr = read_df_from_hdf_stream(BytesIO(resp1.getvalue()))
         inter_ev_values = dfr[('SA(0.1)', 'inter_event_residual', 'BooreEtAl2014')]
-        q1_nonorm, m_nonomr, q9_nonorm =  inter_ev_values.quantile([.1, .5, .9])
+        q1_nonorm, m_nonomr, q9_nonorm = inter_ev_values.quantile([.1, .5, .9])
         assert -1 < m_nonomr < -.5
 
     def test_residuals_ranking(self,

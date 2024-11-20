@@ -30,7 +30,7 @@ def error_message(response: HttpResponse):
 @pytest.mark.django_db
 def test_model_info():
     client = Client()
-    data={'model': ['CauzziEtAl2014']}
+    data = {'model': ['CauzziEtAl2014']}
     response = client.post(f"/{MODEL_INFO}",
                            json.dumps(data),
                            content_type="application/json")

@@ -3,7 +3,6 @@ import pandas as pd
 from requests import HTTPError
 import pytest
 
-from egsim.smtk.registry import Clabel
 from egsim.api.data.client.snippets.get_egsim_predictions import get_egsim_predictions
 from egsim.api.data.client.snippets.get_egsim_residuals import get_egsim_residuals
 from egsim.api.urls import PREDICTIONS_URL_PATH, RESIDUALS_URL_PATH

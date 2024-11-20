@@ -288,9 +288,6 @@ class GsimForm(SHSRForm):
 class GsimImtForm(GsimForm):
     """Base abstract-like form for any form requiring Gsim+Imt selection"""
 
-    # Custom API param names (see doc of `EgsimBaseForm._field2params` for details):
-    _field2params: dict[str, list[str]] = {'gsim': ('model', 'gsim', 'gmm')}
-
     # Set simple Fields and perform validation in `clean_gsim` and `clean_imt`:
     imt = Field(required=False, help_text='Intensity Measure type(s)')
 
@@ -332,8 +329,10 @@ class GsimImtForm(GsimForm):
 
 
 class APIForm(EgsimBaseForm):
-    """API Form is the Base Form for the eGSIM API request/response. It implements
-    an abstract-like `response_data` method
+    """API Form is the base Form for any eGSIM API view: in addition to handling
+    input validation, it processes the given input into a Python object to be served as
+    http response body / content.
+    Subclasses need to implement the abstract-like `output` method
     """
 
     def output(self) -> Any:
@@ -360,8 +359,8 @@ class GsimFromRegionForm(SHSRForm, APIForm):
 
 class GsimInfoForm(GsimForm, APIForm):
     """API Form returning a info for a list of selected of models. Info is a dict
-    containing the supported imt(s), the input ground motion parameters,
-    and the OpenQuake documentation
+    containing the supported imt(s), the required ground motion parameters,
+    and the OpenQuake docstring
     """
 
     def output(self) -> dict:

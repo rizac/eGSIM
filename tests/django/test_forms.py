@@ -23,6 +23,7 @@ GSIM, IMT = 'gsim', 'imt'
 flatfile_tk_path = abspath(join(dirname(dirname(__file__)), 'data',
                                 'test_flatfile.csv'))
 
+
 @pytest.mark.django_db
 class Test:
 
@@ -79,8 +80,8 @@ class Test:
         assert form.errors_json_data()['message'] == \
                'imt: invalid intensity measure(s) SA(r), _T_'
 
-    def test_flatifle_form(self):
-        # double flatfile provided (this should NOT be poossible from the API
+    def test_flatfile_form(self):
+        # double flatfile provided (this should NOT be possible from the API,
         # but we test the correct message anyway):
         csv = SimpleUploadedFile("file.csv", b"a,b,c,d", content_type="text/csv")
         form = FlatfileForm({'flatfile': 'esm2018'}, {'flatfile': csv})
@@ -106,7 +107,8 @@ class Test:
         assert form.is_valid()
 
         # ok?:
-        csv = SimpleUploadedFile("file.csv", b"PGA,b,c,d\n1.1,,,", content_type="text/csv")
+        csv = SimpleUploadedFile("file.csv", b"PGA,b,c,d\n1.1,,,",
+                                 content_type="text/csv")
         form = FlatfileForm({}, {'flatfile': csv})
         assert form.is_valid()
 
@@ -148,7 +150,7 @@ class Test:
                                 IMT: ['SA(0.1)', 'SA(0.2)', 'PGA', 'PGV']}),
                               ({GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
                                 IMT: ['0.1', '0.2', 'PGA', 'PGV']}),
-                              # Do not support anymore wilcards in models:
+                              # Do not support anymore wildcards in models:
                               # ({GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
                               #   IMT: ['0.1', '0.2', 'PG[AV]']})
                               ])
@@ -165,14 +167,14 @@ class Test:
         # So do not test for string equality but create imts and test for
         # 'period' equality:
         imts = sorted([imt.from_string(i) for i in imts if i not in
-                       ('PGA', 'PGV')], key=lambda imt: imt.period)
+                       ('PGA', 'PGV')], key=lambda imt_: imt_.period)
         assert imts[0].period == 0.1
         assert imts[1].period == 0.2
 
     @pytest.mark.skip('MMI is implemented in egsim3.0')
     def test_gsim_not_available(self):
         data = {
-            'gmm': ['AllenEtAl2012'],  # defined for MMI (not an available IMT in egsim2.0)
+            'gmm': ['AllenEtAl2012'],  # defined for MMI (IMT n/a in egsim2.0)
             IMT: ['SA(0.1)', 'SA(0.2)', 'PG*']
         }
         form = GsimImtForm(data)
@@ -180,7 +182,7 @@ class Test:
         assert form.errors_json_data()['message'] == \
                'Invalid request. Problems found in: gmm'
 
-    def test_gsimimt_form_notdefinedfor_skip_invalid_periods(self):
+    def test_gsimimt_form_not_defined_for_skip_invalid_periods(self):
         """tests that mismatching gsim <-> imt has the priority over bad
         SA periods"""
         data = {
@@ -205,7 +207,7 @@ class Test:
             string chunks (or matlab range notation), but also:
             2a. As python number (param magnitude)
             2b. As string parsable to float (param distance)
-            2c. As list of any of the above types (param vs30)
+            2c. As list of the above types (param vs30)
         3. A MultipleChoiceWildcardField expands wildcards not only if
             the input is a string, but also, if the input is a list of strings,
             for all list sub-elements (param imt)
@@ -232,7 +234,7 @@ class Test:
         """Tests trellis form invalid"""
         data = {GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
                 IMT: ['SA', 'PGA', 'PGV'],
-                'distance' : [1, 'x', ''],
+                'distance': [1, 'x', ''],
                 'msr': 'x',
                 'mag': 'a'}
 
@@ -299,7 +301,8 @@ class Test:
         assert not is_valid
 
         # Test changing a column data type (magnitude becomes string):
-        flatfile = flatfile_df[[c for c in flatfile_df.columns if c != 'magnitude']].copy()
+        flatfile = (
+            flatfile_df[[c for c in flatfile_df.columns if c != 'magnitude']].copy())
         flatfile['magnitude'] = 'A'
         bio = BytesIO()
         flatfile.to_csv(bio, sep=',')
@@ -362,7 +365,7 @@ def test_field2params_in_forms():
         check_egsim_form(Test)
 
     class Test(PredictionsForm):
-        _field2params = {'test': 'model'}  # 'model' neither tuple or list
+        _field2params = {'test': 'model'}  # 'model' neither tuple nor list
         test = Field()
 
     with pytest.raises(ValueError):
@@ -373,7 +376,7 @@ def test_trellis_rupture_site_fields():
 
     form_rupture_fields = set(PredictionsForm().rupture_fields)
     rup_fields = RuptureProperties.__annotations__
-    missing = set(rup_fields) -form_rupture_fields
+    missing = set(rup_fields) - form_rupture_fields
     assert sorted(missing) == ['tectonic_region']
 
     form_site_fields = set(PredictionsForm().site_fields)
@@ -385,8 +388,8 @@ def test_trellis_rupture_site_fields():
     # remove the site and rupture fields, and all fields defined in superclasses.
     # We should be left with 2 fields only: magnitude and distance
 
-    rem_fields = set(PredictionsForm.base_fields) - \
-                 form_rupture_fields - form_site_fields
+    rem_fields = (set(PredictionsForm.base_fields) -
+                  form_rupture_fields - form_site_fields)
 
     for super_cls in PredictionsForm.__mro__:
         if super_cls is not PredictionsForm:
@@ -397,7 +400,7 @@ def test_trellis_rupture_site_fields():
     assert sorted(rem_fields) == ['distance', 'magnitude', 'multi_header']
 
 
-def check_egsim_form(new_class:Type[EgsimBaseForm]):
+def check_egsim_form(new_class: Type[EgsimBaseForm]):
     # Dict denoting the field -> API params mappings:
     field2params = {}
     form_fields = set(new_class.base_fields)

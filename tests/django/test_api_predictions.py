@@ -38,6 +38,7 @@ class Test:
 
     def querystring(self, data):
         return f'{self.url}?{as_querystring(data)}'
+
     @staticmethod
     def error_message(response: HttpResponse):
         return response.content.decode(response.charset)
@@ -60,7 +61,7 @@ class Test:
         assert result == resp2.json()
         form = PredictionsForm(data=dict(inputdic))
         assert form.is_valid()
-        input_ = form.cleaned_data
+        # input_ = form.cleaned_data
         assert sorted(result.keys()) == ['PGA', 'PGV', 'SA(0.2)', Clabel.input]
         # assert list(result.keys())[1] == 'rrup'
         mags = result[Clabel.input][ColumnType.rupture.value]['mag']
@@ -124,8 +125,8 @@ class Test:
         pd.testing.assert_frame_equal(result_hdf, result_hdf_single_header)
 
     def test_400_invalid_param_names(self,
-            # pytest fixtures:
-            client):
+                                     # pytest fixtures:
+                                     client):
         """Test invalid param names in request"""
         data = {
             'aspect': 1,
@@ -185,7 +186,7 @@ class Test:
         assert self.error_message(resp1) == 'gsim: invalid model(s) AkkarEtAl2013'
 
     @patch('egsim.api.views.PredictionsForm.output', side_effect=ValueError())
-    def test_500_err(self, mocked_output_method, client):
+    def test_500_err(self, mocked_output_method, client):  # noqa
         with open(self.request_filepath) as _:
             inputdic = dict(yaml.safe_load(_))
         resp1 = client.post(self.url, data=inputdic,
@@ -240,7 +241,9 @@ class Test:
                                   # pytest fixtures:
                                   client):
         """tests a model supplied with an invalid imt"""
-        imtz = {imt_name(i) for i in AkkarEtAlRjb2014.DEFINED_FOR_INTENSITY_MEASURE_TYPES}
+        imtz = {
+            imt_name(i) for i in AkkarEtAlRjb2014.DEFINED_FOR_INTENSITY_MEASURE_TYPES
+        }
         undefined_imt = [_ for _ in registered_imts.keys() if _ not in imtz]
 
         for imtx in undefined_imt:

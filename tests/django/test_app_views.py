@@ -200,7 +200,7 @@ class Test:
         assert "x" in msg and 'y' in msg
 
         for data in [
-            {'x': 'mag'}, # this returns 400 cause "mag" is not in the flatfile
+            {'x': 'mag'},  # this returns 400 cause "mag" is not in the flatfile
             {'x': 'magnitude'},
             {'x': 'PGA'},
             {'x': 'magnitude', 'y': 'PGA'},
@@ -229,13 +229,14 @@ class Test:
                 URLS.RESIDUALS_VISUALIZE,
                 self.request_residuals_filepath,
                 ResidualsVisualizeForm,
-                { 'data-query': 'mag > 7' } # no x or x None => residuals
+                {'data-query': 'mag > 7'}  # no x or x None => residuals
             ),
             (
                 URLS.RESIDUALS_VISUALIZE,
                 self.request_residuals_filepath,
                 ResidualsVisualizeForm,
-                {'data-query': 'mag > 7', 'likelihood': True } # no x or x None but likelihood => LH residuals
+                # no x or x None but likelihood => LH residuals:
+                {'data-query': 'mag > 7', 'likelihood': True}
             ),
             (
                 URLS.RESIDUALS_VISUALIZE,

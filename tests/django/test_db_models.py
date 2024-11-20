@@ -30,7 +30,7 @@ def test_models(capfd):
     queryset = sorted(Gsim.queryset(), key=lambda _: _.name)
     assert [_.id for _ in queryset] == [_.id for _ in objects]  # noqa
 
-    # Now let's create an hidden item, as we clicked on the admin panel:
+    # Now let's create a hidden item, as we clicked on the admin panel:
     assert not objects[0].hidden
     objects[0].hidden = True
     objects[0].save()
@@ -48,7 +48,7 @@ def test_models(capfd):
     # get names:
     names = sorted(Gsim.names())
     # assert names returns the same as `objects` but not hidden name
-    assert len(names) == len(objects) -1
+    assert len(names) == len(objects) - 1
     assert names == [_.name for _ in objects if _.name != hidden_name]
     # use queryset now and assert we do not have hidden_name either:
     queryset = sorted(Gsim.queryset(), key=lambda _: _.name)

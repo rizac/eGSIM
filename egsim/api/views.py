@@ -43,15 +43,18 @@ class EgsimView(View):
     during the process will be caught and returned as 500 HttpResponse with the exception 
     string in the response body / content.
     
-    Usage:
-    ======
+    Usage
+    =====
     
     Simply implement the abstract-like method `response`:
     ```
     class MyEgsimView(EgsimView):
     
         def response(self, request: HttpRequest, data: dict, files: Optional[dict] = None) -> HttpResponseBase:
-            ...
+            content = ... # bytes or string sequence (serialized from a Python object)
+            return HttpResponse(content, content_type=MimeType.csv, ...)
+            # or, if cotent is a JSON dict:
+            return JsonResponse(content)
     ```
     And then bind as usual this class view to an endpoint in `urls.py`, .e.g.:
     ```
@@ -99,7 +102,7 @@ class EgsimView(View):
                  files: Optional[dict] = None) -> HttpResponseBase:
         """Return a Django HttpResponse from the given arguments extracted from a GET
         or POST request. Any Exception raised here will be returned as 500 HttpResponse
-        with `str(excpetion)` as Response body / content. Other specific error responses
+        with `str(exception)` as Response body / content. Other specific error responses
         need to be returned in try except clauses, as usual:
         ```
         try:
@@ -116,7 +119,7 @@ class EgsimView(View):
 
     def handle_exception(self, exc: Exception, request) -> HttpResponse:  # noqa
         """
-        Handles any exception raised in `self.get` or self.post` returning a
+        Handles any exception raised in `self.get` or `self.post` returning a
         server error (HttpResponse 500) with the exception string representation
         as response body / content
         """
@@ -179,18 +182,50 @@ class NotFound(EgsimView):
 
 
 class APIFormView(EgsimView):
-    """EgsimView serving any APIForm output.
+    """EgsimView serving any APIForm output. Please read :class:`ApiForm` and 
+    :class:`EgsimView` docstring for details. In addition, this class handles Form 
+    validation errors returning a 400 HttpResponse with the error message in the 
+    response body / content.
 
-    When called, this class first instantiate a new instance of this class Form
-    (`self.formclass`) with the request input, and then serializes `Form.output()`
-    (Python object) into Response body (bytes sequence) by calling the user-implemented
-    "response_[format]" method (e.g. "response_json") matching the format parameter in
-    the request (see subclasses for details).
+    Usage
+    =====
+    
+    Simple case: your form `output()` method returns a JSON dict, and your view is 
+    supposed to return MimeType.json ("application/json") content only. Then, implement 
+    a new endpoint in `urls.py`:
+    
+    ```
+    urlpatterns = [
+        ...
+        re_path(...endpoint..., APIFormView.as_view(formclass=form)),
+        ...
+    ]
+    ```
 
-    Parameter errors as well as code exceptions will be handled and returned
-    in an appropriate HttpResponse object
-    """
+    Advanced case: create a new :class:`ApiForm` instance by implementing the class 
+    attribute `formclass` and any method `response_[format]`, where `format` is any of 
+    the :class:`MimeType` attributes (the request 'format' parameter - default if 
+    missing 'json' - will then redirect to the relative `response` method, returning a 
+    400 HttpResponse error if not implemented):
+    ```
+    class MyApiFormView(APIFormView):
 
+        formclass = MyApiForm
+
+        def response_hdf(self, form_output: Any, form: APIForm, **kwargs) -> HttpResponse:
+            # Form is valid, implement the HttpResponse from the given form output:
+            s_output = ... # serialize `form_output`, e.g. as bytes, and then:
+            return HttpResponse(s_output, content_type=MimeType.hdf, ...)
+    ```
+    And then bind as usual this class view to an endpoint in `urls.py`, .e.g.:
+    ```
+    urlpatterns = [
+        ...
+        re_path(...endpoint..., MyApiFormView.as_view()),
+        ...
+    ]
+    ```
+    """  # noqa
     # The APIForm of this view, to be set in subclasses:
     formclass: Type[APIForm] = None
 
@@ -248,16 +283,18 @@ class SmtkView(APIFormView):
     """APIFormView for smtk (strong motion toolkit) output (e.g. Predictions or
     Residuals, set in the `formclass` class attribute"""
 
-    def response_csv(self, form_output: pd.DataFrame, form: APIForm, **kwargs)\
-            -> FileResponse:
+    def response_csv(  # noqa
+            self, form_output: pd.DataFrame, form: APIForm, **kwargs  # noqa
+    ) -> FileResponse:
         content = write_df_to_csv_stream(form_output)
         content.seek(0)  # for safety
         kwargs.setdefault('content_type', MimeType.csv)
         kwargs.setdefault('status', 200)
         return FileResponse(content, **kwargs)
 
-    def response_hdf(self, form_output: pd.DataFrame, form: APIForm, **kwargs)\
-            -> FileResponse:
+    def response_hdf(  # noqa
+            self, form_output: pd.DataFrame, form: APIForm, **kwargs  # noqa
+    ) -> FileResponse:
         content = write_df_to_hdf_stream({'egsim': form_output})
         content.seek(0)  # for safety
         kwargs.setdefault('content_type', MimeType.hdf)
@@ -318,7 +355,7 @@ def write_df_to_hdf_stream(frames: dict[str, pd.DataFrame], **kwargs) -> BytesIO
 
 
 def read_df_from_hdf_stream(stream: Union[bytes, IO], **kwargs) -> pd.DataFrame:
-    """Read pandas DataFrame from a HDF BytesIO or bytes sequence
+    """Read pandas DataFrame from an HDF BytesIO or bytes sequence
 
     :param stream: the stream / file-like (e.g. open file content)
     :param kwargs: additional arguments to be passed to pandas `read_hdf`
@@ -376,7 +413,8 @@ def as_querystring(
     """Return `data` as query string (URL portion after the '?' character) for GET
     requests. With the default set of input parameters, this function encodes strings
     exactly as JavaScript encodeURIComponent:
-    https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURIComponent#description   # noqa
+    https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURIComponent#description
+    
     Examples:
     ```
     as_querystring(' ') = "%20"
