@@ -4,6 +4,7 @@ Django views for the eGSIM app (web app with frontend)
 from io import BytesIO, StringIO
 from os.path import splitext
 from typing import Optional
+import re
 
 from shapely.geometry import shape
 
@@ -19,7 +20,7 @@ from ..api.forms.residuals import ResidualsForm
 from ..api.forms.scenarios import PredictionsForm
 from ..api.views import MimeType, EgsimView
 from .forms import PredictionsVisualizeForm, FlatfileVisualizeForm
-
+from ..smtk.registry import Clabel
 
 img_ext = ('png', 'pdf', 'svg')
 data_ext = ('hdf', 'csv')
@@ -361,7 +362,7 @@ class ResidualsHtmlTutorial(EgsimView):
             get_egsim_residuals
         api_form = ResidualsForm({
             'gsim': ['CauzziEtAl2014', 'BindiEtAl2014Rjb'],
-            'imt': ['PGA', 'PGV'],
+            'imt': ['PGA'],
             'data-query': '(mag > 7) & (vs30 > 1100)',
             'flatfile': 'esm2018'
         })
@@ -376,42 +377,67 @@ def get_html_tutorial(
         api_form: APIForm,
         api_client_function
 ) -> HttpResponseBase:
-    import re
 
     # create dataframe htm:
     s = StringIO()
-    if api_form.is_valid():
-        api_form.output().to_html(s, index=True,
-                                  classes='table table-bordered table-light my-2',
-                                  border=0,
-                                  max_rows=3)
+    if not api_form.is_valid():
+        raise ValueError('The Form for the current tutorial is invalid, change config. '
+                         'Cannot execute Python code')
+
+    dataframe = api_form.output()
+    s.write(_to_html(dataframe))
 
     if key == 'residuals':
         s.write('Or, if ranking=True:')
         api_form.cleaned_data['ranking'] = True
-        api_form.output().to_html(s, index=True,
-                                  classes='table table-bordered table-light my-2',
-                                  border=0,
-                                  max_rows=3)
+        s.write(_to_html(api_form.output()))
 
-    dataframe_html = re.sub(r"<t([dh])\s*>",
-                            r"<t\1 style='white-space: nowrap;'>",
-                            s.getvalue())
+    dataframe_html = s.getvalue()
 
     # create explanation (from code snippet docstring):
     dataframe_info = api_client_function.__doc__
     dataframe_info = dataframe_info[dataframe_info.index('Returns:'):]
-    dataframe_info = dataframe_info.split("\n")  # split strings
-    dataframe_info = dataframe_info[3:]  # remove 1st 3 lines
-    dataframe_info = [_.strip() for _ in dataframe_info]  # strip each line
-    dataframe_info = ['</p><p>' if not _ else _ for _ in dataframe_info]
-    if any('<p>' in _ for _ in dataframe_info):
-        dataframe_info = ['<p>'] + dataframe_info + ['</p>']
-    dataframe_info = "\n".join(dataframe_info)
+    dataframe_info = re.split(r"\n\s*\n", dataframe_info)  # split strings
+    dataframe_info = dataframe_info[2:]  # remove 1st 2 lines
+
+    # create selection executions:
+    py_select_exprs = {
+        'Select by IMT (PGA)':
+            'dframe[[c for c in dframe.columns if c.startswith("PGA ")]]',
+        'Select by model (BindiEtAl2014Rjb)':
+            'dframe[[c for c in dframe.columns if c.endswith(" BindiEtAl2014Rjb")]]',
+        'Select all input data':
+            f'dframe[[c for c in dframe.columns if c.startswith("{Clabel.input }")]]',
+    }
+    if key == 'residuals':
+        py_select_exprs['Select by metric type (Total residuals)'] = \
+            f'dframe[[c for c in dframe.columns if " {Clabel.total_res} " in c]]'
+    else:
+        py_select_exprs['Select by metric type (Medians)'] = \
+            f'dframe[[c for c in dframe.columns if " {Clabel.median} " in c]]'
+
+    py_select_snippets = []
+    for title, expr in py_select_exprs.items():
+        py_select_snippets.append([
+            title, expr, _to_html(eval(expr, {'dframe': dataframe}), max_rows=3)]
+        )
 
     return render(request, 'downloaded-data-tutorial.html',
                   context={
                       'key': key,
                       'dataframe_html': dataframe_html,
-                      'dataframe_info': dataframe_info
+                      'dataframe_info': dataframe_info,
+                      'py_select_snippets': py_select_snippets
                   })
+
+
+def _to_html(dataframe, **kwargs):
+    kwargs.setdefault('classes', 'table table-bordered table-light my-0')
+    kwargs.setdefault('border', 0)
+    kwargs.setdefault('max_rows', 3)
+    kwargs.setdefault('max_cols', None)
+    kwargs.setdefault('index', True)
+    buffer = StringIO()
+    dataframe.to_html(buffer, **kwargs)
+    # No cell text wrapping. Note that pandas might add style, so add Bootstrap5 class:
+    return re.sub(r"<t([dh])([ >])", r'<t\1 class="text-nowrap"\2', buffer.getvalue())

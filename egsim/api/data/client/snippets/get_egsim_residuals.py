@@ -54,9 +54,12 @@ def get_egsim_residuals(
     If ranking is True, then each row will denote a model (reported in the 1st column)
     and each column a measure of fit (reported in the 1st row).
     
-    If ranking is False, then each row will denote a flatfile record (reported in the
-    first column the record position - starting from 0 - in the original flatfile),
-    and each column:
+    If ranking is False, then each row will denote a flatfile record with the input data
+    and the computed residuals.
+
+    The first column (row label) reports a unique identifier (the record position
+    in the original flatfile, starting from 0), and the first row (columns label)
+    reports:
     
     - A computed residual or prediction, if the first chunk is an intensity measure type
       (e.g. "PGA total_residual BindiEtAl2014Rjb"): in this case, the second chunk is 

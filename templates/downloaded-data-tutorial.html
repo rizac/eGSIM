@@ -16,18 +16,24 @@
 
 
 {% block body %}
-<div style='line-height:2'>
+<div style='line-height:2' class='d-flex flex-column gap-4'>
 
-<div>eGSIM computed {{ key }} are arranged in a tabular structure like this one:</div>
+	<div>eGSIM computed {{ key }} are arranged in a tabular structure like this one:</div>
 
-<div style='overflow:auto'>{{ dataframe_html | safe }}</div>
+	<div style='overflow:auto'>{{ dataframe_html | safe }}</div>
 
-<div style='overflow:auto'>{{ dataframe_info | safe }}</div>
+	<div class='d-flex flex-column gap-2'>
+		{% for dataframe_info_line in dataframe_info %}
+		<div>{{ dataframe_info_line | safe }}</div>
+		{% endfor %}
+	</div>
 
-<div>
-Here below some code snippets to help working with the data in your code (<i>Disclaimer:
-snippets have been tested in Python only. Do not hesitate to
-provide feedbacks in case of errors</i>):
+	<div>
+	Here some code snippets to help working with the data in your code (<i>Disclaimer:
+	snippets have been tested in Python only. Do not hesitate to
+	provide feedback for other languages</i>):
+	</div>
+
 </div>
 
 <script type="text/javascript">
@@ -41,11 +47,13 @@ provide feedbacks in case of errors</i>):
 		if (!div){ return; }
 		var divs = document.querySelectorAll("div[data-tutorial]");
 		divs.forEach(e => e.classList.add("d-none"));
+		divs.forEach(e => e.classList.remove("d-flex"));
 		div.classList.remove('d-none');
+		div.classList.add('d-flex');
 	}
 </script>
 
-<ul class="nav nav-tabs mt-5">
+<ul class="nav nav-tabs mt-2">
   <li class="nav-item">
     <a class="nav-link active" data-tutorial="python" href="#"
 		onclick='tutorial(this.getAttribute("data-tutorial"))'>
@@ -69,20 +77,26 @@ provide feedbacks in case of errors</i>):
 <!-- PYTHON CODE SNIPPETS -->
 <!---->
 
-<div data-tutorial="python">
+<div data-tutorial="python" class='d-flex flex-column gap-4 pt-4'>
 
-HDF
+<div>
+Read/write HDF
 <pre><code class="language-python">import pandas as pd  # if not installed: pip/conda install pandas tables
 
-# To read data, provide a string path to an existing file (file_path):
+# Define the path to your HDF5 file
+file_path = "your_hdf5_file.hdf"
+
+# To read data:
 dataframe = pd.read_hdf(file_path)
 
-# To write data, provide a string path to a destination file (file_path)
-# and a string identifier for the table, required in HDF (table_key)
-dataframe.to_hdf(file_path, key=table_key, format="table")
+# To write data, provide a key for the table, required because you can store several tables in a single HDF
+# (`pd.read_hdf` does not need the key as argument if the HDF contains a single table)
+dataframe.to_hdf(file_path, key="your_custom_key"", format="table")
 </code></pre>
+</div>
 
-CSV
+<div>
+Read/write CSV
 <details><summary>Disclaimer: We discourage the use of CSV files (click for details)</summary>
 <i>
 	CSV is much less performant than HDF, meaning bigger files size and slower download,
@@ -92,7 +106,6 @@ CSV
 </i>
 </details>
 
-
 <!--
 # To read data, provide a string path to an existing file (file_path)
 dataframe = pd.read_csv(file_path, header=[0, 1, 2], index_col=0)
@@ -100,13 +113,32 @@ dataframe = pd.read_csv(file_path, header=[0, 1, 2], index_col=0)
 
 <pre><code class="language-python">import pandas as pd  # if not installed: pip/conda install pandas
 
-# To read data with only one header row (residuals -> ranking):
+# Define the path to your HDF5 file
+file_path = "your_hdf5_file.hdf"
+
+# To read data (header=[0] = 1st row has column labels, index_col=0, the 1st column has row labels):
 dataframe = pd.read_csv(file_path, header=[0], index_col=0)
 
-# To write data, provide a string path to a destination file (file_path):
+# To write data:
 dataframe.to_csv(file_path)
 </code></pre>
+</div>
 
+
+<div class="d-flex flex-column gap-3">
+Dataframe data selection
+
+{% for py_select_snippet in py_select_snippets %}
+<div class="d-flex flex-column gap-1">
+{{ py_select_snippet.0 }}
+<pre class='my-0'><code class="language-python">{{ py_select_snippet.1 }}</code></pre>
+{{ py_select_snippet.2 | safe }}
+</div>
+{% endfor %}
+
+</div>
+
+<div>
 Useful links
 <ul>
 	<li><a href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_hdf.html"
@@ -126,6 +158,7 @@ Useful links
 		<i class='fa fa-external-link'></i>plot with pandas
 	</a></li>
 </ul>
+</div>
 
 </div>
 
@@ -134,13 +167,14 @@ Useful links
 <!-- R CODE SNIPPETS -->
 <!---->
 
-<div data-tutorial="r" class="d-none">
+<div data-tutorial="r" class="d-none flex-column gap-4">
 
 <!-- Disclaimer: R does not natively support multi-level column headers. However,
 you can simulate multi-level headers by creating custom column names with separators
 like "__", <b>Please look at the last code snippet for details</b> -->
 
-HDF
+<div>
+Read HDF
 <pre><code class="language-r">
 # Install Bioconductor package manager if not installed (one-time operation)
 if (!requireNamespace("BiocManager", quietly = TRUE)) {
@@ -172,8 +206,10 @@ df <- as.data.frame(data)
 # Close the HDF5 file when you're done
 H5Fclose(h5file)
 </code></pre>
+</div>
 
-CSV
+<div>
+Read CSV
 
 <pre><code class="language-r">
 # Define the path to your CSV file
@@ -182,7 +218,7 @@ file_path <- "your_file.csv"
 # Read the CSV file into a DataFrame
 df <- read.csv(file_path)
 </code></pre>
-
+</div>
 <!--
 How to merge first 3 rows ino a single row
 
@@ -208,8 +244,9 @@ rownames(df_new) <- NULL
 <!-- MATLAB CODE SNIPPETS -->
 <!---->
 
-<div data-tutorial="matlab" class="d-none">
-HDF
+<div data-tutorial="matlab" class="d-none flex-column gap-4">
+<div>
+Read HDF
 <pre><code class="language-matlab">
 % Define the file path
 file_path = 'your_file.h5';
@@ -233,10 +270,10 @@ data_table = array2table(data, 'VariableNames', column_names);
 % Display the table
 disp(data_table);
 </code></pre>
-
-
+</div>
 
 </div>
+
 {% endblock %}
 
 
