@@ -407,7 +407,7 @@ def get_html_tutorial(
         'Select by model (BindiEtAl2014Rjb)':
             'dframe[[c for c in dframe.columns if c.endswith(" BindiEtAl2014Rjb")]]',
         'Select all input data':
-            f'dframe[[c for c in dframe.columns if c.startswith("{Clabel.input }")]]',
+            f'dframe[[c for c in dframe.columns if c.startswith("{Clabel.input } ")]]',
     }
     if key == 'residuals':
         py_select_exprs['Select by metric type (Total residuals)'] = \

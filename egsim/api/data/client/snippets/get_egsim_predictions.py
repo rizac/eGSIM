@@ -36,18 +36,16 @@ def get_egsim_predictions(
 
     A [pandas DataFrame](https://pandas.pydata.org/docs/user_guide/dsintro.html#dataframe)
     
-    Each row contains the input data and the computed predictions for a given 
-    scenario (i.e., a combination of a configured Rupture and Site properties).
+    Each row denotes a scenario (i.e., a combination of a configured Rupture and Site
+    properties), the first column a unique scenario identifier (incremental and
+    starting from 0) and each remaining column denotes:
 
-    The first column (row label) reports a unique identifier (incremental and
-    starting from 0), and the first row (columns label) reports:
-
-    - A computed prediction if the first chunk is an intensity measure type
+    - a computed prediction if the first chunk is an intensity measure type
       (e.g. "PGA median BindiEtAl2014Rjb"): in this case, the second chunk is the metric 
       type (e.g. "median") and the third the predicting model ("BindiEtAl2014Rjb")
     
-    - The scenario configuration relative to the computed prediction if the first chunk
-      is the text "input" (e.g., "input distance_measure rrup"): in this case, the second
+    - the scenario configured properties if the first chunk is the text "input" (e.g.,
+      "input distance_measure rrup"): in this case, the second
       chunk is the configuration data type ("distance_measure", "intensity_measure",
       "rupture_parameter", "site_parameter" or "uncategorized") and the third is the
       configuration data name ("rrup")

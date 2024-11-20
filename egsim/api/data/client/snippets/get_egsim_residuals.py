@@ -51,22 +51,19 @@ def get_egsim_residuals(
 
     A [pandas DataFrame](https://pandas.pydata.org/docs/user_guide/dsintro.html#dataframe)
     
-    If ranking is True, then each row will denote a model (reported in the 1st column)
+    If ranking is True, then each row denotes a model (reported in the 1st column)
     and each column a measure of fit (reported in the 1st row).
     
-    If ranking is False, then each row will denote a flatfile record with the input data
-    and the computed residuals.
-
-    The first column (row label) reports a unique identifier (the record position
-    in the original flatfile, starting from 0), and the first row (columns label)
-    reports:
+    If ranking is False, then each row denotes a flatfile record, the first column
+    the record position starting from 0 (a sort of id) and each remaining
+    column denotes:
     
-    - A computed residual or prediction, if the first chunk is an intensity measure type
+    - a computed residual or prediction, if the first chunk is an intensity measure type
       (e.g. "PGA total_residual BindiEtAl2014Rjb"): in this case, the second chunk is 
       the metric type ("total_residual") and the third the predicting model
       ("BindiEtAl2014Rjb")
     
-    - The flatfile data relative to the computed prediction if the first chunk
+    - the flatfile data relative to the computed prediction if the first chunk
       is the text "input"  (e.g., "input distance_measure rrup"): in this case, the
       second chunk is the flatfile data type ("distance_measure", "intensity_measure",
       "rupture_parameter", "site_parameter" or "uncategorized") and the third the
