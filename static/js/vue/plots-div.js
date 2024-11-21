@@ -194,7 +194,7 @@ EGSIM.component('plots-div', {
 			</div>
 		</div>
 		<!-- RIGHT TOOLBAR (legend, buttons, controls) -->
-		<div class='d-flex flex-column ps-4 gap-3'>
+		<div class='d-flex flex-column ps-4 gap-3' style='width:21vw !important'>
 			<div class="btn-group">
 				<button v-if="closeButton" type='button' class='btn btn-primary border-0 text-nowrap'
 						@click="show = !show" title='close plots panel'>
@@ -217,8 +217,8 @@ EGSIM.component('plots-div', {
 				<div class='d-flex flex-column gap-2'>
 				<div
 					v-for="[legendgroup, legendObj] in Array.from(legend.entries()).filter(e => e[1].visible).concat(Array.from(legend.entries()).filter(e => !e[1].visible))"
-					:style="legendObj.visible ? '' : {'visibility': 'hidden'}"
-					class='d-flex flex-column p-2 border bg-white gap-2'
+					:class="legendObj.visible ? 'd-flex' : 'd-none'"
+					class='flex-column p-2 border bg-white gap-2'
 					>
 					<div class='d-flex align-items-baseline gap-2 text-nowrap' :style="{color: legendObj.mainColor}">
 						<input type='checkbox' title="Toggle plot trace(s) visibility"
@@ -226,7 +226,8 @@ EGSIM.component('plots-div', {
 							v-model="legendObj.traceStyle.visible"
 							@change="setTraceStyle(legendgroup, {visible: legendObj.traceStyle.visible})"
 							:style="{'accent-color': legendObj.mainColor + ' !important'}" />
-						<span style='flex: 1 1 auto'>{{ legendgroup }}</span>
+						<span style='flex: 1 1 auto; overflow:hidden; text-overflow:ellipsis'
+							:title="legendgroup">{{ legendgroup }}</span>
 						<button type='button' title="Style plot trace(s)" class='btn btn-sm border-0 py-0 pe-1'
 							@click="legendObj.expanded=!legendObj.expanded;"
 							:style="{'color': legendObj.mainColor + ' !important'}">
