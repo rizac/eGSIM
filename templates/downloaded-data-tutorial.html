@@ -83,26 +83,28 @@
 Read/write HDF
 <pre><code class="language-python">import pandas as pd  # if not installed: pip/conda install pandas tables
 
-# Define the path to your HDF5 file
+# Define the path to your HDF file (HDF5)
 file_path = "your_hdf5_file.hdf"
 
 # To read data:
 dframe = pd.read_hdf(file_path)
 
-# To write data, provide a key for the table, required because you can store several tables in a single HDF
-# (`pd.read_hdf` does not need the key as argument if the HDF contains a single table)
-dframe.to_hdf(file_path, key="your_custom_key"", format="table")
+# To write data:
+# provide a key for the table, required because you can store several tables in a single HDF file
+# (`pd.read_hdf` does not need the key as argument as long as the file contains a single table)
+dframe.to_hdf(file_path, key="your_custom_key", format="table")
 </code></pre>
 </div>
 
 <div>
-Read/write CSV
-<details><summary>Disclaimer: We discourage the use of CSV files (click for details)</summary>
+<details><summary>Read/write CSV (not recommended, click for details)</summary>
 <i>
-	CSV is much less performant than HDF, meaning bigger files size and slower download,
-	and potential information loss: as such, you might need to fix potential issues with
-	additional code (see the pandas doc in case), especially when reading or writing
-	DataFrames with missing data or non-standard column types (e.g. categorical)
+	CSV stores everything (numbers, boolean, date-times and categorical values) as
+	strings of text. This has two potential problems: bigger file sizes and slower download,
+	and information loss (you write numbers e.g., [5, NaN] and read strings ['5', 'NaN']).
+	Most likely, data downloaded from eGSIM is safe, but we cannot guarantee it.
+	If you want to work with CSV files, we suggest to have a look at `read_csv` documentation
+	(link provided in this page) and check your dataframe after opening.
 </i>
 </details>
 
@@ -116,8 +118,8 @@ dataframe = pd.read_csv(file_path, header=[0, 1, 2], index_col=0)
 # Define the path to your HDF5 file
 file_path = "your_hdf5_file.hdf"
 
-# To read data (header=[0] = 1st row has column labels, index_col=0, the 1st column has row labels):
-dframe = pd.read_csv(file_path, header=[0], index_col=0)
+# To read data (1st col and 1st row are headers. Read read_csv doc for more options):
+dframe = pd.read_csv(file_path, header=0, index_col=0)
 
 # To write data:
 dframe.to_csv(file_path)
@@ -141,13 +143,17 @@ Dataframe data selection
 <div>
 Useful links
 <ul>
+	<li><a href="https://pandas.pydata.org/docs/user_guide/10min.html">
+		<i class='fa fa-external-link'></i>pandas short intro
+	</a></li>
 	<li><a href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_hdf.html"
 	   target="_blank"><i class='fa fa-external-link'></i>Read HDF</a></li>
 	<li><a href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.to_hdf.html"
 		   target="_blank"><i class='fa fa-external-link'></i>Write HDF</a></li>
-	<li><a href="https://pandas.pydata.org/docs/user_guide/10min.html">
-		<i class='fa fa-external-link'></i>pandas short intro
-	</a></li>
+	<li><a href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_csv.html"
+	   target="_blank"><i class='fa fa-external-link'></i>Read CSV</a></li>
+	<li><a href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.to_csv.html"
+		   target="_blank"><i class='fa fa-external-link'></i>Write CSV</a></li>
 	<li><a href="https://pandas.pydata.org/docs/user_guide/indexing.html">
 		<i class='fa fa-external-link'></i>indexing and selecting data
 	</a></li>
