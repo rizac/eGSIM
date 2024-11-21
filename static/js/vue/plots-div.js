@@ -213,37 +213,37 @@ EGSIM.component('plots-div', {
 					</ul>
 				</div>
 			</div>
-			<div v-show='legend.size' class='d-flex flex-column gap-2' style='flex:1 1 auto; overflow:auto'>
-				<div v-for="[legendgroup, jsonStyle] in legend"
-					 class='d-flex flex-column p-2 border bg-white gap-2'
-					 style='flex: 0 1 0px;'>
-					<div class='d-flex align-items-baseline gap-2 text-nowrap' :style="{color: getLegendColor(jsonStyle)}">
+			<div v-show='legend.size' class='d-flex flex-column gap-2' style='flex:1 1 0; overflow:auto'>
+				<div
+					v-for="[legendgroup, legendObj] in Array.from(legend.entries()).filter(e => e[1].visible).concat(Array.from(legend.entries()).filter(e => !e[1].visible))"
+					:style="legendObj.visible ? '' : {'visibility': 'hidden'}"
+					class='d-flex flex-column p-2 border bg-white gap-2'
+					style='flex: 0 1 0px;'>
+					<div class='d-flex align-items-baseline gap-2 text-nowrap' :style="{color: legendObj.mainColor}">
 						<input type='checkbox' title="Toggle plot trace(s) visibility"
-							   v-if="plots.some(p => p.data.length > 1)"
-							   v-model="jsonStyle.visible"
-							   @change="event => { setTraceStyle(legendgroup, {visible: jsonStyle.visible}) }"
-							   :style="{'accent-color': getLegendColor(jsonStyle) + ' !important'}"
-							   >
+							v-if="plots.some(p => p.data.length > 1)"
+							v-model="legendObj.traceStyle.visible"
+							@change="setTraceStyle(legendgroup, {visible: legendObj.traceStyle.visible})"
+							:style="{'accent-color': legendObj.mainColor + ' !important'}" />
 						<span style='flex: 1 1 auto'>{{ legendgroup }}</span>
 						<button type='button' title="Style plot trace(s)" class='btn btn-sm border-0'
-							:style="{'color': getLegendColor(jsonStyle) + ' !important'}"
-							onclick='var root = this.parentNode.parentNode; root.style.flexGrow=parseInt(1-this.parentNode.parentNode.style.flexGrow); root.querySelector("._json_config").classList.toggle("d-none"); root.querySelectorAll("._arrow").forEach(s => s.classList.toggle("d-none"))'>
-							<span class='_arrow'><i class='fa fa-chevron-down'></span>
-							<span class='_arrow d-none'><i class='fa fa-chevron-up'></span>
+							@click="legendObj.expanded=!legendObj.expanded;"
+							:style="{'color': legendObj.mainColor + ' !important'}">
+							<span v-show="!legendObj.expanded"><i class='fa fa-chevron-down'></span>
+							<span v-show="legendObj.expanded"><i class='fa fa-chevron-up'></span>
 						</button>
 					</div>
-					<div class='_json_config d-none d-flex flex-column' style='flex:1 1 auto;'
-						:style="{color: getLegendColor(jsonStyle)}">
-						<textarea rows="2" class='form-control rounded-bottom-0 border-bottom-0 p-1' spellcheck="false"
-								  style='color: inherit !important; flex:1 1 auto; min-height:0px; resize: none; font-family:monospace; white-space: pre; overflow-wrap: normal; overflow: auto;'
-								  :value="JSON.stringify(jsonStyle, (k, v) => k == 'visible' ? undefined : v, '  ')"
-								  @input="event => { var textarea = event.target; var v = textarea.value; var btn = textarea.parentNode.querySelector('button'); try{ JSON.parse(v); btn.setAttribute('data-json', v); btn.disabled=false; }catch(err){ btn.disabled=true; } }"
-								  v-model="jsonStyle"/>
-						<!-- these attrs data-json and disabled are controlled by the textarea @input above -->
-						<button type="button" class='btn btn-sm rounded-top-0 border'
-								data-json="" disabled
-								@click="event => {setTraceStyle(legendgroup, JSON.parse(event.target.getAttribute('data-json'))) }"
-								style="color: inherit; !important">
+					<div :class="legendObj.expanded ? 'd-flex' :'d-none'"
+						class='flex-column' style='flex: 1 1 auto;'
+						:style="{color: legendObj.mainColor}">
+						<textarea class='form-control rounded-bottom-0 border-bottom-0 p-1' spellcheck="false"
+							size="3"
+							style='color: inherit !important; resize: vertical; font-family:monospace; white-space: pre; overflow-wrap: normal; overflow: auto;'
+							v-model="legendObj.traceStyleJSONString" />
+						<button
+							@click="try{ var json=JSON.parse(legendObj.traceStyleJSONString); setTraceStyle(legendgroup, json); }catch(e){ }"
+							type="button" class='btn btn-sm rounded-top-0 border'
+							style="color: inherit; !important">
 								Apply
 						</button>
 					</div>
@@ -258,7 +258,7 @@ EGSIM.component('plots-div', {
 				</select>
 				<div class='d-flex flex-row'>
 					<div>Show label</div>
-					 <div v-for="ax in [0, 1]" class='ms-1 d-flex flex-row'>
+					 <div v-for="ax in [1, 0]" class='ms-1 d-flex flex-row'>
 						<label class='text-nowrap m-0 ms-2 align-items-baseline' v-show="!!grid.params[ax].label">
 							<input type='checkbox' v-model="grid.visibility[ax]">
 							<span class='ms-1 text-nowrap'>
@@ -450,7 +450,7 @@ EGSIM.component('plots-div', {
 							if (prm1 === prm2){
 								continue;
 							}
-							var gridlayoutname = `${harr} ${prm1.label} vs. ${varr} ${prm2.label}`;
+							var gridlayoutname = `${varr} ${prm2.label} vs. ${harr} ${prm1.label}`;
 							gridlayouts[gridlayoutname] = [prm1, prm2];
 							if (!selectedgridlayout){ // take the first combination as selected one:
 								selectedgridlayout = gridlayoutname;
@@ -466,8 +466,8 @@ EGSIM.component('plots-div', {
 		},
 		initAxisControls(){
 			// initAxisControls is just about setting the initial checked state of the controls
-			// disable state or the real value associated to a checkbox is set in
-			// initAxisControlsFromCurrentlyDisplayedPlots
+			// The disable state or the v-model value associated to a checkbox (sameRange and title need one)
+			// is set in initAxisControlsFromCurrentlyDisplayedPlots
 			for (var layoutkey of ['xaxis', 'yaxis']){
 				// get the Array of axis Objects:
 				var axis = this.plots.map(p => (p.layout || {})[layoutkey] || {});
@@ -592,14 +592,19 @@ EGSIM.component('plots-div', {
 				plot.data.forEach(trace => {
 					trace.xaxis = `x${axisIndex}`;
 					trace.yaxis = `y${axisIndex}`;
-					// this is necessary only if we show the plotly legend (we don't)
-					// in order to avoid duplicated entries on the plotly legend:
 					if ('legendgroup' in trace){
+						// this is necessary only if we show the plotly legend (we don't)
+						// in order to avoid duplicated entries on the plotly legend:
 						trace.showlegend = !legendgroups.has(trace.legendgroup);
+						// this will be used later to set our legend visible:
 						legendgroups.add(trace.legendgroup);
 					}
 					data.push(trace);
 				});
+			}
+			// set legend visibility:
+			for (var [key, legendObj] of this.legend.entries()) {
+				legendObj.visible = legendgroups.has(key)
 			}
 			// add grid tick labels in form text placed on the plot (Plotly annotations).
 			// The precise annotations positions will be set later (see `this.getPaperMargin`):
@@ -1053,20 +1058,32 @@ EGSIM.component('plots-div', {
 			for (var plot of this.plots){
 				for (var trace of plot.data){
 					if (trace.legendgroup && !this.legend.has(trace.legendgroup)){
-						this.setLegendItem(trace.legendgroup, trace);
+						this.setLegendItem(trace.legendgroup, trace, true, false);
 					}
 				}
 			}
 		},
-		setLegendItem(legendgroup, traceObject){
-			var editableData = {};
-			['marker', 'line', 'xbins', 'ybins', 'visible', 'fillcolor'].forEach(k => {
+		setLegendItem(legendgroup, traceObject, visible, expanded){
+			var traceStyle = {};
+			['marker', 'line', 'xbins', 'ybins', 'fillcolor'].forEach(k => {
 				if (k in traceObject){
-					editableData[k] = traceObject[k];
+					traceStyle[k] = traceObject[k];
 				}
 			});
-			'visible' in editableData || (editableData.visible = true);  // set default visibility (true)
-			this.legend.set(legendgroup, editableData);
+			// create jsonString (to be set in the textarea and edited manually by users):
+			var jsonString = JSON.stringify(traceStyle, null, 2);
+			// Now set `traceStyle.visible`. Do this after creating the jsonString because
+			// the visibility is set via a checkbox, not the textarea.
+			// Note that traceObject.visible defaults to true if missing in plotly, so:
+			traceStyle.visible = 'visible' in traceObject ? traceObject.visible : true;
+			this.legend.set(legendgroup, {
+				visible: visible,
+				expanded: expanded,
+				traceStyle: traceStyle,
+				traceStyleJSONString: jsonString,
+				traceStyleJSONValid: true,
+				mainColor: this.getLegendColor(traceStyle)
+			});
 		},
 		getLegendColor(styleObj){
 			var color = '#000000';
@@ -1085,8 +1102,10 @@ EGSIM.component('plots-div', {
 		},
 		setTraceStyle(legendgroup, styleObject){
 			try{
-				var legenddata = Object.assign(this.legend.get(legendgroup), styleObject);
-				this.setLegendItem(legendgroup, legenddata);
+				var legendObj = this.legend.get(legendgroup);
+				// same key => styleObject values will override legendObj.traceStyle values:
+				var newStyleObject = Object.assign(legendObj.traceStyle, styleObject);
+				this.setLegendItem(legendgroup, newStyleObject, legendObj.visible, legendObj.expanded);
 			}catch(error){  // also raises if style is empty string
 				return;
 			}
