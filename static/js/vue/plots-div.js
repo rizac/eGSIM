@@ -228,8 +228,8 @@ EGSIM.component('plots-div', {
 						<button type='button' title="Style plot trace(s)" class='btn btn-sm border-0'
 							:style="{'color': getLegendColor(jsonStyle) + ' !important'}"
 							onclick='var root = this.parentNode.parentNode; root.style.flexGrow=parseInt(1-this.parentNode.parentNode.style.flexGrow); root.querySelector("._json_config").classList.toggle("d-none"); root.querySelectorAll("._arrow").forEach(s => s.classList.toggle("d-none"))'>
-							<span class='_arrow'>&#9207;</span> <!--arrow down -->
-							<span class='_arrow d-none'>&#9206;</span> <!-- arrow up -->
+							<span class='_arrow'><i class='fa fa-chevron-down'></span>
+							<span class='_arrow d-none'><i class='fa fa-chevron-up'></span>
 						</button>
 					</div>
 					<div class='_json_config d-none d-flex flex-column' style='flex:1 1 auto;'
@@ -413,8 +413,8 @@ EGSIM.component('plots-div', {
 
 			var gridlayouts = {};
 			var selectedgridlayout = '';
-			var varr = '&#8679;';  // vartical arrow character
-			var harr = '&#8680;';  // horiontal arrow character
+			var varr = '&#8679;';  // vertical arrow character
+			var harr = '&#8680;';  // horizontal arrow character
 			if (params.length == 0){
 				if (plots.length == 1){
 					// config this Vue Component with a 1x1 grid of plots non selectable and with no grid labels:
