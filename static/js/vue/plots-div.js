@@ -285,16 +285,14 @@ EGSIM.component('plots-div', {
 						</ul>
 					</div>
 					<table class='_panel table table-sm table-borderless mb-0'>
-						<thead><tr>
-							<td v-for="key in ['', 'same range', 'log', 'grid', 'title']" class='text-nowrap text-end'>
-								{{ key }}
-							</td>
-						</tr></thead>
+						<thead></thead>
 						<tbody><tr v-for="ax in ['x', 'y']">
 							<td class='text-nowrap text-end'>{{ ax }}</td>
 							<td v-for="key in ['sameRange', 'log', 'grid', 'title']" class='text-nowrap text-end'>
-								<input type='checkbox' v-model='plotoptions.axis[ax][key].checked'
+								<label><input type='checkbox' v-model='plotoptions.axis[ax][key].checked'
 									   :disabled="plotoptions.axis[ax][key].disabled">
+									{{ key == 'sameRange' ? 'same range' : key }}
+								</label>
 							</td>
 						</tr></tbody>
 					</table>
