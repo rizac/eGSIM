@@ -163,7 +163,7 @@ EGSIM.component('plots-div', {
 			}
 		},
 	},
-	template: `<div class='flex-row bg-body p-1' :class='data.length && show ? "d-flex" : "d-none"'>
+	template: `<div class='flex-row bg-body p-1 align-items-stretch' :class='data.length && show ? "d-flex" : "d-none"'>
 		<div class="d-flex flex-column" style="flex: 1 1 auto">
 			<div v-if="params.length" class='d-flex flex-row justify-content-around'>
 				<template v-for='(param, index) in params'>
@@ -194,7 +194,7 @@ EGSIM.component('plots-div', {
 			</div>
 		</div>
 		<!-- RIGHT TOOLBAR (legend, buttons, controls) -->
-		<div class='d-flex flex-column ps-4 gap-3' style='max-height: 100%; overflow: hidden'>
+		<div class='d-flex flex-column ps-4 gap-3'>
 			<div class="btn-group">
 				<button v-if="closeButton" type='button' class='btn btn-primary border-0 text-nowrap'
 						@click="show = !show" title='close plots panel'>
@@ -213,12 +213,13 @@ EGSIM.component('plots-div', {
 					</ul>
 				</div>
 			</div>
-			<div v-show='legend.size' class='d-flex flex-column gap-2' style='flex:1 1 0; overflow:auto'>
+			<div style='flex:1 1 0; overflow: auto' class='d-flex flex-column gap-3'>
+				<div class='d-flex flex-column gap-2'>
 				<div
 					v-for="[legendgroup, legendObj] in Array.from(legend.entries()).filter(e => e[1].visible).concat(Array.from(legend.entries()).filter(e => !e[1].visible))"
 					:style="legendObj.visible ? '' : {'visibility': 'hidden'}"
 					class='d-flex flex-column p-2 border bg-white gap-2'
-					style='flex: 0 1 0px;'>
+					>
 					<div class='d-flex align-items-baseline gap-2 text-nowrap' :style="{color: legendObj.mainColor}">
 						<input type='checkbox' title="Toggle plot trace(s) visibility"
 							v-if="plots.some(p => p.data.length > 1)"
@@ -248,76 +249,76 @@ EGSIM.component('plots-div', {
 						</button>
 					</div>
 				</div>
-			</div>
-			<div :class="Object.keys(grid.layouts).length > 1 ? 'd-flex': 'd-none'"
-				class='border p-2 bg-white flex-column gap-2'>
-				<div>Subplots layout</div>
-				<select v-model='grid.selectedLayout' class='form-control'>
-					<option v-for='key in Object.keys(grid.layouts)' :value="key" v-html="key">
-					</option>
-				</select>
-				<div class='d-flex flex-row'>
-					<div>Show label</div>
-					 <div v-for="ax in [1, 0]" class='ms-1 d-flex flex-row'>
-						<label class='text-nowrap m-0 ms-2 align-items-baseline' v-show="!!grid.params[ax].label">
-							<input type='checkbox' v-model="grid.visibility[ax]">
-							<span class='ms-1 text-nowrap'>
-								{{ grid.params[ax].label }}
-							</span>
-						</label>
+				</div>
+				<div :class="Object.keys(grid.layouts).length > 1 ? 'd-flex': 'd-none'"
+					class='border p-2 bg-white flex-column gap-2'>
+					<div>Subplots layout</div>
+					<select v-model='grid.selectedLayout' class='form-control'>
+						<option v-for='key in Object.keys(grid.layouts)' :value="key" v-html="key">
+						</option>
+					</select>
+					<div class='d-flex flex-row'>
+						<div>Show label</div>
+						 <div v-for="ax in [1, 0]" class='ms-1 d-flex flex-row'>
+							<label class='text-nowrap m-0 ms-2 align-items-baseline' v-show="!!grid.params[ax].label">
+								<input type='checkbox' v-model="grid.visibility[ax]">
+								<span class='ms-1 text-nowrap'>
+									{{ grid.params[ax].label }}
+								</span>
+							</label>
+						</div>
 					</div>
 				</div>
-			</div>
-			<div class='d-flex flex-column border p-2 bg-white'>
-				<div class="d-flex align-items-baseline gap-2"
-					style="border-bottom: 1px solid var(--bs-primary) !important">
-					<span style='flex: 1 1 auto'>Plots options</span>
-					<ul class="nav nav-pills">
-						<button type='button' class="nav-link active rounded-bottom-0"
-								onclick='this.parentNode.querySelectorAll("button").forEach(e => e.classList.toggle("active")); this.parentNode.parentNode.parentNode.querySelectorAll("._panel").forEach(e => e.classList.toggle("d-none"))'>
-							axis
-						</button>
-						<button type='button' class="nav-link rounded-bottom-0"
-								onclick='this.parentNode.querySelectorAll("button").forEach(e => e.classList.toggle("active")); this.parentNode.parentNode.parentNode.querySelectorAll("._panel").forEach(e => e.classList.toggle("d-none"))'>
-							mouse
-						</button>
-					</ul>
+				<div class='d-flex flex-column border p-2 bg-white'>
+					<div class="d-flex align-items-baseline gap-2"
+						style="border-bottom: 1px solid var(--bs-primary) !important">
+						<span style='flex: 1 1 auto'>Plots options</span>
+						<ul class="nav nav-pills">
+							<button type='button' class="nav-link active rounded-bottom-0"
+									onclick='this.parentNode.querySelectorAll("button").forEach(e => e.classList.toggle("active")); this.parentNode.parentNode.parentNode.querySelectorAll("._panel").forEach(e => e.classList.toggle("d-none"))'>
+								axis
+							</button>
+							<button type='button' class="nav-link rounded-bottom-0"
+									onclick='this.parentNode.querySelectorAll("button").forEach(e => e.classList.toggle("active")); this.parentNode.parentNode.parentNode.querySelectorAll("._panel").forEach(e => e.classList.toggle("d-none"))'>
+								mouse
+							</button>
+						</ul>
+					</div>
+					<table class='_panel table table-sm table-borderless mb-0'>
+						<thead><tr>
+							<td v-for="key in ['', 'same range', 'log', 'grid', 'title']" class='text-nowrap text-end'>
+								{{ key }}
+							</td>
+						</tr></thead>
+						<tbody><tr v-for="ax in ['x', 'y']">
+							<td class='text-nowrap text-end'>{{ ax }}</td>
+							<td v-for="key in ['sameRange', 'log', 'grid', 'title']" class='text-nowrap text-end'>
+								<input type='checkbox' v-model='plotoptions.axis[ax][key].checked'
+									   :disabled="plotoptions.axis[ax][key].disabled">
+							</td>
+						</tr></tbody>
+					</table>
+					<table class='_panel table table-sm table-borderless mb-0 d-none'>
+						<tbody><tr>
+							<td>on hover</td>
+							<td><select v-model="plotoptions.mouse.hovermode"
+									class='form-control form-control-sm'>
+								<option v-for='name in mouseMode.hovermodes' :value='name'>
+									{{ mouseMode.hovermodeLabels[name] }}
+								</option>
+							</select></td>
+						</tr>
+						<tr>
+							<td> on drag</td>
+							<td><select v-model="plotoptions.mouse.dragmode"
+									class='form-control form-control-sm'>
+								<option v-for='name in mouseMode.dragmodes' :value='name'>
+									{{ mouseMode.dragmodeLabels[name] }}
+								</option>
+							</select></td>
+						</tr></tbody>
+					</table>
 				</div>
-				<table class='_panel table table-sm table-borderless mb-0'>
-					<thead><tr>
-						<td v-for="key in ['', 'same range', 'log', 'grid', 'title']" class='text-nowrap text-end'>
-							{{ key }}
-						</td>
-					</tr></thead>
-					<tbody><tr v-for="ax in ['x', 'y']">
-						<td class='text-nowrap text-end'>{{ ax }}</td>
-						<td v-for="key in ['sameRange', 'log', 'grid', 'title']" class='text-nowrap text-end'>
-							<input type='checkbox' v-model='plotoptions.axis[ax][key].checked'
-								   :disabled="plotoptions.axis[ax][key].disabled">
-						</td>
-					</tr></tbody>
-				</table>
-				<table class='_panel table table-sm table-borderless mb-0 d-none'>
-					<tbody><tr>
-						<td>on hover</td>
-						<td><select v-model="plotoptions.mouse.hovermode"
-								class='form-control form-control-sm'>
-							<option v-for='name in mouseMode.hovermodes' :value='name'>
-								{{ mouseMode.hovermodeLabels[name] }}
-							</option>
-						</select></td>
-					</tr>
-					<tr>
-						<td> on drag</td>
-						<td><select v-model="plotoptions.mouse.dragmode"
-								class='form-control form-control-sm'>
-							<option v-for='name in mouseMode.dragmodes' :value='name'>
-								{{ mouseMode.dragmodeLabels[name] }}
-							</option>
-						</select></td>
-					</tr></tbody>
-				</table>
-
 			</div>
 		</div>
 	</div>`,
