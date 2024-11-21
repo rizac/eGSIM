@@ -227,7 +227,7 @@ EGSIM.component('plots-div', {
 							@change="setTraceStyle(legendgroup, {visible: legendObj.traceStyle.visible})"
 							:style="{'accent-color': legendObj.mainColor + ' !important'}" />
 						<span style='flex: 1 1 auto'>{{ legendgroup }}</span>
-						<button type='button' title="Style plot trace(s)" class='btn btn-sm border-0'
+						<button type='button' title="Style plot trace(s)" class='btn btn-sm border-0 py-0 pe-1'
 							@click="legendObj.expanded=!legendObj.expanded;"
 							:style="{'color': legendObj.mainColor + ' !important'}">
 							<span v-show="!legendObj.expanded"><i class='fa fa-chevron-down'></span>
