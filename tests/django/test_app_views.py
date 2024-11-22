@@ -311,6 +311,27 @@ class Test:
                                content_type="application/json")
         assert response.status_code == 400
 
+    def test_residuals_visualize_no_missing_plots(self):
+        """Some models do not produce plots for specific IMTs or residuals type
+        Test that we return those plots, albeit empty
+        """
+        client = Client()
+        # SgobbaEtAl not defined for the given SA, AbrahmsonSilva only for total
+        data = {
+            'model': ['SgobbaEtAl2020', 'AbrahamsonSilva1997'],
+            'imt': ['SA(0.1)'],
+            'flatfile': 'esm2018',
+            'flatfile-query': 'mag > 7'
+        }
+        response1 = client.post(f"{URLS.RESIDUALS}",
+                                json.dumps(data),
+                                content_type="application/json")
+        content = pd.read_csv(BytesIO(response1.content()))
+
+        response = client.post(f"/{URLS.RESIDUALS_VISUALIZE}",
+                               json.dumps(data),
+                               content_type="application/json")
+
     def test_download_response_img_formats(self):
         for url, ext in product((URLS.PREDICTIONS_PLOT_IMG, URLS.RESIDUALS_PLOT_IMG),
                                 img_ext):

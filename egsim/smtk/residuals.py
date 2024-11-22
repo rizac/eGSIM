@@ -511,25 +511,31 @@ def get_required_ground_motion_properties(
     from the given models (`gsim`), i.e. all columns denoting ground motion
     properties required by the passed models
     """
-    req_properties_flatfile = pd.DataFrame(index=flatfile.index)
-    req_properties = ground_motion_properties_required_by(*gsims)
+    required_props_flatfile = pd.DataFrame(index=flatfile.index)
+    required_props = ground_motion_properties_required_by(*gsims)
 
     # REQUIRES_DISTANCES is empty when gsims = [FromFile]: in this case, add a
     # default 'rrup' (see openquake,hazardlib.contexts.ContextMaker.__init__):
-    if 'rrup' not in req_properties and \
+    if 'rrup' not in required_props and \
             any(len(g.REQUIRES_DISTANCES) == 0 for g in gsims):
-        req_properties |= {'rrup'}
+        required_props |= {'rrup'}
 
     missing_flatfile_columns = set()
-    for p in req_properties:
+    for p in required_props:
         try:
-            req_properties_flatfile[p] = get_ground_motion_property_values(flatfile, p)
+            # https://stackoverflow.com/a/29706954
+            # `required_props_flatfile` is a dataframe with a specific index (see above).
+            # Adding a Series to it might result in NaNs where the Series index
+            # does not match the DataFrame index. As such, assign the series.values to
+            # the DataFrame (see test_residuals.test_assign_series to assure this is ok)
+            required_props_flatfile[p] = \
+                get_ground_motion_property_values(flatfile, p).values
         except MissingColumnError:
             missing_flatfile_columns.add(p)
     if missing_flatfile_columns:
         raise MissingColumnError(*list(missing_flatfile_columns))
 
-    return req_properties_flatfile
+    return required_props_flatfile
 
 
 DEFAULT_MSR = PeerMSR()

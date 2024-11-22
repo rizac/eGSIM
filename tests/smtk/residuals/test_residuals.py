@@ -5,6 +5,8 @@ import json
 import numpy as np
 import os
 import pandas as pd
+import pytest
+from datetime import datetime
 
 from egsim.smtk import residuals
 from egsim.smtk.flatfile import read_flatfile, ColumnType
@@ -25,7 +27,7 @@ def get_gsims_imts_flatfile():
     flatfile = _flatfile.copy()
     for i in imts:
         # convert cm/sec^2 to g:
-        flatfile[i] = flatfile[i] / (100 *g)  # convert_accel_units(flatfile[i], 'cm/s/s', 'g')
+        flatfile[i] = flatfile[i] / (100 * g)  # convert_accel_units(flatfile[i], 'cm/s/s', 'g')
     return gsims, imts, flatfile
 
 
@@ -50,6 +52,20 @@ def get_residuals(gsims, imts, flatfile, likelihood=False):
     df_multi_header2.columns = pd.MultiIndex.from_tuples(df_multi_header2.columns)
     pd.testing.assert_frame_equal(df_multi_header, df_multi_header2)
     return df_multi_header
+
+
+def test_residuals_error():
+    """GhofraniAtkinson2014CascadiaUpper requires a backarc attribute not present
+    in a flatfile. Test that we correctly replace it with boolean false
+    (this was not happening in previous eGSIM version due to DataFrame index != Series
+    index. For details see https://stackoverflow.com/a/29706954)
+    """
+    flatfile = read_flatfile(os.path.join(BASE_DATA_PATH,
+                             "test_flatfile_esm_2018_SA_mag_greater_than_7.hdf"))
+    gsims = ['GhofraniAtkinson2014CascadiaUpper']
+    imts = ['PGA']
+    flatfile = flatfile[(flatfile.index >= 75) & (flatfile.index <= 77)]
+    res_df = get_residuals(gsims, imts, flatfile)
 
 
 def test_residuals_execution():
@@ -163,3 +179,36 @@ def test_residuals_execution_lh():
             vals_ok = max_diff < RTOL
 
         assert vals_ok
+
+
+def test_assign_series():
+    # in residuals.get_required_ground_motion_properties we assign a series values to
+    # a dataframe. Check that this is not causing a dtype change
+    for vals in [
+        [1, 2],
+        [1.1, np.nan],
+        [True, False],
+        [datetime.utcnow(), pd.NaT],
+        ['a', None]
+    ]:
+        series = pd.Series(vals)
+        series1 = pd.DataFrame({'series': series}).series
+        series2 = pd.DataFrame({'series': series.values}).series
+        pd.testing.assert_series_equal(series1, series2)
+        assert series1.dtype == series2.dtype
+        # this is the problem we want to avoid:
+        # provide an index to the DataFrame, the dtype might be different
+        series3 = pd.DataFrame({'series': series}, index=[11, 12]).series
+        # for ints and bools is not ok
+        # (as index differs -> data not found -> set NaN in dframe -> change dtype)
+        if series1.dtype in (np.bool_, np.int64):
+            assert series1.dtype != series3.dtype
+        else:
+            # for dtypes supporting NaNs, dtype is preserved BUT VALUES ARE NOT!
+            # dtype1 in (np.float64, np.dtype('<M8[ns]'), np.dtype('O')):
+            assert series1.dtype == series3.dtype
+            try:
+                pd.testing.assert_series_equal(series1, series3)
+                raise AssertionError('series are identical, they should not be')
+            except AssertionError:
+                pass
