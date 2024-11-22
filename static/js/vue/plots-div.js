@@ -216,27 +216,26 @@ EGSIM.component('plots-div', {
 			<div style='flex:1 1 0; overflow: auto' class='d-flex flex-column gap-3'>
 				<div class='d-flex flex-column gap-2'>
 				<div
-					v-for="[legendgroup, legendObj] in Array.from(legend.entries()).filter(e => e[1].visible).concat(Array.from(legend.entries()).filter(e => !e[1].visible))"
+					v-for="[legendgroup, legendObj] in legend.entries()"
 					:class="legendObj.visible ? 'd-flex' : 'd-none'"
 					class='flex-column p-2 border bg-white gap-2'
 					>
 					<div class='d-flex align-items-baseline gap-2 text-nowrap' :style="{color: legendObj.mainColor}">
 						<input type='checkbox' title="Toggle plot trace(s) visibility"
-							v-if="plots.some(p => p.data.length > 1)"
 							v-model="legendObj.traceStyle.visible"
 							@change="setTraceStyle(legendgroup, {visible: legendObj.traceStyle.visible})"
-							:style="{'accent-color': legendObj.mainColor + ' !important'}" />
+							:style="{'accent-color': legendObj.mainColor + ' !important'}" >
 						<span style='flex: 1 1 auto; overflow:hidden; text-overflow:ellipsis'
 							:title="legendgroup">{{ legendgroup }}</span>
 						<button type='button' title="Style plot trace(s)" class='btn btn-sm border-0 py-0 pe-1'
 							@click="legendObj.expanded=!legendObj.expanded;"
 							:style="{'color': legendObj.mainColor + ' !important'}">
-							<span v-show="!legendObj.expanded"><i class='fa fa-chevron-down'></span>
-							<span v-show="legendObj.expanded"><i class='fa fa-chevron-up'></span>
+							<span v-show="!legendObj.expanded"><i class='fa fa-chevron-down'></i></span>
+							<span v-show="legendObj.expanded"><i class='fa fa-chevron-up'></i></span>
 						</button>
 					</div>
 					<div :class="legendObj.expanded ? 'd-flex' :'d-none'"
-						class='flex-column' style='flex: 1 1 auto;'
+						class='flex-column'
 						:style="{color: legendObj.mainColor}">
 						<textarea class='form-control rounded-bottom-0 border-bottom-0 p-1' spellcheck="false"
 							size="3"
