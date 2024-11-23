@@ -314,6 +314,46 @@ class Test:
                                content_type="application/json")
         assert response.status_code == 400
 
+    def test_predictions_visualize_no_missing_plots(self):
+        """Some models do not produce plots for specific IMTs or residuals type
+        Test that we return those plots, albeit empty
+        """
+        client = Client()
+        # SgobbaEtAl not defined for the given SA, AbrahmsonSilva only for total
+        models = ['SgobbaEtAl2020', 'AbrahamsonSilva1997']
+        imts = ['SA(0.1)', 'PGA']
+        data = {
+            'model': models,
+            'imt': imts,
+            'magnitude': [4],
+            'distance': [10]
+        }
+        response1 = client.post(f"/{URLS.PREDICTIONS}.csv",
+                                json.dumps(data | {'format': 'csv'}),
+                                content_type="application/json")
+        assert response1.status_code == 200
+        content = b''.join(response1.streaming_content)
+        dframe = pd.read_csv(BytesIO(content), index_col=0, header=0)
+        assert f'SA(0.1) {Clabel.median} SgobbaEtAl2020' not in dframe.columns
+        assert f'SA(0.1) {Clabel.std} AbrahamsonSilva1997' in dframe.columns
+        assert f'PGA {Clabel.median} SgobbaEtAl2020' in dframe.columns
+        assert f'SA(0.1) {Clabel.median} AbrahamsonSilva1997' in dframe.columns
+        # 2 imts for SgobbaEtAl, 4 for Abrahamson et al:
+        len_c = len([c for c in dframe.columns if not c.startswith(f'{Clabel.input} ')])
+        assert len_c == 6
+
+        response = client.post(f"/{URLS.PREDICTIONS_VISUALIZE}",
+                               json.dumps(data | {'plot_type': 'm'}),
+                               content_type="application/json")
+        assert response.status_code == 200
+        json_c = response.json()
+        plots = json_c['plots']
+        # first plot has 6 traces (3 Sgobba, 3 Abrhamson)
+        # second plot has 3 tracs (3 Abrhamson, Sgobba non-implemented for SA)
+        # the 3 plots per model is because we also have std (upper and lower bound)
+        assert (len(plots[0]['data']) == 6 and len(plots[1]['data']) == 3) or \
+            (len(plots[1]['data']) == 6 and len(plots[0]['data']) == 3)
+
     def test_residuals_visualize_no_missing_plots(self):
         """Some models do not produce plots for specific IMTs or residuals type
         Test that we return those plots, albeit empty
@@ -333,6 +373,7 @@ class Test:
         response1 = client.post(f"/{URLS.RESIDUALS}.csv",
                                 json.dumps(data | {'format': 'csv'}),
                                 content_type="application/json")
+        assert response1.status_code == 200
         content = b''.join(response1.streaming_content)
         dframe = pd.read_csv(BytesIO(content), index_col=0, header=0)
         assert f'SA(0.1) {Clabel.total_res} SgobbaEtAl2020' not in dframe.columns
@@ -346,7 +387,7 @@ class Test:
         response = client.post(f"/{URLS.RESIDUALS_VISUALIZE}",
                                json.dumps(data),
                                content_type="application/json")
-        assert response.status == 200
+        assert response.status_code == 200
         expected_params = set(
             product(imts, models, ('Total', 'Inter event', 'Intra event'))
         )

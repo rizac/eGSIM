@@ -309,8 +309,10 @@ class ResidualsVisualizeForm(ResidualsForm):
                 'layout': layout
             }
 
+        # set layout for empty data plots, copying from similar one
+        # (same model same imt, or at least same imt)
         for key, plot in plots.items():
-            if plot['layout'] is not None:
+            if plot['layout'] is not None:  # empty data plot
                 continue
             layout_to_copy = {}
             for key_, plot_ in plots.items():
@@ -321,22 +323,6 @@ class ResidualsVisualizeForm(ResidualsForm):
                     if plot['params']['model'] == plot_['params']['model']:
                         break
             plot['layout'] = layout_to_copy
-
-            # # if we are processing total residuals, also set intra and inter
-            # # defaults as empty plot. If intra and inter were already (or will be )
-            # # processed, the  skip this
-            # if res_type == total_res:
-            #     for r_type in (intra_res, inter_res):
-            #         key[-1] = r_type
-            #         plots.setdefault(tuple(key), {
-            #             'data': [{}],
-            #             'params': {
-            #                 'model': model,
-            #                 'imt': imt,
-            #                 'residual type': residual_label[r_type]
-            #             },
-            #             'layout': dict(layout)
-            #         })
 
         # return keys sorted so that the frontend displays them accordingly:
         return {'plots': [plots[key] for key in sorted(plots.keys())]}
