@@ -1,4 +1,6 @@
 """Forms handling data (flatfiles)"""
+from itertools import product
+
 import numpy as np
 import pandas as pd
 from scipy.stats import linregress
@@ -267,21 +269,26 @@ class ResidualsVisualizeForm(ResidualsForm):
             inter_res: 'Inter event'
         }
 
-        for col in dataframe.columns:
-            if col[1] not in res_columns:
-                continue
-            imt, res_type, model = col
+        for imt, res_type, model in product(
+            self.cleaned_data['imt'],
+            res_columns,
+            self.cleaned_data['gsim']
+        ):
+            col = (imt, res_type, model)
+            data = [{}]
+            layout = None
 
-            if not col_x:  # histogram (residuals or LH):
-                x = dataframe[col]
-                y = None
-            else:
-                x = self.cleaned_data['flatfile'][col_x]
-                y = dataframe[col]
+            if col in dataframe.columns:
+                if not col_x:  # histogram (residuals or LH):
+                    x = dataframe[col]
+                    y = None
+                else:
+                    x = self.cleaned_data['flatfile'][col_x]
+                    y = dataframe[col]
 
-            color = colors.setdefault(model, next(c_cycle))
-            data, layout = self.get_plot_traces_and_layout(model, imt, x, y,
-                                                           likelihood, col_x, color)
+                color = colors.setdefault(model, next(c_cycle))
+                data, layout = self.get_plot_traces_and_layout(model, imt, x, y,
+                                                               likelihood, col_x, color)
 
             # provide a key that is comparable for sorting the plots. Note that imt
             # is separated into name and period (so that "SA(9)" < "SA(10)") and that
@@ -302,21 +309,34 @@ class ResidualsVisualizeForm(ResidualsForm):
                 'layout': layout
             }
 
-            # if we are processing total residuals, also set intra and inter
-            # defaults as empty plot. If intra and inter were already (or will be )
-            # processed, the  skip this
-            if res_type == total_res:
-                for r_type in (intra_res, inter_res):
-                    key[-1] = r_type
-                    plots.setdefault(tuple(key), {
-                        'data': [{}],
-                        'params': {
-                            'model': model,
-                            'imt': imt,
-                            'residual type': residual_label[r_type]
-                        },
-                        'layout': dict(layout)
-                    })
+        for key, plot in plots.items():
+            if plot['layout'] is not None:
+                continue
+            layout_to_copy = {}
+            for key_, plot_ in plots.items():
+                if plot_['layout'] is None:
+                    continue
+                if plot['params']['imt'] == plot_['params']['imt']:
+                    layout_to_copy = dict(plot_['layout'])
+                    if plot['params']['model'] == plot_['params']['model']:
+                        break
+            plot['layout'] = layout_to_copy
+
+            # # if we are processing total residuals, also set intra and inter
+            # # defaults as empty plot. If intra and inter were already (or will be )
+            # # processed, the  skip this
+            # if res_type == total_res:
+            #     for r_type in (intra_res, inter_res):
+            #         key[-1] = r_type
+            #         plots.setdefault(tuple(key), {
+            #             'data': [{}],
+            #             'params': {
+            #                 'model': model,
+            #                 'imt': imt,
+            #                 'residual type': residual_label[r_type]
+            #             },
+            #             'layout': dict(layout)
+            #         })
 
         # return keys sorted so that the frontend displays them accordingly:
         return {'plots': [plots[key] for key in sorted(plots.keys())]}

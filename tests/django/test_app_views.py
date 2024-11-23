@@ -29,6 +29,9 @@ from egsim.app.forms import (FlatfileVisualizeForm, PredictionsVisualizeForm,
 from egsim.app.views import URLS, img_ext, form2dict
 from django.test.client import Client
 
+from egsim.smtk import get_sa_limits
+from egsim.smtk.registry import Clabel
+
 GSIM, IMT = 'gsim', 'imt'
 
 
@@ -317,20 +320,44 @@ class Test:
         """
         client = Client()
         # SgobbaEtAl not defined for the given SA, AbrahmsonSilva only for total
+        models = ['SgobbaEtAl2020', 'AbrahamsonSilva1997']
+        imts = ['SA(0.1)', 'PGA']
         data = {
-            'model': ['SgobbaEtAl2020', 'AbrahamsonSilva1997'],
-            'imt': ['SA(0.1)'],
+            'model': models,
+            'imt': imts,
             'flatfile': 'esm2018',
             'flatfile-query': 'mag > 7'
         }
-        response1 = client.post(f"{URLS.RESIDUALS}",
-                                json.dumps(data),
+        saLim1 = get_sa_limits('SgobbaEtAl2020')
+        salim2 = get_sa_limits('AbrahamsonSilva1997')
+        response1 = client.post(f"/{URLS.RESIDUALS}.csv",
+                                json.dumps(data | {'format': 'csv'}),
                                 content_type="application/json")
-        content = pd.read_csv(BytesIO(response1.content()))
+        content = b''.join(response1.streaming_content)
+        dframe = pd.read_csv(BytesIO(content), index_col=0, header=0)
+        assert f'SA(0.1) {Clabel.total_res} SgobbaEtAl2020' not in dframe.columns
+        assert f'SA(0.1) {Clabel.intra_ev_res} AbrahamsonSilva1997' not in dframe.columns
+        assert f'PGA {Clabel.total_res} SgobbaEtAl2020' in dframe.columns
+        assert f'SA(0.1) {Clabel.total_res} AbrahamsonSilva1997' in dframe.columns
+        # 3 imts for SgobbaEtAl, 2 for Abrahamson et al:
+        len_c = len([c for c in dframe.columns if not c.startswith(f'{Clabel.input} ')])
+        assert len_c == 5
 
         response = client.post(f"/{URLS.RESIDUALS_VISUALIZE}",
                                json.dumps(data),
                                content_type="application/json")
+        assert response.status == 200
+        expected_params = set(
+            product(imts, models, ('Total', 'Inter event', 'Intra event'))
+        )
+        json_c = response.json()
+        plots = json_c['plots']
+        actual_params = {
+            (c['params']['imt'], c['params']['model'], c['params']['residual type'])
+            for c in plots
+        }
+        assert len(actual_params) == 12
+        assert expected_params == actual_params
 
     def test_download_response_img_formats(self):
         for url, ext in product((URLS.PREDICTIONS_PLOT_IMG, URLS.RESIDUALS_PLOT_IMG),
