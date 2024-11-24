@@ -2,6 +2,8 @@
 test residuals computations (standard and likelihood)
 """
 import json
+from unittest.mock import patch
+
 import numpy as np
 import os
 import pandas as pd
@@ -12,7 +14,7 @@ from egsim.smtk import residuals
 from egsim.smtk.flatfile import read_flatfile, ColumnType
 from scipy.constants import g
 from egsim.smtk.registry import Clabel
-
+from egsim.smtk.validators import ModelError
 
 # load flatfile once:
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), "data")
@@ -212,3 +214,14 @@ def test_assign_series():
                 raise AssertionError('series are identical, they should not be')
             except AssertionError:
                 pass
+
+
+@patch('egsim.smtk.residuals.get_ground_motion_values', side_effect=ValueError('a'))
+def test_model_error(mock_get_gmv):
+    with pytest.raises(ModelError) as err:
+        gsims, imts, flatfile = get_gsims_imts_flatfile()
+        res_df = get_residuals(gsims, imts, flatfile, likelihood=True)
+    assert mock_get_gmv.called
+    # the expected model is the first among the gsims (sorted), so:
+    expected_model = sorted(gsims)[0]
+    assert f'{expected_model}: (ValueError) a' in str(err.value)

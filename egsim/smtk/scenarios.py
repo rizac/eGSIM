@@ -21,7 +21,7 @@ from .registry import get_ground_motion_values, Clabel
 from .flatfile import FlatfileMetadata
 from .converters import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
 from .validators import (validate_inputs, harmonize_input_gsims,
-                         harmonize_input_imts, validate_imt_sa_limits)
+                         harmonize_input_imts, validate_imt_sa_limits, ModelError)
 
 
 @dataclass
@@ -103,7 +103,7 @@ def get_scenarios_predictions(
     # Get the ground motion values
     data = []
     columns = []
-    for gsim_label, gsim in gsims.items():
+    for gsim_name, gsim in gsims.items():
         imts_ok = validate_imt_sa_limits(gsim, imts)
         if not imts_ok:
             continue
@@ -111,11 +111,11 @@ def get_scenarios_predictions(
         try:
             median, sigma, tau, phi = get_ground_motion_values(gsim, imt_vals, ctxts)
             data.append(median)
-            columns.extend((i, Clabel.median, gsim_label) for i in imt_names)
+            columns.extend((i, Clabel.median, gsim_name) for i in imt_names)
             data.append(sigma)
-            columns.extend((i, Clabel.std, gsim_label) for i in imt_names)
+            columns.extend((i, Clabel.std, gsim_name) for i in imt_names)
         except Exception as exc:
-            raise ValueError(f'Error in {gsim_label}: {str(exc)}')
+            raise ModelError(f'{gsim_name}: ({exc.__class__.__name__}) {str(exc)}')
 
     # distances:
     columns.append((

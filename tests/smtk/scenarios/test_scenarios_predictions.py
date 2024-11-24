@@ -2,8 +2,11 @@
 Tests for generation of data for trellis plots
 """
 import os
+from unittest.mock import patch
+
 import numpy as np
 import pandas as pd
+import pytest
 
 from openquake.hazardlib.gsim.akkar_2014 import AkkarEtAlRjb2014
 from openquake.hazardlib.gsim.bindi_2014 import BindiEtAl2014Rjb
@@ -13,6 +16,7 @@ from scipy.interpolate import interp1d
 from egsim.smtk.registry import Clabel
 from egsim.smtk.flatfile import ColumnType, FlatfileMetadata
 from egsim.smtk import scenarios
+from egsim.smtk.validators import ModelError
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), "data")
 
@@ -297,3 +301,23 @@ def open_ref_hdf(file_name) -> pd.DataFrame:
     new_ref = pd.DataFrame({v: ref[c] for c, v in c_mapping.items()})
     new_ref.columns = pd.MultiIndex.from_tuples(new_ref.columns)
     return new_ref
+
+
+@patch('egsim.smtk.scenarios.get_ground_motion_values', side_effect=ValueError('a'))
+def test_model_error(mock_get_gmv):
+    magnitudes = np.arange(4., 8.1, 0.1)
+    distance = 20.
+
+    with pytest.raises(ModelError) as err:
+        dfr = get_scenarios_predictions(
+            gsims,
+            imts,
+            magnitudes,
+            distance,
+            scenarios.RuptureProperties(dip=60.0, aspect=1.5, rake=-90),
+            scenarios.SiteProperties(vs30=800, z1pt0=50., z2pt5=1.)
+        )
+    assert mock_get_gmv.called
+    # the expected model is the first among the gsims (sorted), so:
+    expected_model = sorted(gsims)[0]
+    assert f'{expected_model}: (ValueError) a' in str(err.value)

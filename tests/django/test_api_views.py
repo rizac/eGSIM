@@ -36,7 +36,8 @@ def test_model_info():
                            content_type="application/json")
     assert response.status_code == 200
     assert sorted(response.json().keys()) == ['CauzziEtAl2014']
-    assert all(isinstance(v, dict) and sorted(v.keys()) == ['doc', 'imts', 'props']
+    assert all(isinstance(v, dict) and
+               sorted(v.keys()) == ['doc', 'imts', 'props', 'sa_limits']
                for v in response.json().values())
 
     data = {'model': ['BindiEtAl2014Rjb', 'CauzziEtAl2014']}
@@ -45,7 +46,8 @@ def test_model_info():
                            content_type="application/json")
     assert response.status_code == 200
     assert sorted(response.json().keys()) == ['BindiEtAl2014Rjb', 'CauzziEtAl2014']
-    assert all(isinstance(v, dict) and sorted(v.keys()) == ['doc', 'imts', 'props']
+    assert all(isinstance(v, dict) and
+               sorted(v.keys()) == ['doc', 'imts', 'props', 'sa_limits']
                for v in response.json().values())
 
     data = {'model': ['x', 'CauzziEtAl2014']}
