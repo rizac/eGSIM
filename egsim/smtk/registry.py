@@ -180,12 +180,15 @@ def gsim_info(model: Union[str, GMPE]) -> dict:
      - imts: list[str] the intensity measures defined for the model
      - props: list[str] the ground motion properties required to compute the
         model predictions
+     - sa_limits: spectral acceleration period limits where the model is defined
+        or None if the model is not defined for SA
     """
     model = gsim(model)
     return {
         'doc': (model.__doc__ or "").strip(),
         'imts': list(intensity_measures_defined_for(model) or []),
-        'props': list(ground_motion_properties_required_by(model) or [])
+        'props': list(ground_motion_properties_required_by(model) or []),
+        'sa_limits': get_sa_limits(model)
     }
 
 

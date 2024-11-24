@@ -338,13 +338,12 @@ EGSIM.component('gsim-select', {
 				var json = response.json().then(obj => {
 					var arr = Object.keys(obj).map(k =>
 						`<h5 class='text-nowrap text-primary'>${k}</h5>
-						<ul class='ps-4 mb-2'>
-						<li><b>Supported intensity measures:</b> ${obj[k]['imts'].join(', ')}</li>
-						<li><b>Required Ground motion properties:</b> ${obj[k]['props'].join(', ')}</li>
-						</ul>
-						<p class='ps-4'>${obj[k]['doc'].trim().replaceAll(/\.\s*\n\s*/g, ".<br>")}</p>
+						<b>Supported intensity measures:</b> ${obj[k]['imts'].join(', ')}</b><br>
+						${!obj[k]['sa_limits'] ? '' : '<b>SA limits (s):</b> ' + obj[k]['sa_limits'].join(', ') + '<br>' }
+						<b>Required Ground motion properties:</b> ${obj[k]['props'].join(', ')}
+						<div class='mt-2'>${obj[k]['doc'].trim().replaceAll(/\.\s*\n\s*/g, ".<br>")}</div>
 					`);
-					this.modelInfoText = arr.join('');
+					this.modelInfoText = '<div class="d-flex flex-column gap-4"><div>' + arr.join('</div><div>') + '</div></div>';
 				});
 			}).catch((error) => {
 				this.modelInfoText = 'No info available';
