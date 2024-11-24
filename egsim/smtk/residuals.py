@@ -271,6 +271,8 @@ def get_residuals_from_expected_and_observed_motions(
     :param normalise: boolean (default True) normalize the random effects residuals
         (calculated using the inter-event residual formula described in
          Abrahamson & Youngs (1992) Eq. 10)
+    :param return_mean: boolean (default False) include the predicted values
+        (models computed mean) in the dataframe columns
     """
     residuals: pd.DataFrame = pd.DataFrame(index=expected.index)
     mean_cols = expected.columns[expected.columns.get_level_values(1) == Clabel.mean]

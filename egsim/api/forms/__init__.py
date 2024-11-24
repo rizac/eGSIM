@@ -322,9 +322,11 @@ class GsimImtForm(GsimForm):
             try:
                 validate_inputs(cleaned_data[gsim_field], cleaned_data[imt_field])
             except IncompatibleModelImtError as imi_err:
+                err_msg = (f"incompatible model(s) and intensity measure(s) "
+                           f"{str(imi_err)}")
                 # add_error removes also the field from self.cleaned_data:
-                self.add_error(gsim_field, str(imi_err))
-                self.add_error(imt_field, str(imi_err))
+                self.add_error(gsim_field, err_msg)
+                self.add_error(imt_field, err_msg)
         return cleaned_data
 
 

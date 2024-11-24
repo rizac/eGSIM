@@ -167,6 +167,5 @@ class IncompatibleModelImtError(InputError):
         """Custom error msg"""
         arg = self.args[0]
         return (
-            "incompatible model(s) and intensity measure(s) " +
             ", ".join(f'{m}+{i}' for m in sorted(arg.keys()) for i in sorted(arg[m]))
         )
