@@ -281,7 +281,7 @@ class GsimForm(SHSRForm):
                 if name not in ret:
                     ret[name] = gsim(name)
         except ModelError as err:
-            self.add_error(key, str(err))
+            self.add_error(key, f'invalid model(s) {str(err)}')
         return ret
 
 
@@ -308,7 +308,7 @@ class GsimImtForm(GsimForm):
         try:
             ret = harmonize_input_imts(value)
         except ImtError as err:
-            self.add_error(key, str(err))
+            self.add_error(key, f'invalid intensity measure(s) {str(err)}')
         return ret
 
     def clean(self):

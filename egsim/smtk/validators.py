@@ -144,25 +144,17 @@ def validate_imt_sa_limits(model: GMPE, imts: dict[str, IMT]) -> dict[str, IMT]:
 class InputError(ValueError):
     """Base **abstract** exception for any input error (model, imt, flatfile)"""
 
-    # The str representation of this Exception (and subclasses) is each arg in self.args
-    # (comma-separated), prefixed by `msg_prefix` (if given):
-    msg_prefix: str
-
     def __str__(self):
         """Reformat ``str(self)``"""
-        args = ", ".join(sorted(str(a) for a in self.args))
-        try:
-            return f'{self.msg_prefix} {args}'
-        except AttributeError:
-            return args
+        return ", ".join(sorted(str(a) for a in self.args))
 
 
 class ModelError(InputError):
-    msg_prefix = 'invalid model(s)'
+    pass
 
 
 class ImtError(InputError):
-    msg_prefix = 'invalid intensity measure(s)'
+    pass
 
 
 class IncompatibleModelImtError(InputError):

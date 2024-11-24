@@ -6,6 +6,7 @@ Django Forms for eGSIM model-to-data comparison (residuals computation)
 import pandas as pd
 from django.forms import BooleanField
 
+from egsim.smtk.flatfile import MissingColumnError
 from egsim.smtk.residuals import get_residuals, FlatfileError, Clabel
 from egsim.smtk.ranking import get_measures_of_fit
 from egsim.api.forms import APIForm
@@ -65,5 +66,7 @@ class ResidualsForm(GsimImtForm, FlatfileForm, APIForm):
             if is_ranking:
                 return get_measures_of_fit(gsims, imts, residuals)
             return residuals
+        except MissingColumnError as mce:
+            self.add_error('flatfile', f'missing column(s) {str(mce)}')
         except FlatfileError as err:
             self.add_error("flatfile", str(err))

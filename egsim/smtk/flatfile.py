@@ -453,7 +453,7 @@ def cast_to_dtype(
 
 
 class FlatfileError(InputError):
-    """General flatfile column(s) error. Inherits from smtks.validators.InputError.
+    """General flatfile column(s) error. Inherits from smtk.validators.InputError.
     Note that the str representation equals the init arguments comma-separated:
     FlatfileError(arg1, arg2, ...) -> f"{str(arg1)}, {str(arg2)}, ..."
     See subclasses for details
@@ -464,18 +464,15 @@ class FlatfileError(InputError):
 class MissingColumnError(FlatfileError, AttributeError, KeyError):
     """MissingColumnError. It inherits also from AttributeError and
     KeyError to be compliant with pandas and OpenQuake"""
-
-    msg_prefix = 'missing column(s)'
+    pass
 
 
 class IncompatibleColumnError(FlatfileError):
-
-    msg_prefix = 'column names conflict'
+    pass
 
 
 class ColumnDataError(FlatfileError, ValueError, TypeError):
-
-    msg_prefix = 'invalid data for'
+    pass
 
 
 # registered columns:

@@ -11,7 +11,8 @@ from django.forms.fields import CharField, FileField
 from egsim.smtk import (ground_motion_properties_required_by, FlatfileError,
                         intensity_measures_defined_for, get_sa_limits)
 from egsim.smtk.flatfile import (read_flatfile, get_dtype_of, FlatfileMetadata,
-                                 query as flatfile_query, EVENT_ID_COLUMN_NAME)
+                                 query as flatfile_query, EVENT_ID_COLUMN_NAME,
+                                 IncompatibleColumnError)
 from egsim.api import models
 from egsim.api.forms import EgsimBaseForm, APIForm, GsimForm
 
@@ -116,6 +117,9 @@ class FlatfileForm(EgsimBaseForm):
                 # (the former if file size > configurable threshold
                 # (https://stackoverflow.com/a/10758350):
                 dataframe = read_flatfile(u_flatfile)
+            except IncompatibleColumnError as ice:
+                self.add_error('flatfile', f'column names conflict {str(ice)}')
+                return cleaned_data
             except FlatfileError as err:
                 self.add_error("flatfile", str(err))
                 return cleaned_data  # no need to further process
