@@ -354,6 +354,37 @@ class Test:
         assert (len(plots[0]['data']) == 6 and len(plots[1]['data']) == 3) or \
             (len(plots[1]['data']) == 6 and len(plots[0]['data']) == 3)
 
+    def test_predictions_visualize_missing_periods_no_Exc(self):
+        """Some models do not produce plots for specific IMTs or residuals type
+        Test that we return those plots, albeit empty
+        """
+        client = Client()
+        # SgobbaEtAl not defined for the given SA, AbrahmsonSilva only for total
+        models = ['SgobbaEtAl2020', 'BindiEtAl2014Rjb']
+        imts = [f'SA({_})' for _ in [0.01, 0.015, 0.5, 0.6]]
+        data = {
+            'model': models,
+            'imt': imts,
+            'magnitude': [4],
+            'distance': [10]
+        }
+        saLim1 = get_sa_limits('SgobbaEtAl2020')
+        salim2 = get_sa_limits('BindiEtAl2014Rjb')
+        response = client.post(f"/{URLS.PREDICTIONS_VISUALIZE}",
+                               json.dumps(data | {'plot_type': 's'}),
+                               content_type="application/json")
+        assert response.status_code == 200
+        json_c = response.json()
+        plots = json_c['plots']
+        # only one plot (one dist and one mag):
+        assert len(plots) == 1
+        # 3 plots for Bindi, 3 for Sgobba (medians + stdev x2 ) x2:
+        assert len(plots[0]['data']) == 6
+        data = plots[0]['data']
+        # all x values should amtch the sa limits of the models, which are
+        # 0.5 and 0.6 for both:
+        assert all(d['x'] == [0.5, 0.6] for d in data)
+
     def test_residuals_visualize_no_missing_plots(self):
         """Some models do not produce plots for specific IMTs or residuals type
         Test that we return those plots, albeit empty

@@ -63,7 +63,7 @@ class PredictionsVisualizeForm(PredictionsForm):
 
             def groupby(dframe: pd.DataFrame):
                 for dist, dfr in dframe.groupby(dist_col):
-                    x = dfr[mag_col]
+                    x = {m: dfr[mag_col] for m in models}
                     for i in imts:
                         p = {dist_label: dist, imt_label: i}
                         data = {}
@@ -83,7 +83,7 @@ class PredictionsVisualizeForm(PredictionsForm):
 
             def groupby(dframe: pd.DataFrame):
                 for mag, dfr in dframe.groupby(mag_col):
-                    x = dfr[dist_col]
+                    x = {m: dfr[dist_col].values for m in models}
                     for i in imts:
                         p = {mag_label: mag, imt_label: i}
                         data = {}
@@ -103,18 +103,31 @@ class PredictionsVisualizeForm(PredictionsForm):
 
             # imts is a dict[str, IMT] of sorted SA(p) (see super.clean_imt and
             # self.clean) rename it as `sas` just for clarity:
-            sas = imts
-
-            x_values = [float(sa_period(_)) for _ in sas]
+            # sas = imts
+            # x_values = [float(sa_period(_)) for _ in sas]
 
             def groupby(dframe: pd.DataFrame):
+                sa_cols = {}
+                x_values = {}
+                for m in models:
+                    model_sa_cols = [
+                        c for c in dframe.columns
+                        if c[0].startswith('SA(') and
+                        c[1] == Clabel.median and
+                        c[2] == m and
+                        (c[0], Clabel.std, c[2]) in dframe.columns
+                    ]
+                    model_sa_cols = sorted(model_sa_cols, key=lambda c: sa_period(c[0]))
+                    x_values[m] = [float(sa_period(_[0])) for _ in model_sa_cols]
+                    sa_cols[m] = model_sa_cols
+
                 for (d, mag), dfr in dframe.groupby([dist_col, mag_col]):
                     p = {mag_label: mag, dist_label: d, imt_label: 'SA'}
                     data = {}
                     for m in models:
                         data[m] = (
-                            dfr.loc[:, (sas, Clabel.median, m)].iloc[0, :].values,
-                            dfr.loc[:, (sas, Clabel.std, m)].iloc[0, :].values
+                            dfr.loc[:, sa_cols[m]].iloc[0, :].values,
+                            dfr.loc[:, sa_cols[m]].iloc[0, :].values
                         )
                     yield p, x_values, data
 
@@ -134,8 +147,11 @@ class PredictionsVisualizeForm(PredictionsForm):
         return {'plots': plots}
 
     @staticmethod
-    def get_plot_traces_and_layout(x, y: dict[str, tuple], x_label, y_label,
-                                   colors: dict[str, str]) -> tuple[list[dict], dict]:
+    def get_plot_traces_and_layout(
+            x: dict[str, np.ndarray],
+            y: dict[str, tuple[np.ndarray, np.ndarray]],
+            x_label, y_label, colors: dict[str, str]
+    ) -> tuple[list[dict], dict]:
         """
         Return the traces and layout of a prediction plot (to be displayed using the
         JavaScript library Plotly). Traces is a list, where each Trace is a dict
@@ -143,7 +159,7 @@ class PredictionsVisualizeForm(PredictionsForm):
         layout is a dict of layout configuration, such as plot title, x- or y-axis
         range and type (log/linear)
 
-        :param x: the x values (common to all traces)
+        :param x: the x values (dict of str (model name) mapped to its x values
         :param y: the y values, as dict. Each dict key is a model name (str) and it's
             mapped to the model y values, as tuple of two elements: (medians, stddev),
             where medians and stddev are numeric arrays of the same length as `x`
@@ -155,10 +171,12 @@ class PredictionsVisualizeForm(PredictionsForm):
         """
         traces = []
         ys = []
+        xs = []
         for model, [medians, sigmas] in y.items():
             color = colors[model]
             color_transparent = color.replace(', 1)', ', 0.1)')
             legendgroup = model
+            xs.append(x[model])
             # first add all values to list so that we can compute ranges later
             # TODO add Graeme if this is ok (np.exp I mean, legacy code from smtk)
             ys.append(np.exp(medians))
@@ -168,7 +186,7 @@ class PredictionsVisualizeForm(PredictionsForm):
             traces.extend([
                 line_trace(
                     color=color,
-                    x=x,
+                    x=xs[-1],
                     y=ys[-3],
                     name=model,
                     legendgroup=legendgroup
@@ -177,7 +195,7 @@ class PredictionsVisualizeForm(PredictionsForm):
                     width=0,
                     color=color_transparent,
                     fillcolor=color_transparent,
-                    x=x,
+                    x=xs[-1],
                     y=ys[-2],
                     name=model + ' stddev',
                     legendgroup=legendgroup + ' stddev'
@@ -188,7 +206,7 @@ class PredictionsVisualizeForm(PredictionsForm):
                     fillcolor=color_transparent,
                     fill='tonexty',
                     # https://plotly.com/javascript/reference/scatter/#scatter-fill  # noqa
-                    x=x,
+                    x=xs[-1],
                     y=ys[-1],
                     name=model + ' stddev',
                     legendgroup=legendgroup + ' stddev'
@@ -199,7 +217,8 @@ class PredictionsVisualizeForm(PredictionsForm):
             'xaxis': {
                 'title': x_label,
                 'type': 'linear',
-                'autorange': True
+                'autorange': True,
+                'range': axis_range(np.concatenate(xs).ravel()),
             },
             'yaxis': {
                 'title': y_label,
