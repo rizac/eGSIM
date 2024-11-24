@@ -504,5 +504,22 @@ class Test:
                 assert args[1]['mean'] is True
                 assert args[1]['normalise'] is True
 
+    @patch('egsim.smtk.residuals.get_ground_motion_values', side_effect=ValueError('a'))
+    def test_residuals_model_error(self,
+                                   mock_get_gmv,
+                                   # pytest fixtures:
+                                   client):
+        with open(self.request_filepath) as _:
+            inputdic = yaml.safe_load(_)
+        inputdic['data-query'] = '(vs30 >= 1000) & (mag>=7)'
+        inputdic['ranking'] = True
 
-# TODO: remove check residualsform (is done in output)
+        resp2 = client.post(self.url, data=inputdic,
+                            content_type='application/json')
+        resp1 = client.get(self.querystring(inputdic))
+        assert resp1.status_code == 400
+        err_msg = resp1.content
+        assert err_msg == resp2.content
+        expected_model = sorted(inputdic['model'])[0]
+        assert mock_get_gmv.called
+        assert f'{expected_model}: (ValueError) a' in str(err_msg)

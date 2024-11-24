@@ -234,7 +234,7 @@ class Test:
         resp2 = client.post(self.url, data=inputdic,
                             content_type='application/json')
         # WARNING THIS SHOULD BE A BUG FIXED IN FUTURE OPENQUAKE VERSIONS:
-        assert resp1.status_code == 500
+        assert resp1.status_code == 400
         assert 'AkkarBommer2010SWISS01' in self.error_message(resp2)
 
     def test_mismatching_imt_gsim(self,
@@ -275,3 +275,24 @@ class Test:
             assert self.error_message(resp1) == self.error_message(resp2)
             assert 'gsim' in self.error_message(resp1) and \
                    'imt' in self.error_message(resp1)
+
+    @patch('egsim.smtk.scenarios.get_ground_motion_values', side_effect=ValueError('a'))
+    def test_trellis_model_error(
+            self,
+            mock_get_gmv,
+            # pytest fixtures:
+            client):
+        """test trellis distance and distance stdev"""
+        with open(self.request_filepath) as _:
+            inputdic = dict(yaml.safe_load(_))
+
+        # and from now on,
+        resp1 = client.get(self.querystring(inputdic))
+        resp2 = client.post(self.url, data=inputdic,
+                            content_type=MimeType.json)
+        assert resp1.status_code == resp2.status_code == 400
+        err_msg = resp1.content
+        assert err_msg == resp2.content
+        expected_model = sorted(inputdic['model'])[0]
+        assert mock_get_gmv.called
+        assert f'{expected_model}: (ValueError) a' in str(err_msg)

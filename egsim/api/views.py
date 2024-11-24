@@ -18,6 +18,7 @@ from ..smtk.converters import dataframe2dict
 from .forms import APIForm, EgsimBaseForm, GsimInfoForm
 from .forms.scenarios import PredictionsForm
 from .forms.residuals import ResidualsForm
+from ..smtk.validators import ModelError
 
 
 class MimeType:  # noqa
@@ -135,7 +136,7 @@ class EgsimView(View):
         """
         Return a HttpResponse with default status set to self.CLIENT_ERR_CODE
         and custom message in the response body / content. For custom status,
-        provide the `status` keyword param. explicitly
+        provide the `status` explicitly as keyword argument
         """
         kwargs.setdefault('status', self.CLIENT_ERR_CODE)
         if not isinstance(message, (str, bytes)):
@@ -202,11 +203,13 @@ class APIFormView(EgsimView):
     ]
     ```
 
-    Advanced case: create a new :class:`ApiForm` instance by implementing the class 
-    attribute `formclass` and any method `response_[format]`, where `format` is any of 
-    the :class:`MimeType` attributes (the request 'format' parameter - default if 
-    missing 'json' - will then redirect to the relative `response` method, returning a 
-    400 HttpResponse error if not implemented):
+    Advanced case: create a new :class:`APIFormView` instance by 1) implementing the 
+    class attribute `formclass` and 2) any method `response_[format]` returning the
+    relative HttpResponse (see :class:`MimeType` and `sel.respomse_json`, already 
+    implemented for all subclasses). 
+    During the processing of a request, this class reads the request's body 'format' 
+    parameter (default if missing 'json') redirecting to the relative `response` method, 
+    returning a 400 HttpResponse error if not implemented). Example:
     ```
     class MyApiFormView(APIFormView):
 
@@ -282,6 +285,17 @@ class GsimInfoView(APIFormView):
 class SmtkView(APIFormView):
     """APIFormView for smtk (strong motion toolkit) output (e.g. Predictions or
     Residuals, set in the `formclass` class attribute"""
+
+    def response(self,
+                 request: HttpRequest,
+                 data: dict,
+                 files: Optional[dict] = None):
+        """Calls superclass method but catch ModelError(s) returning the appropriate
+        HTTPResponse (Client error)"""
+        try:
+            return super().response(request=request, data=data, files=files)
+        except ModelError as m_err:
+            return self.error_response(m_err)
 
     def response_csv(  # noqa
             self, form_output: pd.DataFrame, form: APIForm, **kwargs  # noqa
