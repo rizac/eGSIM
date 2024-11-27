@@ -366,7 +366,7 @@ def get_column_name(flatfile: pd.DataFrame, column: str) -> Union[str, None]:
     ff_cols = set(flatfile.columns)
     cols = set(FlatfileMetadata.get_aliases(column)) & ff_cols
     if len(cols) > 1:
-        raise IncompatibleColumnError(*cols)
+        raise IncompatibleColumnError(cols)
     elif len(cols) == 0:
         return None
     else:

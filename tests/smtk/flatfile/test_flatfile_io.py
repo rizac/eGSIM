@@ -18,6 +18,7 @@ from egsim.smtk.flatfile import (read_flatfile,
                                  FlatfileError,
                                  get_dtype_of, optimize_flatfile_dataframe, ColumnDtype)
 from egsim.smtk.flatfile import FlatfileMetadata, _load_flatfile_metadata
+from egsim.smtk.validators import ConflictError
 
 
 def test_read_flatifle_yaml():
@@ -140,18 +141,23 @@ def test_flatfile_exceptions():
                      ['st_lon', 'hypo_lat', 'unknown']]:
 
             exc = exc_cls(*cols)
+            if issubclass(exc_cls, ConflictError):
+                exc = exc_cls(*[cols])
+
             assert all(_ in str(exc) for _ in cols)
 
             try:
-                raise exc_cls(*cols)
+                raise exc
             except FlatfileError as exc:
                 import traceback
                 from io import StringIO
                 s = StringIO()
                 traceback.print_exc(file=s)
                 strr = s.getvalue()
-                # assert f'{exc_cls.__name__}:' in strr
-                assert ", ".join(sorted(cols)) in strr
+                if not issubclass(exc_cls, ConflictError):
+                    assert ", ".join(sorted(cols)) in strr
+                elif len(cols) > 1:
+                    assert "+".join(sorted(cols)) in strr
 
 
 def test_optimize_flatfile():

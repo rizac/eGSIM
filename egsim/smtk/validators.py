@@ -101,15 +101,15 @@ def validate_inputs(gsims: dict[str, GMPE], imts: dict[str, IMT]):
         instance, as output from `harmonize_input_imts`
     """
     imt_names = {n if sa_period(i) is None else n[:2] for n, i in imts.items()}
-    errors = {}
+    errors = []
     for gm_name, gsim_inst in gsims.items():
         invalid_imts = imt_names - intensity_measures_defined_for(gsim_inst)
         if not invalid_imts:
             continue
-        errors[gm_name] = list(invalid_imts)
+        errors.extend([gm_name, i] for i in invalid_imts)
 
     if errors:
-        raise IncompatibleModelImtError(errors) from None
+        raise IncompatibleModelImtError(*errors) from None
 
     return gsims, imts
 
@@ -152,22 +152,28 @@ class InputError(ValueError):
 
 
 class ModelError(InputError):
+    """Error for invalid models (e.g., misspelled, unable to compute predictions)"""
     pass
 
 
 class ImtError(InputError):
+    """Error for invalid intensity measures (e.g., misspelled)"""
     pass
 
 
-class IncompatibleModelImtError(InputError):
-    """Given any process with input models and input imts, this class is initialized
-    with a dict of input model names mapped to the input imts they do NOT define
-    (as class names, i.e. SA, not SA(period))
+class ConflictError(ValueError):
+    """Describes conflicts among entities (model and imt, flatfile column names).
+    Each argument to this class is a conflict, represented by a sequence of the
+    items E1, ... EN in conflict within each other. As such,
+    `str(ConflictError([E1, E2, E3], ...)) =
+    str(E1) + "+" + str(E2) + "+" + str(E3) + ", " + ...`
     """
 
     def __str__(self):
         """Custom error msg"""
-        arg = self.args[0]
-        return (
-            ", ".join(f'{m}+{i}' for m in sorted(arg.keys()) for i in sorted(arg[m]))
-        )
+        return ", ".join(sorted(f'+'.join(sorted(a)) for a in self.args))
+
+
+class IncompatibleModelImtError(ConflictError):
+    """Describes conflicts within model and imts"""
+    pass

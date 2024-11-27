@@ -19,7 +19,7 @@ try:
 except ImportError:
     from yaml import SafeLoader  # same as using yaml.safe_load
 
-from .validators import sa_period, InputError
+from .validators import sa_period, InputError, ConflictError
 
 _csv_default_args = (
     ('na_values', ("", "null", "NULL", "None",
@@ -226,7 +226,7 @@ def validate_flatfile_dataframe(
     for c in dfr.columns:
         aliases = set(FlatfileMetadata.get_aliases(c))
         if len(aliases & ff_cols) > 1:
-            raise IncompatibleColumnError(*list(aliases & ff_cols))
+            raise IncompatibleColumnError(list(aliases & ff_cols))
         if not has_imt and FlatfileMetadata.get_type(c) == ColumnType.intensity:
             has_imt = True
 
@@ -466,7 +466,7 @@ class MissingColumnError(FlatfileError, AttributeError, KeyError):
     pass
 
 
-class IncompatibleColumnError(FlatfileError):
+class IncompatibleColumnError(ConflictError, FlatfileError):
     pass
 
 

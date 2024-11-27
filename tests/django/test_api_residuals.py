@@ -120,8 +120,8 @@ class Test:
         assert resp2.status_code == 400
         # account for different ordering in error columns:
         assert self.error_message(resp2) in \
-               ("flatfile: column names conflict evt_lat, hypo_lat",
-                "flatfile: column names conflict hypo_lat, evt_lat")
+               ("flatfile: column names conflict evt_lat+hypo_lat",
+                "flatfile: column names conflict hypo_lat+evt_lat")
 
         def fake_post(self, request):  # noqa
             # Django testing class `client` expects every data in the `data` argument
