@@ -142,7 +142,9 @@ def validate_imt_sa_limits(model: GMPE, imts: dict[str, IMT]) -> dict[str, IMT]:
 
 
 class InputError(ValueError):
-    """Base **abstract** exception for any input error (model, imt, flatfile)"""
+    """Base **abstract** exception for any input error (model, imt, flatfile).
+    Note that `str(InputError(arg1, arg2, ...)) = str(arg1) + ", " + str(arg2) + ...
+    """
 
     def __str__(self):
         """Reformat ``str(self)``"""

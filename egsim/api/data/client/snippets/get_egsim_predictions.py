@@ -36,11 +36,12 @@ def get_egsim_predictions(
 
     A [pandas DataFrame](https://pandas.pydata.org/docs/user_guide/dsintro.html#dataframe)
     
-    Each row denotes a scenario (i.e., a combination of a configured Rupture and Site
-    properties), the first column a unique scenario identifier (incremental and
-    starting from 0) and each remaining column denotes:
+    Each row denotes a scenario (i.e., a combination of a given Rupture and Site) and
+    each column the scenario configured or computed properties. More specifically, except
+    the first column (denoting a unique scenario identifier, incremental and starting
+    from 0), each column denotes:
 
-    - a computed prediction if the first chunk is an intensity measure type
+    - a computed prediction if the first chunk of ts name is an intensity measure type
       (e.g. "PGA median BindiEtAl2014Rjb"): in this case, the second chunk is the metric 
       type (e.g. "median") and the third the predicting model ("BindiEtAl2014Rjb")
     

@@ -453,10 +453,9 @@ def cast_to_dtype(
 
 
 class FlatfileError(InputError):
-    """General flatfile column(s) error. Inherits from smtk.validators.InputError.
-    Note that the str representation equals the init arguments comma-separated:
-    FlatfileError(arg1, arg2, ...) -> f"{str(arg1)}, {str(arg2)}, ..."
-    See subclasses for details
+    """Subclass of :class:`smtk.validators.InputError` for describing flatfile
+    errors (specifically, column errors). See subclasses for details. Remember
+    that `str(FlatfileError(arg1, arg2, ...)) = str(arg1) + ", " + str(arg2) + ...
     """
     pass
 
@@ -484,8 +483,8 @@ class FlatfileMetadata:
 
     @staticmethod
     def has(column: str) -> bool:
-        """Return whether the given column name is a registered flatfile column
-        (column aliases included)
+        """Return whether the given argument is a registered flatfile column name
+        (including aliases)
         """
         return bool(FlatfileMetadata._props_of(column))
 
@@ -533,12 +532,12 @@ class FlatfileMetadata:
 
     @staticmethod
     def get_dtype(column: str) -> Union[ColumnDtype, None]:
-        """Return the data type of the given column name, as item of the
-        `ColumnDtype` Enum item, or None (=no data type set for the column).
-        If the column dtype is categorical, this method returns the (unique) dtype
-        of all categories. This means that `ColumnDtype.category` is never returned,
-        and to check that the column dtype is categorical, check that
-        `get_categories(column)` returns a non-empty list
+        """Return the data type of the given column name, as `ColumnDtype` Enum item,
+        or None if the column ha no known data type.
+        If the column dtype is categorical, this method will *not* return
+        `ColumnDtype.category`, but the (unique) dtype of all categories (e.g.,
+        `ColumnDtype.str`). Hence, if you want to know whether the column dtype is
+        categorical, check that `get_categories(column)` returns a non-empty list
         """
         dtype = FlatfileMetadata._get_dtype(column)
         if isinstance(dtype, pd.CategoricalDtype):
