@@ -67,7 +67,7 @@ class Test:
         # test wrong flatfile:
         resp2 = client.post(self.url, data=inputdic2)
         assert resp2.status_code == 400
-        assert self.error_message(resp2) == "data-query: name 'vs30' is not defined"
+        assert self.error_message(resp2) == 'data-query: undefined column "vs30"'
 
         # 1b no rows matching query:
         csv = SimpleUploadedFile("file.csv", b"PGA,vs30,mag,b,c,d\n1.1,,,",

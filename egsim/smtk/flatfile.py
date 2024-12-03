@@ -1,9 +1,11 @@
 """flatfile root module"""
 from __future__ import annotations
-from io import IOBase
+from io import IOBase, StringIO
 from os.path import join, dirname
 from datetime import datetime
 import re
+import tokenize
+
 from pandas.core.base import IndexOpsMixin
 from pandas.errors import ParserError
 from tables import HDF5ExtError
@@ -247,39 +249,6 @@ def optimize_flatfile_dataframe(dfr: pd.DataFrame):
                 dfr[c] = cat_dtype
 
 
-def query(flatfile: pd.DataFrame, query_expression: str,
-          raise_no_rows=True) -> pd.DataFrame:
-    """Call `flatfile.query` with some utilities:
-     - datetime can be input in the string, e.g. "datetime(2016, 12, 31)"
-     - boolean can be also lower case ("true" or "false")
-     - Some series methods with all args optional can also be given with no brackets
-       (e.g. ".notna", ".median")
-    """
-    # Setup custom keyword arguments to dataframe query. See also
-    # val2str for consistency (e.f. datetime, bools)
-    __kwargs = {
-        # add support for `datetime("<iso_string>")` inside expressions:
-        'local_dict': {
-            'datetime': lambda a: datetime.fromisoformat(a)
-        },
-        'global_dict': {},  # 'pd': pd, 'np': np
-        # add support for bools lower case (why doesn't work if set in local_dict?):
-        'resolvers': [{'true': True, 'false': False}]
-    }
-    # methods which can be input without brackets (regex pattern group):
-    __meths = '(mean|median|min|max|notna)'
-    # flatfile columns (as regex pattern group):
-    __ff_cols = f"({'|'.join(re.escape(_) for _ in flatfile.columns)})"
-    # Append brackets to methods in query expression, if needed:
-    query_expression = re.sub(f"\\b{__ff_cols}\\.{__meths}(?![\\w\\(])", r"\1.\2()",
-                              query_expression)
-    # evaluate expression:
-    ret = flatfile.query(query_expression, **__kwargs)
-    if raise_no_rows and ret.empty:
-        raise FlatfileError('no rows matching query')
-    return ret
-
-
 # Flatfile columns utilities:
 
 class ColumnType(Enum):
@@ -474,6 +443,11 @@ class ColumnDataError(FlatfileError, ValueError, TypeError):
     pass
 
 
+class FlatfileQueryError(FlatfileError):
+    """Error while filtering flatfile rows via query expressions"""
+    pass
+
+
 # registered columns:
 
 class FlatfileMetadata:
@@ -617,3 +591,132 @@ def _harmonize_col_props(name: str, props: dict):
         if k in props:
             props[k] = cast_to_dtype(props[k], dtype)
     return props
+
+
+# flatfile query expression
+
+
+def query(flatfile: pd.DataFrame, query_expression: str,
+          raise_no_rows=True) -> pd.DataFrame:
+    """Call `flatfile.query` with some utilities:
+     - ISO-861 strings (e.g. "2006-01-31") will be converted to datetime objects
+     - booleans can be also lower case (true or false)
+     - Some series methods can be called with the dot dot notation [col].[method]:
+       notna, median, mean, min, max
+    """
+    # Setup custom keyword arguments to dataframe query. See also
+    # val2str for consistency (e.f. datetime, bools)
+    __kwargs = {
+        'local_dict': {},
+        'global_dict': {},  # 'pd': pd, 'np': np
+        # add support for bools lower case (why doesn't work if set in local_dict?):
+        'resolvers': [prepare_expr(query_expression, flatfile.columns)]
+    }
+    # evaluate expression:
+    try:
+        ret = flatfile.query(query_expression, **__kwargs)
+    except Exception as exc:
+        raise FlatfileQueryError(str(exc)) from None
+    if raise_no_rows and ret.empty:
+        raise FlatfileQueryError('no rows matching query')
+    return ret
+
+
+def prepare_expr(expr: str, columns: list[str]):
+
+    # valid names:
+    cols = set(columns)
+    # backtick-quoted column names is pandas syntax. Check them now and replace them
+    # with a valid name (replacement_col):
+    replacement_col = '_'
+    while replacement_col in columns:
+        replacement_col += '_'
+    new_expr = re.sub(f'`.*?`', replacement_col, expr)
+    if new_expr != expr:
+        # check that columns are correct
+        cols.add(replacement_col)
+        for match in re.finditer(f'`.*?`', expr):
+            if match.group()[1:-1] not in columns:
+                raise FlatfileQueryError(f'undefined column "{match.group()[1:-1]}"')
+
+    meth_placeholder = replacement_col + '_'
+    while meth_placeholder in cols:
+        meth_placeholder += '_'
+    new_expr = re.sub(r'\.\s*(notna|mean|std|median|min|max)\s*\(\s*\)',
+                      f' {meth_placeholder} ',
+                      new_expr)
+
+    # analyze string and return the replacements to be done:
+    replacements = {}
+    toknums = []
+    tokvals = []  # either str, or the int tokenize.NEWLINE
+    # allowed sequences:
+    allowed_names = cols | {'true', 'True', 'false', 'False'}
+    token_generator = tokenize.generate_tokens(StringIO(new_expr).readline)
+    for toknum, tokval, start, _, _ in token_generator:
+        last_toknum = toknums[-1] if len(toknums) else None
+        last_tokval = tokvals[-1] if len(tokvals) else None
+
+        if toknum == tokenize.NAME:
+            if tokval not in cols:
+                if tokval == 'true':
+                    replacements[tokval] = True
+                elif tokval == 'false':
+                    replacements[tokval] = False
+        elif toknum == tokenize.STRING:
+            try:
+                dtime = datetime.fromisoformat(tokval[1:-1])
+                replacements[tokval] = dtime
+            except (TypeError, ValueError):
+                pass
+
+        skip_check_sequence = tokval == meth_placeholder and last_tokval in cols
+        if not skip_check_sequence:
+            if toknum == tokenize.NAME and tokval not in allowed_names:
+                raise FlatfileQueryError(f'undefined column "{tokval}"')
+            if not valid_expr_sequence(last_toknum, last_tokval, toknum, tokval):
+                if last_toknum is None:
+                    raise FlatfileQueryError(f'invalid first chunk {tokval}')
+                elif last_toknum == tokenize.NEWLINE:
+                    raise FlatfileQueryError(f'multi-line expression not allowed')
+                elif toknum == tokenize.NEWLINE:
+                    raise FlatfileQueryError(f'invalid last chunk "{last_tokval}"')
+                else:
+                    raise FlatfileQueryError(f'invalid sequence '
+                                             f'"{last_tokval}" + "{tokval}"')
+
+        tokvals.append(tokval)
+        toknums.append(toknum)
+
+    return replacements
+
+
+def valid_expr_sequence(tok_num1: int, tok_val1: str, tok_num2: int, tok_val2: str):
+    OP, STRING, NAME, NUMBER, NEWLINE, EOM = \
+        (tokenize.OP, tokenize.STRING, tokenize.NAME, tokenize.NUMBER, tokenize.NEWLINE,
+         tokenize.ENDMARKER)
+    if tok_num1 is None:
+        if tok_num2 == OP:
+            return tok_val2 in '(~'
+        return tok_num2 in {NAME, NUMBER, STRING}
+    elif tok_num1 == NEWLINE:
+        return tok_num2 == EOM
+    elif tok_num2 == NEWLINE:
+        return tok_num1 in {NUMBER, NAME, STRING} or tok_val1 == ')'
+    elif (tok_num1, tok_num2) == (OP, OP):
+        return (tok_val1 + tok_val2 in
+                {'(~', '~(', '((', '~~', '))', '&(', '|(', ')|', ')&'})
+    elif (tok_num1, tok_num2) == (NAME, OP):
+        return tok_val2 in {'==', '!=', '<', '<=', '>', '>=', ')', '+', '-', '*', '/'}
+    elif (tok_num1, tok_num2) == (OP, NAME):
+        return tok_val1 in {'==', '!=', '<', '<=', '>', '>=', '(', '+', '-', '*', '/'}
+    elif (tok_num1, tok_num2) == (NUMBER, OP):
+        return tok_val2 in {'==', '!=', '<', '<=', '>', '>=', ')', '+', '-', '*', '/'}
+    elif (tok_num1, tok_num2) == (OP, NUMBER):
+        return tok_val1 in {'==', '!=', '<', '<=', '>', '>=', '(', '+', '-', '*', '/'}
+    elif (tok_num1, tok_num2) == (STRING, OP):
+        return tok_val2 in {'==', '!=', '<', '<=', '>', '>=', ')'}
+    elif (tok_num1, tok_num2) == (OP, STRING):
+        return tok_val1 in {'==', '!=', '<', '<=', '>', '>=', '('}
+    else:
+        return False

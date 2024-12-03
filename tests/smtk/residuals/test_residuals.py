@@ -105,7 +105,7 @@ def test_residuals_execution():
             # & Youngs (2008; 2014) case)
             _computed = []
             key = (Clabel.input, ColumnType.rupture.value, 'event_id')
-            for ev_id, dfr in res_df.groupby([key]):
+            for ev_id, dfr in res_df.groupby([key], observed=False):
                 vals = dfr[lbl].values
                 if ((vals - vals[0]) < 1.0E-12).all():
                     _computed.append(vals[0])

@@ -8,10 +8,11 @@ from django.core.files.uploadedfile import TemporaryUploadedFile
 from django.forms import Form
 from django.forms.fields import CharField, FileField
 
-from egsim.smtk import (ground_motion_properties_required_by, FlatfileError,
+from egsim.smtk import (ground_motion_properties_required_by,
                         intensity_measures_defined_for, get_sa_limits)
 from egsim.smtk.flatfile import (read_flatfile, get_dtype_of, FlatfileMetadata,
                                  query as flatfile_query, EVENT_ID_COLUMN_NAME,
+                                 FlatfileError, FlatfileQueryError,
                                  IncompatibleColumnError)
 from egsim.api import models
 from egsim.api.forms import EgsimBaseForm, APIForm, GsimForm
@@ -132,7 +133,7 @@ class FlatfileForm(EgsimBaseForm):
         if selexpr:
             try:
                 cleaned_data['flatfile'] = flatfile_query(dataframe, selexpr).copy()
-            except Exception as exc:
+            except FlatfileQueryError as exc:
                 # add_error removes also the field from self.cleaned_data:
                 self.add_error(key, str(exc))
 

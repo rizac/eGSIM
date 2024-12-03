@@ -16,7 +16,8 @@ from egsim.smtk.flatfile import (read_flatfile,
                                  query,
                                  ColumnType,
                                  FlatfileError,
-                                 get_dtype_of, optimize_flatfile_dataframe, ColumnDtype)
+                                 get_dtype_of, optimize_flatfile_dataframe, ColumnDtype,
+                                 FlatfileQueryError)
 from egsim.smtk.flatfile import FlatfileMetadata, _load_flatfile_metadata
 from egsim.smtk.validators import ConflictError
 
@@ -74,7 +75,7 @@ def test_query():
             'i': 1,
             'f': 5.,
             's': '"x"',
-            'd': 'datetime("' + (now + timedelta(seconds=1)).isoformat('T') + '")',
+            'd': '"' + (now + timedelta(seconds=1)).isoformat('T') + '"',
             'b': 'false'
         }[c]
         with pytest.raises(FlatfileError) as ferr:
@@ -90,20 +91,21 @@ def test_query():
         d[new_col] = d[col].astype('category')
         new_d = query(d, f'{new_col}.notna()')
         assert len(new_d) == 2 if col in ('i', 'b') else 1
-        new_d = query(d, f'{new_col}.notna')
-        assert len(new_d) == 2 if col in ('i', 'b') else 1
+        with pytest.raises(FlatfileError) as ferr:
+            new_d = query(d, f'{new_col}.notna')
+            # assert len(new_d) == 2 if col in ('i', 'b') else 1
         # just test some series method works (no assert):
         if col in ('b', 'i', 'f', 'd'):
             for method in ('median', 'mean', 'max', 'min'):
-                query(d, f'{col} == {col}.{method}', raise_no_rows=False)
+                # query(d, f'{col} == {col}.{method}', raise_no_rows=False)
                 query(d, f'{col} == {col}.{method}()', raise_no_rows=False)
         else:
-            with pytest.raises(TypeError) as terr:  # unsupported for string:
+            with pytest.raises(FlatfileQueryError) as terr:  # unsupported for string:
                 for method in ('median', 'mean', 'max', 'min'):
-                    query(d, f'{col} == {col}.{method}')
+                    # query(d, f'{col} == {col}.{method}')
                     query(d, f'{col} == {col}.{method}()')
-        with pytest.raises(TypeError) as terr:  # unsupported for categorical:
-            query(d, f'{new_col} == {new_col}.{method}')
+        with pytest.raises(FlatfileQueryError) as terr:  # unsupported for categorical:
+            # query(d, f'{new_col} == {new_col}.{method}')
             query(d, f'{new_col} == {new_col}.{method}()')
         # test querying first column:
         query_expr = f'{col} == {d[col].values.tolist()[0]}'
@@ -112,7 +114,7 @@ def test_query():
         elif col == 's':
             query_expr = f'{col} == "{d[col].values.tolist()[0]}"'
         elif col == 'd':
-            query_expr = f'{col} <= datetime("{now.isoformat()}")'
+            query_expr = f'{col} <= "{now.isoformat()}"'
         # test equality with first line
         new_d = query(d, query_expr)
         assert len(new_d) == 1
@@ -121,7 +123,7 @@ def test_query():
         if not prev_expr:
             prev_expr = query_expr
         else:
-            prev_expr += f' & ({query_expr})'
+            prev_expr = f'({prev_expr}) & ({query_expr})'
             new_d2 = query(d, prev_expr)
             pd.testing.assert_frame_equal(new_d, new_d2)
 
