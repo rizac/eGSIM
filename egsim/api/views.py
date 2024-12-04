@@ -14,11 +14,11 @@ from django.http import (JsonResponse, HttpRequest, QueryDict, FileResponse,
 from django.http.response import HttpResponse
 from django.views.generic.base import View
 
-from ..smtk.converters import dataframe2dict
+from egsim.smtk.converters import dataframe2dict
+from egsim.smtk.validation import ModelError
 from .forms import APIForm, EgsimBaseForm, GsimInfoForm
 from .forms.scenarios import PredictionsForm
 from .forms.residuals import ResidualsForm
-from ..smtk.validators import ModelError
 
 
 class MimeType:  # noqa

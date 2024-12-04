@@ -98,6 +98,26 @@ def imt_name(imtx: Union[Callable, IMT]) -> str:
     return imtx.__name__
 
 
+def sa_period(obj: Union[float, str, IMT]) -> Union[float, None]:
+    """Return the period (float) from the given `obj` argument, or None if `obj`
+    does not indicate a Spectral Acceleration object/string with a finite period
+    (e.g. "SA(NaN)", "SA(inf)", "SA" return None).
+
+    :arg: str or `IMT` instance, such as "SA(1.0)" or `imt.SA(1.0)`
+    """
+    try:
+        imt_inst = imt(obj)
+        if not imt_name(imt_inst).startswith('SA('):
+            return None
+    except (TypeError, KeyError, ValueError):
+        return None
+
+    period = imt_inst.period
+    # check also that the period is finite (SA('inf') and SA('nan') are possible:
+    # this function is intended to return a "workable" period):
+    return float(period) if np.isfinite(period) else None
+
+
 def get_sa_limits(
         model: Union[str, GMPE]
 ) -> Union[tuple[float, float], None]:

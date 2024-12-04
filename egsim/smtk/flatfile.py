@@ -22,7 +22,8 @@ try:
 except ImportError:
     from yaml import SafeLoader  # same as using yaml.safe_load
 
-from .validators import sa_period, InputError, ConflictError
+from egsim.smtk.registry import sa_period
+from egsim.smtk.validation import InputError, ConflictError
 
 _csv_default_args = (
     ('na_values', ("", "null", "NULL", "None",

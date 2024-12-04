@@ -20,7 +20,7 @@ from openquake.hazardlib.source.point import PointSource
 from .registry import get_ground_motion_values, Clabel
 from .flatfile import FlatfileMetadata
 from .converters import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
-from .validators import (validate_inputs, harmonize_input_gsims,
+from .validation import (validate_inputs, harmonize_input_gsims,
                          harmonize_input_imts, validate_imt_sa_limits, ModelError)
 
 

@@ -2,7 +2,7 @@ import pytest
 from openquake.hazardlib import imt
 
 from egsim.smtk import validate_inputs, harmonize_input_gsims, harmonize_input_imts, gsim
-from egsim.smtk.validators import IncompatibleModelImtError, validate_imt_sa_limits
+from egsim.smtk.validation import IncompatibleModelImtError, validate_imt_sa_limits
 
 
 def test_invalid_imts(capsys):

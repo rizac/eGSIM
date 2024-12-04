@@ -17,7 +17,7 @@ from egsim.api import models
 from egsim.smtk import (validate_inputs, harmonize_input_gsims,
                         harmonize_input_imts, gsim)
 from egsim.smtk.registry import gsim_info
-from egsim.smtk.validators import IncompatibleModelImtError, ImtError, ModelError
+from egsim.smtk.validation import IncompatibleModelImtError, ImtError, ModelError
 
 _base_singleton_renderer = BaseRenderer()  # singleton no-op renderer, see below
 

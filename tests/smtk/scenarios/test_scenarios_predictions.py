@@ -16,7 +16,7 @@ from scipy.interpolate import interp1d
 from egsim.smtk.registry import Clabel
 from egsim.smtk.flatfile import ColumnType, FlatfileMetadata
 from egsim.smtk import scenarios
-from egsim.smtk.validators import ModelError
+from egsim.smtk.validation import ModelError
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), "data")
 

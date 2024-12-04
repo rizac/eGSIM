@@ -12,8 +12,7 @@ from egsim.api.forms.scenarios import PredictionsForm
 from django.forms.fields import ChoiceField, CharField
 
 from egsim.smtk.flatfile import ColumnType
-from egsim.smtk.registry import Clabel
-from egsim.smtk.validators import sa_period
+from egsim.smtk.registry import Clabel, sa_period
 from .plotly import (colors_cycle, axis_type, axis_range, scatter_trace,
                      bar_trace, line_trace, histogram_trace, AxisType)
 from ..smtk.converters import datetime2float

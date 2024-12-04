@@ -114,7 +114,7 @@ def dataframe2dict(
     assert orient in ('list', 'dict'), 'orient should be either "list" ot "dict"'
     if not as_json and not drop_empty_levels:
         # use pandas default method:
-        return dframe.to_dict(orient=orient)
+        return dframe.to_dict(orient=orient)  # noqa
     # customized output:
     output = {}
     df_na = None

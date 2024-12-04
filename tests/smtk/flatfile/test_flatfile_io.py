@@ -19,7 +19,7 @@ from egsim.smtk.flatfile import (read_flatfile,
                                  get_dtype_of, optimize_flatfile_dataframe, ColumnDtype,
                                  FlatfileQueryError)
 from egsim.smtk.flatfile import FlatfileMetadata, _load_flatfile_metadata
-from egsim.smtk.validators import ConflictError
+from egsim.smtk.validation import ConflictError
 
 
 def test_read_flatifle_yaml():

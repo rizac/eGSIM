@@ -9,7 +9,7 @@ from openquake.hazardlib.imt import IMT
 from openquake.hazardlib.gsim.base import GMPE
 
 from .registry import (gsim_name, intensity_measures_defined_for, gsim, imt,
-                       get_sa_limits, imt_name)
+                       get_sa_limits, imt_name, sa_period)
 
 
 def harmonize_input_gsims(gsims: Iterable[Union[str, GMPE]]) -> dict[str, GMPE]:
@@ -68,26 +68,6 @@ def _imtkey(imt_inst) -> tuple[str, float]:
         return 'SA', period
     else:
         return imt_name(imt_inst), -np.inf
-
-
-def sa_period(obj: Union[float, str, IMT]) -> Union[float, None]:
-    """Return the period (float) from the given `obj` argument, or None if `obj`
-    does not indicate a Spectral Acceleration object/string with a finite period
-    (e.g. "SA(NaN)", "SA(inf)", "SA" return None).
-
-    :arg: str or `IMT` instance, such as "SA(1.0)" or `imt.SA(1.0)`
-    """
-    try:
-        imt_inst = imt(obj)
-        if not imt_name(imt_inst).startswith('SA('):
-            return None
-    except (TypeError, KeyError, ValueError):
-        return None
-
-    period = imt_inst.period
-    # check also that the period is finite (SA('inf') and SA('nan') are possible:
-    # this function is intended to return a "workable" period):
-    return float(period) if np.isfinite(period) else None
 
 
 def validate_inputs(gsims: dict[str, GMPE], imts: dict[str, IMT]):

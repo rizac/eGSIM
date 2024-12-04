@@ -14,7 +14,7 @@ from egsim.smtk import residuals
 from egsim.smtk.flatfile import read_flatfile, ColumnType
 from scipy.constants import g
 from egsim.smtk.registry import Clabel
-from egsim.smtk.validators import ModelError
+from egsim.smtk.validation import ModelError
 
 # load flatfile once:
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), "data")

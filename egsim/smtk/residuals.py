@@ -21,9 +21,9 @@ from openquake.hazardlib.scalerel import PeerMSR
 
 from .flatfile import (FlatfileError, MissingColumnError, FlatfileMetadata,
                        ColumnDataError, IncompatibleColumnError, EVENT_ID_COLUMN_NAME)
-from .validators import (validate_inputs, harmonize_input_gsims, sa_period,
+from .validation import (validate_inputs, harmonize_input_gsims,
                          harmonize_input_imts, validate_imt_sa_limits, ModelError)
-from .registry import (get_ground_motion_values, Clabel,
+from .registry import (get_ground_motion_values, Clabel, sa_period,
                        ground_motion_properties_required_by)
 from .converters import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
 
