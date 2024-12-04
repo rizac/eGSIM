@@ -110,7 +110,8 @@ extra_dtype = {
     'st_nation_code': 'category',
     'network_code': 'category',
     'station_code': 'category',
-    'location_code': 'category',
+    'location_code': 'str',  # location_code is ambiguous ('00', '01',...).
+                             # Force str and convert to category in post_process
     'housing_code': 'category',
     'ec8_code': 'category'
 }
@@ -123,6 +124,9 @@ def post_process(flatfile: pd.DataFrame) -> pd.DataFrame:
     """
 
     dfr = flatfile  # legacy code below use `dfr`, too tired to rename
+
+    # loc code a scategorical:
+    dfr['loc_code'] = dfr['loc_code'].astype('category')
 
     # set station id as int:
     dfr['sta_id'] = \

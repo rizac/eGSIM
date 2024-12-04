@@ -257,7 +257,11 @@ def get_hr_flatfile_column_meta(name: str, values: Optional[pd.Series] = None) -
 
     if FlatfileMetadata.has(name):
         c_dtype = FlatfileMetadata.get_dtype(name)
-        c_categories = FlatfileMetadata.get_categories(name)
+        cat_dtype = FlatfileMetadata.get_categorical_dtype(name)
+        if cat_dtype is not None:
+            # c_categories is a pandas CategoricalStype. So:
+            c_dtype = get_dtype_of(cat_dtype.categories)
+            c_categories = cat_dtype.categories.tolist()
         c_type = getattr(FlatfileMetadata.get_type(name), 'value', "")
         c_help = FlatfileMetadata.get_help(name) or ""
         c_aliases = FlatfileMetadata.get_aliases(name)

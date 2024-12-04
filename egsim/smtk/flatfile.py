@@ -1,5 +1,6 @@
 """flatfile root module"""
 from __future__ import annotations
+
 from io import IOBase, StringIO
 from os.path import join, dirname
 from datetime import datetime
@@ -57,7 +58,7 @@ def read_flatfile(
     :param dtypes: dict of file column names mapped to user-defined data types, to
         check and cast data after the data is read. Standard flatfile columns do not
         need to be present. If they are, the value here will overwrite the default dtype,
-        if set. Columns in `dtype` not present in the file will be ignored.
+        if set. Columns in `dtypes` not present in the file will be ignored.
         Dict values can be either 'int', 'bool', 'float', 'str', 'datetime', 'category'`,
         list, pandas `CategoricalDtype`: the last three denote data that can
         take only a limited amount of possible values and should be mostly used with
@@ -98,6 +99,8 @@ def read_flatfile(
         else:
             kwargs['sep'] = csv_sep
 
+        kwargs.setdefault('dtype', {})
+        kwargs['dtype'] |= dtypes or {}
         try:
             dfr = pd.read_csv(filepath_or_buffer, **kwargs)
         except ValueError as exc:
@@ -197,7 +200,9 @@ def validate_flatfile_dataframe(
                         invalid_columns.append(col)
                         continue
         else:
-            xp_dtype = FlatfileMetadata._get_dtype(col)  # noqa
+            xp_dtype = FlatfileMetadata.get_dtype(col)
+            if xp_dtype == ColumnDtype.category:
+                xp_dtype = FlatfileMetadata.get_categorical_dtype(col)
 
         if xp_dtype is None:
             continue
@@ -507,26 +512,25 @@ class FlatfileMetadata:
     @staticmethod
     def get_dtype(column: str) -> Union[ColumnDtype, None]:
         """Return the data type of the given column name, as `ColumnDtype` Enum item,
-        or None if the column ha no known data type.
-        If the column dtype is categorical, this method will *not* return
-        `ColumnDtype.category`, but the (unique) dtype of all categories (e.g.,
-        `ColumnDtype.str`). Hence, if you want to know whether the column dtype is
-        categorical, check that `get_categories(column)` returns a non-empty list
+        or None if the column has no known data type. If the return value is
+        `ColumnDtype.category`, more info can be obtained via
+        `get_categorical_dtype(column)`
         """
         dtype = FlatfileMetadata._get_dtype(column)
         if isinstance(dtype, pd.CategoricalDtype):
-            return get_dtype_of(dtype.categories)
+            return ColumnDtype.category
         return dtype
 
     @staticmethod
-    def get_categories(column: str) -> list:
-        """Return the list of possible values that the column can have
-        (aka categories, all the same dtype) or an empty list otherwise
+    def get_categorical_dtype(column: str) -> Union[pd.CategoricalDtype, None]:
+        """Return the pandas CategoricalDtype, a data type for categorical data, for
+        the given column. To get the possible categories, use the `.categories` attribute
+        of the returned object. Return None if the column data type is not categorical
         """
         dtype = FlatfileMetadata._get_dtype(column)
         if isinstance(dtype, pd.CategoricalDtype):
-            return dtype.categories.tolist()
-        return []
+            return dtype
+        return None
 
     @staticmethod
     def _get_dtype(column: str) -> Union[pd.CategoricalDtype, ColumnDtype, None]:

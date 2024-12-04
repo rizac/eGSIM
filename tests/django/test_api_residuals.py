@@ -168,7 +168,7 @@ class Test:
         """
 
         # FIRST we test that the current pandas version does NOT support
-        # upload from file
+        # reading HDF from stream:
         dfr = pd.read_csv(BytesIO(self.flatfile_tk_content))
         bytes_io = write_df_to_hdf_stream({'egsim': dfr})
         with pytest.raises(Exception) as exc:
