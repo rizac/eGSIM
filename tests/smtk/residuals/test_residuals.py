@@ -18,7 +18,7 @@ from egsim.smtk.validators import ModelError
 
 # load flatfile once:
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), "data")
-ifile = os.path.join(BASE_DATA_PATH, "residual_tests_esm_data.csv" )
+ifile = os.path.join(BASE_DATA_PATH, "residual_tests_esm_data.csv")
 _flatfile = read_flatfile(ifile)
 
 
@@ -29,7 +29,7 @@ def get_gsims_imts_flatfile():
     flatfile = _flatfile.copy()
     for i in imts:
         # convert cm/sec^2 to g:
-        flatfile[i] = flatfile[i] / (100 * g)  # convert_accel_units(flatfile[i], 'cm/s/s', 'g')
+        flatfile[i] = flatfile[i] / (100 * g)
     return gsims, imts, flatfile
 
 
@@ -101,7 +101,7 @@ def test_residuals_execution():
         computed = res_df[lbl].values
         if is_inter_ev:
             # Are all inter events (per event) are close enough?
-            # (otherwise its an Inter event residuals per-site e.g. Chiou
+            # (otherwise it's an Inter event residuals per-site e.g. Chiou
             # & Youngs (2008; 2014) case)
             _computed = []
             key = (Clabel.input, ColumnType.rupture.value, 'event_id')
@@ -159,11 +159,11 @@ def test_residuals_execution_lh():
         computed = res_df[lbl].values
         if is_inter_ev:
             # Are all inter events (per event) are close enough?
-            # (otherwise its an Inter event residuals per-site e.g. Chiou
+            # (otherwise it's an Inter event residuals per-site e.g. Chiou
             # & Youngs (2008; 2014) case)
             _computed = []
             key = (Clabel.input, ColumnType.rupture.value, 'event_id')
-            for ev_id, dfr in res_df.groupby([key]):
+            for ev_id, dfr in res_df.groupby([key], observed=False):
                 vals = dfr[lbl].values
                 if ((vals - vals[0]) < 1.0E-12).all():
                     _computed.append(vals[0])

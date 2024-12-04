@@ -24,7 +24,7 @@ def parse(file) -> pd.DataFrame:
     :param file: str, path object or file-like object denoting the input to be
         read and parsed
     """
-    dfr = read_flatfile(file, sep=sep, rename=rename, dtypes=extra_dtype,
+    dfr = read_flatfile(file, csv_sep=sep, rename=rename, dtypes=extra_dtype,
                         defaults={}, usecols=usecols)
 
     return post_process(dfr)

@@ -43,7 +43,7 @@ def read_flatfile(
         dtypes: dict[str, Union[str, list]] = None,
         defaults: dict[str, Any] = None,
         csv_sep: str = None,
-        **kwargs: dict[str, Any]) -> pd.DataFrame:
+        **kwargs) -> pd.DataFrame:
     """
     Read a flatfile from either a comma-separated values (CSV) or HDF file,
     returning the corresponding pandas DataFrame.
@@ -119,7 +119,7 @@ def read_flatfile(
             # ignore bool int and date-times, we will parse them later
             if v in (ColumnDtype.bool, ColumnDtype.int, ColumnDtype.datetime):
                 continue
-            kwargs['dtype'][c] = v.name if isinstance(v, ColumnDtype) else v
+            kwargs['dtype'][c] = v.name if isinstance(v, ColumnDtype) else v  # noqa
 
         try:
             dfr = pd.read_csv(filepath_or_buffer, **kwargs)
@@ -612,16 +612,15 @@ def _harmonize_col_props(name: str, props: dict):
 # flatfile query expression
 
 
-def query(flatfile: pd.DataFrame, query_expression: str,
-          raise_no_rows=True) -> pd.DataFrame:
+def query(flatfile: pd.DataFrame, query_expression: str, raise_no_rows=True) \
+        -> pd.DataFrame:
     """Call `flatfile.query` with some utilities:
      - ISO-861 strings (e.g. "2006-01-31") will be converted to datetime objects
      - booleans can be also lower case (true or false)
-     - Some series methods can be called with the dot dot notation [col].[method]:
-       notna, median, mean, min, max
+     - Some series methods can be called with the dot notation [col].[method]:
+       notna(), median(), mean(), min(), max()
     """
-    # Setup custom keyword arguments to dataframe query. See also
-    # val2str for consistency (e.f. datetime, bools)
+    # Setup custom keyword arguments to dataframe query
     __kwargs = {
         'local_dict': {},
         'global_dict': {},  # 'pd': pd, 'np': np
@@ -638,8 +637,11 @@ def query(flatfile: pd.DataFrame, query_expression: str,
     return ret
 
 
-def prepare_expr(expr: str, columns: list[str]):
-
+def prepare_expr(expr: str, columns: list[str]) -> dict:
+    """Prepare the given selection expression to add a layer of protection
+    to potentially dangerous untrusted input. Returns a dict to be used as
+    `resolvers` argument in `pd.Dataframe.query`
+    """
     # valid names:
     cols = set(columns)
     # backtick-quoted column names is pandas syntax. Check them now and replace them
@@ -708,9 +710,10 @@ def prepare_expr(expr: str, columns: list[str]):
 
 
 def valid_expr_sequence(tok_num1: int, tok_val1: str, tok_num2: int, tok_val2: str):
-    OP, STRING, NAME, NUMBER, NEWLINE, EOM = \
-        (tokenize.OP, tokenize.STRING, tokenize.NAME, tokenize.NUMBER, tokenize.NEWLINE,
-         tokenize.ENDMARKER)
+    """Return true if the given sequence of two tokens is valid"""
+    OP, STRING, NAME, NUMBER, NEWLINE, EOM = (tokenize.OP, tokenize.STRING,  # noqa
+                                              tokenize.NAME, tokenize.NUMBER,
+                                              tokenize.NEWLINE, tokenize.ENDMARKER)
     if tok_num1 is None:
         if tok_num2 == OP:
             return tok_val2 in '(~'
