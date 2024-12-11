@@ -51,24 +51,23 @@ def get_egsim_residuals(
 
     A [pandas DataFrame](https://pandas.pydata.org/docs/user_guide/dsintro.html#dataframe)
     
-    If ranking is True, then each row denotes a model (reported in the first column)
-    and each column a measure of fit (reported in the first row).
+    If ranking is True, then each row denotes a model (labelled by the unique model name)
+    and each column a measure of fit.
     
-    If ranking is False, then each row denotes a flatfile record and each column the
-    record configured or computed properties. More specifically, except the first
-    column (denoting the record id, i.e. the position in the original flatfile,
-    starting from 0), each column denotes:
+    If ranking is False, then each row denotes a flatfile record, labelled by a unique
+    integer id (the record position in the original flatfile, starting from 0), and
+    each column denotes:
     
-    - a computed residual or prediction, if the first chunk of ts name is an intensity
-      measure type (e.g. "PGA total_residual BindiEtAl2014Rjb"): in this case, the
-      second chunk is the metric type ("total_residual") and the third the predicting
+    - a computed residual or prediction if the first chunk of the column name is an
+      intensity measure type (e.g. "PGA total_residual BindiEtAl2014Rjb"): in this case,
+      the second chunk is the metric type ("total_residual") and the third the predicting
       model ("BindiEtAl2014Rjb")
     
-    - the flatfile data relative to the computed prediction if the first chunk
-      is the text "input"  (e.g., "input distance_measure rrup"): in this case, the
-      second chunk is the flatfile data type ("distance_measure", "intensity_measure",
-      "rupture_parameter", "site_parameter" or "uncategorized") and the third the
-      data name ("rrup")
+    - a record input property (copied from the original flatfile) if the first chunk
+      of the column name is the text "input"  (e.g., "input distance_measure rrup"): in
+      this case, the second chunk is the flatfile data type ("distance_measure",
+      "intensity_measure", "rupture_parameter", "site_parameter" or "uncategorized") and
+      the third the data name ("rrup")
     """
     # request parameters:
     parameters = {

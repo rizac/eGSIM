@@ -106,16 +106,12 @@ def validate_imt_sa_limits(model: GMPE, imts: dict[str, IMT]) -> dict[str, IMT]:
         are valid for the given model
     """
     model_sa_p_lim = get_sa_limits(model)
-    if model_sa_p_lim is None:
-        return imts
-    imt_periods = {i: sa_period(v) for i, v in imts.items()}
-    if all(_ is None for _ in imt_periods.values()):
-        return imts
-    imt_new = {}
-    for imt_n, sa_p in imt_periods.items():
-        if sa_p is None or model_sa_p_lim[0] <= sa_p <= model_sa_p_lim[1]:
-            imt_new[imt_n] = imts[imt_n]
-    return imt_new
+    return {
+        i: v for i, v in imts.items()
+        if model_sa_p_lim is None
+        or sa_period(v) is None
+        or model_sa_p_lim[0] <= sa_period(v) <= model_sa_p_lim[1]
+    }
 
 
 # Custom Exceptions:
