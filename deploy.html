@@ -769,18 +769,18 @@ server {
 	server_name $DOMAIN www.$DOMAIN;
 	keepalive_timeout 70;
 	# certificate (must be configured for https, tutorial not covered here. For non-secure connection, you can comment out the following lines):
-	ssl_certificate /etc/ssl/certs/egsim.chain.txt;  # <- not there by default, to be added
-    	ssl_certificate_key /etc/ssl/private/$DOMAIN.key;  # <- not there by default, to be added
-    	ssl_session_cache   shared:SSL:10m;
-    	ssl_session_timeout 10m;
-    	location / {
+	ssl_certificate /etc/ssl/certs/egsim.chain.txt;  # file is not there by default, to be added
+    ssl_certificate_key /etc/ssl/private/$DOMAIN.key;  # file is not there by default, to be added
+    ssl_session_cache   shared:SSL:10m;
+    ssl_session_timeout 10m;
+    location / {
 		proxy_pass http://localhost:$GUNICORN_PORT;
-		proxy_read_timeout 180s;  # <- should match proxy server timeout (gunicorn, uwsgi,...) in the gunicorn service file
+		proxy_read_timeout 180s;  # this should match proxy server timeout (gunicorn, uwsgi,...) in the gunicorn service file
 		proxy_set_header Host $http_host;
-       		proxy_redirect off;
-        	proxy_set_header X-Forwarded-For $remote_addr;
-        	proxy_set_header X-Forwarded-Proto $scheme;
-        	client_max_body_size 20m;
+       	proxy_redirect off;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        client_max_body_size 20m;
 	}
 	location /static/ {
 		alias /var/cache/$DJANGO_PROJECT/static/;
