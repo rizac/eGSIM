@@ -30,14 +30,15 @@ def error_message(response: HttpResponse):
 @pytest.mark.django_db
 def test_model_info():
     client = Client()
-    data = {'model': ['CauzziEtAl2014']}
+    data = {'name': ['CauzziEtAl2014']}  # "name" or "model" are equivalent param names
     response = client.post(f"/{MODEL_INFO}",
                            json.dumps(data),
                            content_type="application/json")
     assert response.status_code == 200
     assert sorted(response.json().keys()) == ['CauzziEtAl2014']
     assert all(isinstance(v, dict) and
-               sorted(v.keys()) == ['doc', 'imts', 'props', 'sa_limits']
+               sorted(v.keys()) == ['defined_for', 'description', 'requires',
+                                    'sa_period_bounds']
                for v in response.json().values())
 
     data = {'model': ['BindiEtAl2014Rjb', 'CauzziEtAl2014']}
@@ -47,15 +48,23 @@ def test_model_info():
     assert response.status_code == 200
     assert sorted(response.json().keys()) == ['BindiEtAl2014Rjb', 'CauzziEtAl2014']
     assert all(isinstance(v, dict) and
-               sorted(v.keys()) == ['doc', 'imts', 'props', 'sa_limits']
+               sorted(v.keys()) == ['defined_for', 'description', 'requires',
+                                    'sa_period_bounds']
                for v in response.json().values())
 
-    data = {'model': ['x', 'CauzziEtAl2014']}
+    data = {'model': ['zww', 'CauzziEtAl2014']}
     response = client.post(f"/{MODEL_INFO}",
                            json.dumps(data),
                            content_type="application/json")
     assert response.status_code == 400
-    assert error_message(response) == 'model: invalid model(s) x'
+    assert error_message(response) == 'model: invalid model(s) zww'
+
+    # partial names: raises (NOTE: we can also supply "name" instead pf "model"):
+    data = {'name': 'cauzzi'}
+    response = client.post(f"/{MODEL_INFO}",
+                           json.dumps(data),
+                           content_type="application/json")
+    assert response.status_code == 200
 
 
 def test_not_found(client):

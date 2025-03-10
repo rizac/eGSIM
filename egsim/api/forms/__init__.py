@@ -15,7 +15,7 @@ from django.forms.fields import Field, FloatField
 
 from egsim.api import models
 from egsim.smtk import (validate_inputs, harmonize_input_gsims,
-                        harmonize_input_imts, gsim)
+                        harmonize_input_imts, gsim, registered_gsims)
 from egsim.smtk.registry import gsim_info
 from egsim.smtk.validation import IncompatibleModelImtError, ImtError, ModelError
 
@@ -268,12 +268,10 @@ class GsimForm(SHSRForm):
         # Implementation note: as of 2024, the 1st arg to ValidationError is not
         # really used, just pass the right `code` arg (see `error_json_data`)
         key = 'gsim'
-        value = self.cleaned_data.get(key, None)
+        value = self.to_list(self.cleaned_data.get(key))
         if not value:
             self.add_error(key, self.ErrMsg.required)
             return {}
-        if type(value) not in (list, tuple):
-            value = [value]
         ret = {}
         try:
             ret = harmonize_input_gsims(value)
@@ -283,6 +281,16 @@ class GsimForm(SHSRForm):
         except ModelError as err:
             self.add_error(key, f'invalid model(s) {str(err)}')
         return ret
+
+    @staticmethod
+    def to_list(value) -> list:
+        if not value:
+            return []
+        if type(value) is tuple:
+            value = list(value)
+        if type(value) is not list:
+            value = [value]
+        return value
 
 
 class GsimImtForm(GsimForm):
@@ -298,12 +306,10 @@ class GsimImtForm(GsimForm):
         # Implementation note: as of 2024, the 1st arg to ValidationError is not
         # really used, just pass the right `code` arg (see `error_json_data`)
         key = 'imt'
-        value = self.cleaned_data.get(key, None)
+        value = self.to_list(self.cleaned_data.get(key))
         if not value:
             self.add_error(key, self.ErrMsg.required)
             return {}
-        if type(value) not in (list, tuple):
-            value = [value]
         ret = {}
         try:
             ret = harmonize_input_imts(value)
@@ -364,6 +370,27 @@ class GsimInfoForm(GsimForm, APIForm):
     containing the supported imt(s), the required ground motion parameters,
     and the OpenQuake docstring
     """
+
+    _field2params: dict[str, list[str]] = {'gsim': ('name', 'model')}
+
+    def clean_gsim(self) -> dict[str, GMPE]:
+        """Custom gsim clean. Relaxes model matching to allow partially typed,
+        case-insensitive model names, eventually calling the super method.
+        The return value will replace self.cleaned_data['gsim']
+        """
+        key = 'gsim'
+        gmms = self.to_list(self.cleaned_data.get(key))
+        if gmms:
+            new_gmms = []
+            for gmm in gmms:
+                if gmm not in registered_gsims:
+                    matches = [m for m in registered_gsims if gmm.lower() in m.lower()]
+                    if matches:
+                        new_gmms.extend(m for m in matches if m not in new_gmms)
+                        continue
+                new_gmms.append(gmm)
+            self.cleaned_data[key] = new_gmms
+        return super().clean_gsim()
 
     def output(self) -> dict:
         """Compute and return the output from the input data (`self.cleaned_data`).

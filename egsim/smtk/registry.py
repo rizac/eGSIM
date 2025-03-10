@@ -196,19 +196,31 @@ def get_ground_motion_values(model: GMPE, imts: list[IMT], ctx: np.recarray):
 
 def gsim_info(model: Union[str, GMPE]) -> dict:
     """Return the model info as a dict with keys:
-     - doc: str the model source code documentation
-     - imts: list[str] the intensity measures defined for the model
-     - props: list[str] the ground motion properties required to compute the
+     - description: str the model source code documentation
+     - defined_for: list[str] the intensity measures defined for the model
+     - requires: list[str] the ground motion properties required to compute the
         model predictions
-     - sa_limits: spectral acceleration period limits where the model is defined
-        or None if the model is not defined for SA
+     - spectral_acc_limits: spectral acceleration period limits where the model
+       is defined, or None if the model is not defined for SA
     """
     model = gsim(model)
+    # get the model docstring (removing all newlines and double quotes, see below):
+    desc = []
+    for line in (model.__doc__ or "").split("\n"):  # parse line by line
+        line = line.strip()  # remove indentation
+        if not line:
+            # if line is empty, then add a dot to the last line unless it does not
+            # already end with punctuation:
+            if desc and desc[-1][-1] not in {'.', ',', ';', ':', '?', '!'}:
+                desc[-1] += '.'
+            continue
+        desc.append(line.replace('"', "'"))
+
     return {
-        'doc': (model.__doc__ or "").strip(),
-        'imts': list(intensity_measures_defined_for(model) or []),
-        'props': list(ground_motion_properties_required_by(model) or []),
-        'sa_limits': get_sa_limits(model)
+        'description': " ".join(desc),
+        'defined_for': list(intensity_measures_defined_for(model) or []),
+        'requires': list(ground_motion_properties_required_by(model) or []),
+        'sa_period_bounds': get_sa_limits(model)
     }
 
 
