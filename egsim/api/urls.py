@@ -13,7 +13,7 @@ API_PATH = 'api/query/'
 # these two are used for testing:
 PREDICTIONS_URL_PATH = f'{API_PATH}predictions'
 RESIDUALS_URL_PATH = f'{API_PATH}residuals'
-MODEL_INFO = f'{API_PATH}modelinfo'
+MODEL_INFO = f'{API_PATH}models'
 
 urlpatterns = [
     re_path(r'^admin/', admin.site.urls),  # added by default by django

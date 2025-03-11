@@ -194,34 +194,22 @@ def get_ground_motion_values(model: GMPE, imts: list[IMT], ctx: np.recarray):
     return median.T, sigma.T, tau.T, phi.T
 
 
-def gsim_info(model: Union[str, GMPE]) -> dict:
-    """Return the model info as a dict with keys:
-     - description: str the model source code documentation
-     - defined_for: list[str] the intensity measures defined for the model
-     - requires: list[str] the ground motion properties required to compute the
+def gsim_info(model: Union[str, GMPE]) -> tuple[str, list, list, Union[list, None]]:
+    """Return the model info as a tuple with elements:
+     - the source code documentation (Python docstring) of the model
+     - the list of the intensity measures defined for the model
+     - the list of the ground motion properties required to compute the
         model predictions
-     - spectral_acc_limits: spectral acceleration period limits where the model
+     - the list of spectral acceleration period limits where the model
        is defined, or None if the model is not defined for SA
     """
     model = gsim(model)
-    # get the model docstring (removing all newlines and double quotes, see below):
-    desc = []
-    for line in (model.__doc__ or "").split("\n"):  # parse line by line
-        line = line.strip()  # remove indentation
-        if not line:
-            # if line is empty, then add a dot to the last line unless it does not
-            # already end with punctuation:
-            if desc and desc[-1][-1] not in {'.', ',', ';', ':', '?', '!'}:
-                desc[-1] += '.'
-            continue
-        desc.append(line.replace('"', "'"))
-
-    return {
-        'description': " ".join(desc),
-        'defined_for': list(intensity_measures_defined_for(model) or []),
-        'requires': list(ground_motion_properties_required_by(model) or []),
-        'sa_period_bounds': get_sa_limits(model)
-    }
+    return (
+        (model.__doc__ or ""),
+        list(intensity_measures_defined_for(model) or []),
+        list(ground_motion_properties_required_by(model) or []),
+        get_sa_limits(model)
+    )
 
 
 class Clabel:
@@ -242,4 +230,3 @@ class Clabel:
     mag = "mag"
     uncategorized_input = 'uncategorized'
     sep = " "  # the default separator for single-row column header
-
