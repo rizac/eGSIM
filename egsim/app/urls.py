@@ -23,67 +23,70 @@ urlpatterns = [
     re_path(r'^$', RedirectView.as_view(pattern_name='main', url='home',
                                         permanent=False)),
     re_path((r'^(?P<page>' +
-             '|'.join([URLS.HOME_PAGE, URLS.PREDICTIONS_PAGE, URLS.RESIDUALS_PAGE,
-                       URLS.FLATFILE_INSPECTION_PLOT_PAGE, URLS.FLATFILE_META_INFO_PAGE,
-                       URLS.IMPRINT_PAGE, URLS.REF_AND_LICENSE_PAGE]) +
+             '|'.join([URLS.WEBPAGE_HOME, URLS.WEBPAGE_PREDICTIONS,
+                       URLS.WEBPAGE_RESIDUALS,
+                       URLS.WEBPAGE_FLATFILE_INSPECTION_PLOT,
+                       URLS.WEBPAGE_FLATFILE_COMPILATION_INFO,
+                       URLS.WEBPAGE_IMPRINT, URLS.WEBPAGE_REF_AND_LICENSE]) +
              ')/?$'), main),
 
     re_path(
-        fr'^{URLS.PREDICTIONS}.(?:{"|".join(data_ext)})$',
+        fr'^{URLS.DOWNLOAD_PREDICTIONS_DATA}.(?:{"|".join(data_ext)})$',
         PredictionsView.as_view()
     ),  # note: `data_ext` in url is set and used only in the GUI as download filename
     path(
-        URLS.PREDICTIONS_VISUALIZE,
+        URLS.SUBMIT_PREDICTIONS_VISUALIZATION,
         APIFormView.as_view(formclass=PredictionsVisualizeForm)
     ),
     re_path(
-        fr'{URLS.PREDICTIONS_PLOT_IMG}.(?:{"|".join(img_ext)})',
+        fr'{URLS.DOWNLOAD_PREDICTIONS_PLOT}.(?:{"|".join(img_ext)})',
         PlotsImgDownloader.as_view()
     ),
     path(
-        URLS.PREDICTIONS_RESPONSE_TUTORIAL,
+        URLS.PREDICTIONS_DOWNLOADED_DATA_TUTORIAL,
         xframe_options_exempt(PredictionsHtmlTutorial.as_view())
     ),
 
     re_path(  # (`data_ext` below is set and used only in the GUI as download filename)
-        r'^%s.(?:%s)$' % (URLS.RESIDUALS, "|".join(data_ext)),
+        r'^%s.(?:%s)$' % (URLS.DOWNLOAD_RESIDUALS_DATA, "|".join(data_ext)),
         ResidualsView.as_view()
     ),
     path(
-        URLS.RESIDUALS_VISUALIZE,
+        URLS.SUBMIT_RESIDUALS_VISUALIZATION,
         APIFormView.as_view(formclass=ResidualsVisualizeForm)
     ),
     re_path(
-        fr'{URLS.RESIDUALS_PLOT_IMG}.(?:{"|".join(img_ext)})',
+        fr'{URLS.DOWNLOAD_RESIDUALS_PLOT}.(?:{"|".join(img_ext)})',
         PlotsImgDownloader.as_view()
     ),
     path(
-        URLS.RESIDUALS_RESPONSE_TUTORIAL,
+        URLS.RESIDUALS_DOWNLOADED_DATA_TUTORIAL,
         xframe_options_exempt(ResidualsHtmlTutorial.as_view())
     ),
 
     path(
-        URLS.FLATFILE_VISUALIZE,
+        URLS.SUBMIT_FLATFILE_COMPILATION_INFO,
+        APIFormView.as_view(formclass=FlatfileMetadataInfoForm)
+    ),
+    path(
+        URLS.SUBMIT_FLATFILE_VISUALIZATION,
         APIFormView.as_view(formclass=FlatfileVisualizeForm)
     ),
     re_path(
-        fr'{URLS.FLATFILE_PLOT_IMG}.(?:{"|".join(img_ext)})',
+        fr'{URLS.DOWNLOAD_FLATFILE_PLOT}.(?:{"|".join(img_ext)})',
         PlotsImgDownloader.as_view()
     ),
 
     path(
-        URLS.FLATFILE_VALIDATE,
+        URLS.FLATFILE_VALIDATION,
         APIFormView.as_view(formclass=FlatfileValidationForm)
     ),
+
     path(
-        URLS.FLATFILE_META_INFO,
-        APIFormView.as_view(formclass=FlatfileMetadataInfoForm)
-    ),
-    path(
-        URLS.GET_GSIMS_FROM_REGION,
+        URLS.GSIMS_FROM_REGION,
         APIFormView.as_view(formclass=GsimFromRegionForm)
     ),
-    path(URLS.GET_GSIMS_INFO, GsimInfoView.as_view()),
+    path(URLS.GSIMS_INFO, GsimInfoView.as_view()),
 
     # test code returning specific response (in this case, no EgsimView required):
     path("test_response/<int:code>",

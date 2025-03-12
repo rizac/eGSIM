@@ -43,6 +43,10 @@ except URLError as exc:
     tests_are_not_online = True
 
 
+def is_web_page_url(url: str):
+    return url.startswith('WEBPAGE_')
+
+
 @pytest.mark.django_db
 class Test:
     with open(abspath(join(dirname(dirname(__file__)), 'data',
@@ -89,7 +93,7 @@ class Test:
             assert len(p_names) >= len(val) >= len(val_c)
 
     def test_html_pages(self, client):
-        page_urls = [getattr(URLS, _) for _ in dir(URLS) if _.endswith('_PAGE')]
+        page_urls = [getattr(URLS, _) for _ in dir(URLS) if is_web_page_url(_)]
         assert len(page_urls)  # in case we rename the attrs sometime
         for url in page_urls:
 
@@ -111,7 +115,7 @@ class Test:
 
     @pytest.mark.skipif(tests_are_not_online, reason='no internet connection')
     def test_external_urls_are_not_dead(self):
-        page_urls = [getattr(URLS, _) for _ in dir(URLS) if _.endswith('_PAGE')]
+        page_urls = [getattr(URLS, _) for _ in dir(URLS) if is_web_page_url(_)]
         assert len(page_urls)  # in case we rename the attrs sometime
         for url in page_urls:
             # external link, just check the link ios n ot broken:
@@ -122,13 +126,13 @@ class Test:
     def test_download_predictions_residuals(self):
         tests = [
             (
-                URLS.PREDICTIONS,
+                URLS.DOWNLOAD_PREDICTIONS_DATA,
                 self.request_predictions_filepath,
                 PredictionsForm,
                 {}
             ),
             (
-                URLS.RESIDUALS,
+                URLS.DOWNLOAD_RESIDUALS_DATA,
                 self.request_residuals_filepath,
                 ResidualsForm,
                 {'data-query': 'mag > 7'}
@@ -160,7 +164,7 @@ class Test:
                         os.remove(file_tmp_hdf)
 
     def test_flatfile_validate(self):
-        url = URLS.FLATFILE_VALIDATE
+        url = URLS.FLATFILE_VALIDATION
 
         ff = SimpleUploadedFile('flatfile',
                                 self.flatfile_tk_content)
@@ -190,8 +194,8 @@ class Test:
     def error_message(response: HttpResponse):
         return response.content.decode(response.charset)
 
-    def test_flatfile_meta_info(self):
-        url = URLS.FLATFILE_META_INFO
+    def test_flatfile_compilation_info(self):
+        url = URLS.SUBMIT_FLATFILE_COMPILATION_INFO
 
         data = {'gsim': 'CauzziEtAl2014'}
         client = Client()  # do not use the fixture client as we want
@@ -200,8 +204,8 @@ class Test:
         assert response.status_code == 200
         cols1 = response.json()['columns']
 
-    def test_flatfile_visualize(self):
-        url = URLS.FLATFILE_VISUALIZE
+    def test_flatfile_visualization(self):
+        url = URLS.SUBMIT_FLATFILE_VISUALIZATION
 
         ff = SimpleUploadedFile('flatfile', self.flatfile_tk_content)
         data = {'flatfile': ff}
@@ -230,29 +234,29 @@ class Test:
                 expected_code = 200
             assert response.status_code == expected_code
 
-    def test_predictions_residuals_visualize(self):
+    def test_submit_predictions_residuals_visualization(self):
         tests = [
             *[(
-                URLS.PREDICTIONS_VISUALIZE,
+                URLS.SUBMIT_PREDICTIONS_VISUALIZATION,
                 self.request_predictions_filepath,
                 PredictionsVisualizeForm,
                 {'plot_type': c[0]}
             ) for c in PredictionsVisualizeForm.declared_fields['plot_type'].choices],
             (
-                URLS.RESIDUALS_VISUALIZE,
+                URLS.SUBMIT_RESIDUALS_VISUALIZATION,
                 self.request_residuals_filepath,
                 ResidualsVisualizeForm,
                 {'data-query': 'mag > 7'}  # no x or x None => residuals
             ),
             (
-                URLS.RESIDUALS_VISUALIZE,
+                URLS.SUBMIT_RESIDUALS_VISUALIZATION,
                 self.request_residuals_filepath,
                 ResidualsVisualizeForm,
                 # no x or x None but likelihood => LH residuals:
                 {'data-query': 'mag > 7', 'likelihood': True}
             ),
             (
-                URLS.RESIDUALS_VISUALIZE,
+                URLS.SUBMIT_RESIDUALS_VISUALIZATION,
                 self.request_residuals_filepath,
                 ResidualsVisualizeForm,
                 {'data-query': 'mag > 7', 'x': 'mag'}
@@ -277,13 +281,13 @@ class Test:
         # test errors:
         tests = [
             (
-                URLS.PREDICTIONS_VISUALIZE,
+                URLS.SUBMIT_PREDICTIONS_VISUALIZATION,
                 self.request_predictions_filepath,
                 PredictionsVisualizeForm,
                 {'plot_type': '?'}
             ),
             (
-                URLS.RESIDUALS_VISUALIZE,
+                URLS.SUBMIT_RESIDUALS_VISUALIZATION,
                 self.request_residuals_filepath,
                 ResidualsVisualizeForm,
                 {'x': '?', 'data-query': 'mag > 7'}
@@ -308,7 +312,7 @@ class Test:
             'flatfile': 'esm2018',
             'flatfile-query': 'mag > 7.5'
         }
-        response = client.post(f"/{URLS.RESIDUALS_VISUALIZE}",
+        response = client.post(f"/{URLS.SUBMIT_RESIDUALS_VISUALIZATION}",
                                json.dumps(data),
                                content_type="application/json")
         assert response.status_code == 200
@@ -319,7 +323,7 @@ class Test:
 
         # now check with no data:
         data['flatfile-query'] = 'mag > 100'
-        response = client.post(f"/{URLS.RESIDUALS_VISUALIZE}",
+        response = client.post(f"/{URLS.SUBMIT_RESIDUALS_VISUALIZATION}",
                                json.dumps(data),
                                content_type="application/json")
         assert response.status_code == 400
@@ -338,7 +342,7 @@ class Test:
             'magnitude': [4],
             'distance': [10]
         }
-        response1 = client.post(f"/{URLS.PREDICTIONS}.csv",
+        response1 = client.post(f"/{URLS.DOWNLOAD_PREDICTIONS_DATA}.csv",
                                 json.dumps(data | {'format': 'csv'}),
                                 content_type="application/json")
         assert response1.status_code == 200
@@ -352,7 +356,7 @@ class Test:
         len_c = len([c for c in dframe.columns if not c.startswith(f'{Clabel.input} ')])
         assert len_c == 6
 
-        response = client.post(f"/{URLS.PREDICTIONS_VISUALIZE}",
+        response = client.post(f"/{URLS.SUBMIT_PREDICTIONS_VISUALIZATION}",
                                json.dumps(data | {'plot_type': 'm'}),
                                content_type="application/json")
         assert response.status_code == 200
@@ -364,7 +368,7 @@ class Test:
         assert (len(plots[0]['data']) == 6 and len(plots[1]['data']) == 3) or \
             (len(plots[1]['data']) == 6 and len(plots[0]['data']) == 3)
 
-    def test_predictions_visualize_missing_periods_no_Exc(self):
+    def test_predictions_visualize_missing_periods_no_exc(self):
         """Some models do not produce plots for specific IMTs or residuals type
         Test that we return those plots, albeit empty
         """
@@ -380,7 +384,7 @@ class Test:
         }
         saLim1 = get_sa_limits('SgobbaEtAl2020')
         salim2 = get_sa_limits('BindiEtAl2014Rjb')
-        response = client.post(f"/{URLS.PREDICTIONS_VISUALIZE}",
+        response = client.post(f"/{URLS.SUBMIT_PREDICTIONS_VISUALIZATION}",
                                json.dumps(data | {'plot_type': 's'}),
                                content_type="application/json")
         assert response.status_code == 200
@@ -411,7 +415,7 @@ class Test:
         }
         saLim1 = get_sa_limits('SgobbaEtAl2020')
         salim2 = get_sa_limits('AbrahamsonSilva1997')
-        response1 = client.post(f"/{URLS.RESIDUALS}.csv",
+        response1 = client.post(f"/{URLS.DOWNLOAD_RESIDUALS_DATA}.csv",
                                 json.dumps(data | {'format': 'csv'}),
                                 content_type="application/json")
         assert response1.status_code == 200
@@ -425,7 +429,7 @@ class Test:
         len_c = len([c for c in dframe.columns if not c.startswith(f'{Clabel.input} ')])
         assert len_c == 5
 
-        response = client.post(f"/{URLS.RESIDUALS_VISUALIZE}",
+        response = client.post(f"/{URLS.SUBMIT_RESIDUALS_VISUALIZATION}",
                                json.dumps(data),
                                content_type="application/json")
         assert response.status_code == 200
@@ -442,7 +446,8 @@ class Test:
         assert expected_params == actual_params
 
     def test_download_response_img_formats(self):
-        for url, ext in product((URLS.PREDICTIONS_PLOT_IMG, URLS.RESIDUALS_PLOT_IMG),
+        for url, ext in product((URLS.DOWNLOAD_PREDICTIONS_PLOT,
+                                 URLS.DOWNLOAD_RESIDUALS_PLOT),
                                 img_ext):
             # for the moment, just provide a global data object regardless of the
             # service:
