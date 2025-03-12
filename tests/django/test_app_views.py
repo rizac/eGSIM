@@ -190,6 +190,16 @@ class Test:
     def error_message(response: HttpResponse):
         return response.content.decode(response.charset)
 
+    def test_flatfile_meta_info(self):
+        url = URLS.FLATFILE_META_INFO
+
+        data = {'gsim': 'CauzziEtAl2014'}
+        client = Client()  # do not use the fixture client as we want
+        # to disable CSRF Token check
+        response = client.post("/" + url, data=data)
+        assert response.status_code == 200
+        cols1 = response.json()['columns']
+
     def test_flatfile_visualize(self):
         url = URLS.FLATFILE_VISUALIZE
 

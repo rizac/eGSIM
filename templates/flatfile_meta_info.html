@@ -44,7 +44,17 @@
 			Here you can inspect how your flatfile should be formatted according to your
 			models of interest.
 			Once compiled, flatfiles can be uploaded in HDF (recommended) or CSV format
-			and used throughout the application (Data visual inspection and Model-to-data comparison)
+			and used throughout the application:
+		</div>
+		<div>
+			<button type='button' @click="currentPage = pages.flatfile_visualize" class='btn btn-primary'>
+				Flatfile visual inspection
+			</button>
+		</div>
+		<div>
+			<button type='button' @click="currentPage = pages.residuals" class='btn btn-primary'>
+				Model-to-data comparison
+			</button>
 		</div>
 	</div>
 

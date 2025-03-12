@@ -33,11 +33,11 @@ class URLS:  # noqa
     PREDICTIONS = 'gui/egsim-predictions'  # <path>/<downloaded_file_basename>
     PREDICTIONS_VISUALIZE = 'gui/egsim-predictions-visualize'
     PREDICTIONS_PLOT_IMG = 'gui/egsim-predictions-plot'  # <path>/<downloaded_file_basename>  # noqa
-    PREDICTIONS_RESPONSE_TUTORIAL = 'jupyter/predictions-response-tutorial.html'
+    PREDICTIONS_RESPONSE_TUTORIAL = 'gui/predictions-response-tutorial.html'
     RESIDUALS = 'gui/egsim-residuals'  # <path>/<downloaded_file_basename>
     RESIDUALS_VISUALIZE = 'gui/egsim-residuals-visualize'
     RESIDUALS_PLOT_IMG = 'gui/egsim-residuals-plot'  # <path>/<downloaded_file_basename>
-    RESIDUALS_RESPONSE_TUTORIAL = 'jupyter/residuals-response-tutorial.html'
+    RESIDUALS_RESPONSE_TUTORIAL = 'gui/residuals-response-tutorial.html'
     FLATFILE_VISUALIZE = 'gui/flatfile_visualization'
     FLATFILE_META_INFO = 'gui/get_flatfile_meta_info'
     FLATFILE_PLOT_IMG = 'gui/egsim-flatfile-plot'  # <path>/<downloaded_file_basename>
@@ -49,8 +49,8 @@ class URLS:  # noqa
     # webpage URLs:
     HOME_PAGE = 'home'
     DATA_PROTECTION_PAGE = 'https://www.gfz-potsdam.de/en/data-protection/'
-    FLATFILE_META_INFO_PAGE = 'flatfile-metadata-info'
-    FLATFILE_INSPECTION_PLOT_PAGE = 'flatfile-inspection-plot'
+    FLATFILE_META_INFO_PAGE = 'flatfile/compilation'
+    FLATFILE_INSPECTION_PLOT_PAGE = 'flatfile/visualization'
     IMPRINT_PAGE = "imprint"
     PREDICTIONS_PAGE = 'predictions'
     RESIDUALS_PAGE = 'residuals'

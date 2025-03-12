@@ -96,13 +96,14 @@ window.fetch = function() {
 	return new Promise((resolve, reject) => {  // https://stackoverflow.com/a/53448336
 		origFetch.apply(this, args).then((response) => {
 			if (!response.ok){
+				var baseError = `${response.statusText}${response.status ? " (status code: " + response.status +")" : ""}`;
 				// HTTP error (status code 4xx or 5xx):
-				response.clone().text().then(
+				response.text().then(
 					// response has a text message (e.g. eGSIM input error) show it:
-					text => showFetchError(text)
+					text => showFetchError(text || baseError)
 				).catch(
 					// response has no text message, show statusText and code:
-					error => showFetchError(`${response.statusText}${response.status ? " (status code: " + response.status +")" : ""}`)
+					error => showFetchError(baseError)
 				);
 				reject(response);
 			}else{
@@ -110,7 +111,7 @@ window.fetch = function() {
 			}
 		}).catch((error) => {
 			// some network error (Note: NOT 4xx or 5xx responses!)
-			showFetchError("" + error);
+			showFetchError("Unknown error " + error);
 			reject(error);
 		}).finally(() => {
 			bar.style.display = 'none';
