@@ -172,11 +172,16 @@ FORM_RENDERER = 'egsim.api.forms.get_base_singleton_renderer'
 # # from SAMEORIGIN to DENY. If you want to restore it back uncomment:
 # X_FRAME_OPTIONS = 'SAMEORIGIN'
 
+# ==============================================================================
+# NOTE: THE MAX FILE UPLOAD SIZE AND THE MAX TIMEOUT ARE HANDLED IN NGINX CONF!
+# THE SETTINGS BELOW DO NOT HANDLE THESE ISSUES, READ THEIR DOCSTRING CAREFULLY!
+# ==============================================================================
+
 # The maximum size (in bytes) that an upload will be before it gets streamed to the
 # file system. Set to 0 to force all uploaded files on disk because as of pandas 2.2.2
 # HDF does not support reading from stream or buffer
 FILE_UPLOAD_MAX_MEMORY_SIZE = 0  # for ref, 2621440 (2Mb) is the default in Django 5.1
 
-# The maximum size in bytes that a request body may be before a SuspiciousOperation
-# (RequestDataTooBig) is raised
-DATA_UPLOAD_MAX_MEMORY_SIZE: 5242880  # 5Mb, twice the default in Django 5.1
+# The maximum size in bytes (EXCLUDING THE FILE UPLOAD SIZE) that a request body may be
+# before a SuspiciousOperation (RequestDataTooBig) is raised:
+DATA_UPLOAD_MAX_MEMORY_SIZE: 5242880  # 5Mb (2621440 = 2Mb is the default in Django 5.1)
