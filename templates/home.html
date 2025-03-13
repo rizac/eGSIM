@@ -95,7 +95,7 @@
 
 		</div>
 
-		<div style='font-size:80%' class='text-muted text-center p-2'>
+		<div style='font-size:80%' class='text-center p-2'>
 			<div>
 				This service (version number: 3, online since 2019)
 				is part of the
@@ -109,10 +109,10 @@
 				<a target="_blank" href="https://github.com/rizac/eGSIM/issues">
 				GitHub Repository</a> with the desired label (e.g. bug, enhancement, question, help)
 			</div>
-			<div>
-				<a class='me-3' @click="currentPage = pages.ref_and_license" href="#">Citation</a>
-				<a class='me-3' @click="currentPage = pages.imprint" href="#">Imprint</a>
-				<a :href='pages.data_protection' target="_blank">Data Protection</a>
+			<div class='d-flex gap-2 justify-content-center'>
+				<button type="button" class='btn btn-link p-0' @click="currentPage = pages.ref_and_license">Citation</button>
+				<button type="button" class='btn btn-link p-0' @click="currentPage = pages.imprint">Imprint</button>
+				<a class='btn btn-link p-0' :href='pages.data_protection' target="_blank">Data Protection</a>
 			</div>
 		</div>
 	</div>

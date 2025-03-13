@@ -139,7 +139,7 @@ const EGSIM = Vue.createApp({
 			immediate: true,
 			handler(newVal, oldVal){
 				this.showNavBar = newVal != this.pages.home;
-				this.setUrlInBrowser(newVal)
+				this.setUrlInBrowser(newVal);
 			}
 		}
 	},
@@ -180,7 +180,6 @@ const EGSIM = Vue.createApp({
 				// https://developer.mozilla.org/en-US/docs/Web/API/History_API
 				window.history.replaceState({}, document.title, newHref);
 			}
-			return false; // in case accessed from within anchors
 		},
 		download(url, data){
 			// download the response using the last portion of url as downloaded file name

@@ -1,27 +1,27 @@
 <nav class="nav bg-dark" style='padding:.25rem'>
 
-	<a class='nav-link' @click="currentPage = pages.home" href="#">
+	<button type="button" class='nav-link' @click="currentPage = pages.home">
 		<i class="fa fa-home me-1"></i>
-	</a>
+	</button>
 
-	<a class='nav-link' @click="currentPage = pages.predictions" href="#">
+	<button type="button" class='nav-link' @click="currentPage = pages.predictions">
 		<i class="fa fa-area-chart me-1"></i> Model-to-Model comparison
-	</a>
+	</button>
 
 	<li class="nav-item dropdown">
-		<a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button">
+		<button type="button" class="nav-link dropdown-toggle" data-bs-toggle="dropdown" role="button">
 			<i class="fa fa-database me-1"></i> Data
-		</a>
+		</button>
 		<ul class="dropdown-menu bg-dark rounded-top-0">
-			<li><a class="dropdown-item" href="#" @click="currentPage = pages.flatfile_meta_info">Compilation</a></li>
-			<li><a class="dropdown-item" href="#" @click="currentPage = pages.flatfile_visualize">Visual inspection</a></li>
+			<li><button type="button" class="dropdown-item" @click="currentPage = pages.flatfile_meta_info">Compilation</button></li>
+			<li><button type="button" class="dropdown-item" @click="currentPage = pages.flatfile_visualize">Visual inspection</button></li>
 		</ul>
 	</li>
 
 
-	<a class='nav-link' @click="currentPage = pages.residuals" href="#">
+	<button type="button" class='nav-link' @click="currentPage = pages.residuals">
 		<i class="fa fa-bar-chart me-1"></i> Model-to-Data Comparison
-	</a>
+	</button>
 
 	<div class='d-flex flex-row align-items-center'
 		 style='flex: 1 1 auto; padding: var(--bs-nav-link-padding-y) var(--bs-nav-link-padding-x);'>
@@ -31,12 +31,12 @@
 		</div>
 	</div>
 
-	<a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button">
+	<button type="button" class="nav-link dropdown-toggle" data-bs-toggle="dropdown" role="button">
 		<i class="fa fa-bars"></i>
-	</a>
+	</button>
 	<ul class="dropdown-menu bg-dark rounded-top-0">
-		<li><a class="dropdown-item" @click="currentPage = pages.ref_and_license" href="#"><i class="fa fa-address-card-o me-1"></i>References & License</a></li>
-		<li><a class="dropdown-item" @click="currentPage = pages.imprint" href="#">Imprint</a></li>
+		<li><button type="button" class="dropdown-item" @click="currentPage = pages.ref_and_license"><i class="fa fa-address-card-o me-1"></i>References & License</button></li>
+		<li><button type="button" class="dropdown-item" @click="currentPage = pages.imprint">Imprint</button></li>
 		<li><a class="dropdown-item" :href='pages.data_protection' target="_blank">Data Protection</a></li>
 	</ul>
 
