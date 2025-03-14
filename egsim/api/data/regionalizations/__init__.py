@@ -121,7 +121,7 @@ def get_regionalization(geometries: Union[str, dict],
 
     regions = []
     for region_name, models in mappings.items():
-        model_names = [_['model'] for _ in models]
+        model_names = sorted({_['model'] for _ in models})
         geojson = {
             "type": "Feature",
             "geometry": {},  # will be populated below

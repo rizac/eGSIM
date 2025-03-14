@@ -317,15 +317,21 @@ class Test:
         assert form.is_valid()
         models = form.get_region_selected_model_names()
         assert len(models) == 12
+        assert type(form.output()['models']) is list
+        assert form.output()['models'] == sorted(models)
 
-        form = GsimFromRegionForm({'lat': 50, 'lon': 7, 'regionalization': 'share'})
+        for reg in ['share', ['share']]:  # test string == single string item list
+            form = GsimFromRegionForm({'lat': 50, 'lon': 7, 'regionalization': reg})
+            assert form.is_valid()
+            models = form.get_region_selected_model_names()
+            assert len(models) == 5
+            assert form.output()['models'] == sorted(models)
+
+        form = GsimFromRegionForm({'lat': 51, 'lon': 10, 'regionalization': ['germany']})
         assert form.is_valid()
         models = form.get_region_selected_model_names()
+        assert form.output()['models'] == sorted(models)
         assert len(models) == 5
-        form = GsimFromRegionForm({'lat': 50, 'lon': 7, 'regionalization': ['share']})
-        assert form.is_valid()
-        _models = form.get_region_selected_model_names()
-        assert sorted(models) == sorted(_models)
 
 
 def test_field2params_in_forms():

@@ -15,7 +15,8 @@ from django.forms.fields import Field, FloatField
 
 from egsim.api import models
 from egsim.smtk import (validate_inputs, harmonize_input_gsims,
-                        harmonize_input_imts, gsim)
+                        harmonize_input_imts, gsim, registered_gsims)
+from egsim.smtk.flatfile import FlatfileMetadata
 from egsim.smtk.registry import gsim_info
 from egsim.smtk.validation import IncompatibleModelImtError, ImtError, ModelError
 
@@ -227,14 +228,16 @@ class SHSRForm(EgsimBaseForm):
             reg_objs = reg_objs.filter(name__in=value)
         return reg_objs
 
-    def get_region_selected_model_names(self) -> set[str]:
+    def get_region_selected_model_names(self) -> dict[str, list[str]]:
         """Get the ground motion model names from the chosen regionalization(s),
         lat and lon. This method should be invoked only if `self.is_valid()` returns
         True (form successfully validated).
-        Empty / not provided `lat` ar `lon` will return an empty set,
-        empty not provided regionalizations will default to all implemented ones
+        Empty / not provided `lat` ar `lon` will return an empty dict,
+        empty not provided regionalizations will default to all implemented ones.
+        The returned dict keys are ground motion models, mapped to the hazard source
+        regionalizations they were defined for (e.g. {'CauzziEtAl2014: ['share']})
         """
-        gsims = set()
+        gsims = {}
         cleaned_data = self.cleaned_data
         lon = cleaned_data.get('longitude', None)
         lat = cleaned_data.get('latitude', None)
@@ -242,13 +245,19 @@ class SHSRForm(EgsimBaseForm):
             return gsims
         point = Point(lon, lat)
         for reg_obj in self.cleaned_data['regionalization']:  # see clean_regionalization
+            reg_name = reg_obj.name
+            if reg_name == 'germany':
+                asd =9
             feat_collection = reg_obj.read_from_filepath()
             for feat in feat_collection['features']:
                 geometry, reg_models = feat['geometry'], feat['properties']['models']
+                reg_models = [r for r in reg_models if reg_name not in gsims.get(r, [])]
                 # if we already have all models, skip check:
-                if set(reg_models) - gsims:
-                    if shape(geometry).contains(point):
-                        gsims.update(reg_models)
+                if not reg_models:
+                    continue
+                if shape(geometry).contains(point):
+                    for model in reg_models:
+                        gsims.setdefault(model, []).append(reg_name)
         return gsims
 
 
@@ -268,21 +277,27 @@ class GsimForm(SHSRForm):
         # Implementation note: as of 2024, the 1st arg to ValidationError is not
         # really used, just pass the right `code` arg (see `error_json_data`)
         key = 'gsim'
-        value = self.cleaned_data.get(key, None)
+        value = self.to_list(self.cleaned_data.get(key))
+        value.extend(m for m in self.get_region_selected_model_names() if m not in value)
         if not value:
             self.add_error(key, self.ErrMsg.required)
             return {}
-        if type(value) not in (list, tuple):
-            value = [value]
         ret = {}
         try:
             ret = harmonize_input_gsims(value)
-            for name in self.get_region_selected_model_names():
-                if name not in ret:
-                    ret[name] = gsim(name)
         except ModelError as err:
             self.add_error(key, f'invalid model(s) {str(err)}')
         return ret
+
+    @staticmethod
+    def to_list(value) -> list:
+        if not value:
+            return []
+        if type(value) is tuple:
+            value = list(value)
+        if type(value) is not list:
+            value = [value]
+        return value
 
 
 class GsimImtForm(GsimForm):
@@ -298,12 +313,10 @@ class GsimImtForm(GsimForm):
         # Implementation note: as of 2024, the 1st arg to ValidationError is not
         # really used, just pass the right `code` arg (see `error_json_data`)
         key = 'imt'
-        value = self.cleaned_data.get(key, None)
+        value = self.to_list(self.cleaned_data.get(key))
         if not value:
             self.add_error(key, self.ErrMsg.required)
             return {}
-        if type(value) not in (list, tuple):
-            value = [value]
         ret = {}
         try:
             ret = harmonize_input_imts(value)
@@ -365,10 +378,65 @@ class GsimInfoForm(GsimForm, APIForm):
     and the OpenQuake docstring
     """
 
+    _field2params: dict[str, list[str]] = {'gsim': ('name', 'model')}
+
+    def clean_gsim(self) -> dict[str, GMPE]:
+        """Custom gsim clean. Relaxes model matching to allow partially typed,
+        case-insensitive names, eventually calling the super method.
+        The return value will replace self.cleaned_data['gsim']
+        """
+        key = 'gsim'
+        gmms = self.to_list(self.cleaned_data.get(key))
+        if gmms:
+            new_gmms = []
+            for gmm in gmms:
+                if gmm not in registered_gsims:
+                    matches = [m for m in registered_gsims if gmm.lower() in m.lower()]
+                    if matches:
+                        new_gmms.extend(m for m in matches if m not in new_gmms)
+                        continue
+                new_gmms.append(gmm)
+            self.cleaned_data[key] = new_gmms
+        return super().clean_gsim()
+
     def output(self) -> dict:
         """Compute and return the output from the input data (`self.cleaned_data`).
         This method must be called after checking that `self.is_valid()` is True
 
         :return: any Python object (e.g., a JSON-serializable dict)
         """
-        return {m: gsim_info(m) for m in self.cleaned_data['gsim']}
+        hazard_source_models = self.get_region_selected_model_names()
+        ret = {}
+        for gmm in self.cleaned_data['gsim']:
+            doc, imts, gmp, sa_limits = gsim_info(gmm)
+            # ground motion properties:
+            gmp = {p: FlatfileMetadata.get_help(p) for p in gmp}
+            # remove unnecessary flatfile-related info (everything after first ".")
+            # and also jsonify the string (replace " with ''):
+            gmp = {
+                k: v[: (v.find('.') + 1) or None].removesuffix(".").replace('"', "''")
+                for k, v in gmp.items()
+            }
+            # pretty print doc (removing all newlines and double quotes, see below):
+            desc = []
+            for line in doc.split("\n"):  # parse line by line
+                line = line.strip()  # remove indentation
+                if not line:
+                    # if line is empty, then add a dot to the last line unless it does
+                    # not already end with punctuation:
+                    if desc and desc[-1][-1] not in {'.', ',', ';', ':', '?', '!'}:
+                        desc[-1] += '.'
+                    continue
+                # avoid \" in json strings, replace with ''
+                desc.append(line.replace('"', "''"))
+            doc = " ".join(desc)
+            # pretty print imts and add sa_)limits to it:
+            imts = ['SA(PERIOD_IN_S)' if  i == 'SA' else i for i in imts]
+            ret[gmm] = {
+                'description': doc,
+                'defined_for': imts,
+                'requires': gmp,
+                'sa_period_limits': sa_limits,
+                'hazard_source_models': hazard_source_models.get(gmm)
+            }
+        return ret

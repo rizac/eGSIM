@@ -41,10 +41,16 @@
 			</div>
 		</div>
 		<div style='text-align: justify; width:0; min-width:100%'> <!--make width adjust according to other siblings width -->
-			Here you can inspect how your flatfile should be formatted according to your
-			models of interest.
 			Once compiled, flatfiles can be uploaded in HDF (recommended) or CSV format
-			and used throughout the application (Data visual inspection and Model-to-data comparison)
+			and used throughout the application:
+		</div>
+		<div style='text-align: justify; width:0; min-width:100%' class='d-flex flex-column gap-2'>
+			<button type='button' @click="currentPage = pages.flatfile_visualize" class='btn btn-outline-primary'>
+				Flatfile visual inspection
+			</button>
+			<button type='button' @click="currentPage = pages.residuals" class='btn btn-outline-primary'>
+				Model-to-data comparison
+			</button>
 		</div>
 	</div>
 
@@ -99,8 +105,13 @@
 		</div>
 	</div>
 
-	<div v-else class='d-flex flex-column gap-3' style='flex: 1 1 auto; height:100%;'>
-		<div style='flex: 1 1 auto' class='position-relative border-start'>
+	<div v-else class='d-flex flex-column gap-2 ms-2' style='flex: 1 1 auto; height:100%;'>
+		<div class='pt-3 ps-2'>
+			To facilitate the compilation of your own flatfile,
+			you can get here the required fields
+			according to your models of interest:
+		</div>
+		<div style='flex: 1 1 auto' class='position-relative border-start border-top'>
 			<gsim-map @gsim-selected="(gs) => { forms.flatfile_meta_info.gsim = Array.from(new Set(forms.flatfile_meta_info.gsim.concat(gs))) }"
 					  @gsim-unselected="(gs) => { forms.flatfile_meta_info.gsim = forms.flatfile_meta_info.gsim.filter(g => !gs.includes(g)); }"
 					  :regionalizations="regionalizations"

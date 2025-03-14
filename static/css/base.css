@@ -3,7 +3,7 @@
 html{ font-size: 1.75vmin; } /* computed from a font-size=16px and a vheight=vmin=982px*/
 
 /* no fancy, browser-decorated anchors and iframes: */
-a, a:hover, a:visited, a:link, a:active{
+a, a:hover, a:visited, a:link, a:active, button.btn-link, button.btn-link:hover{
 	text-decoration: none !important;
 }
 iframe{ border:0; margin:0; }
@@ -16,13 +16,26 @@ iframe{ border:0; margin:0; }
 	--bs-body-bg-rgb: 248,249,250;  /* overrides color of class .bg_body */
 	--bs-light-rgb: 202,214,222;  /* overrides color of class .bg-light */
 	--bs-primary: rgba(var(--bs-primary-rgb), 1); /* primary buttons bg, see below */
-	--bs-primary-active-hover: rgba(32, 77, 116, 1); /* primary buttons hover bg */
+	--bs-primary-active-hover-rgb: 32,77,116;
+	--bs-primary-active-hover: rgba(var(--bs-primary-active-hover-rgb), 1); /* primary buttons hover bg */
+	--bs-link-hover-color-rgb: 57,154,219; /* var(--bs-primary-active-hover-rgb);*/  /* primary anchors and btn link hover */
 	--bs-border-color: rgb(179, 186, 193);  /* color of .border* classes in bootstrap5 */
 	--bs-border-style: solid;  /* style of .border* classes in bootstrap5 */
 	--bs-border-width: 1px; /* width of .border* classes in bootstrap5 */
 	--bs-border-radius: 0.375rem; /* radius of the .rounded class in bootstrap5 */
 	--v-arrows-img: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20style%3D%22background-color%3Atransparent%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22100%22%20height%3D%22160%22%3E%3Cpath%20stroke-linejoin%3D%22round%22%20style%3D%22fill%3A%20none%3Bstroke-width%3A%2015%3Bstroke%3A%20DimGray%3B%22%20d%3D%22M%2010%2C60%2050%2C20%2090%2C60%22%2F%3E%3Cpath%20stroke-linejoin%3D%22round%22%20style%3D%22fill%3A%20none%3Bstroke-width%3A%2015%3Bstroke%3A%20DimGray%3B%22%20d%3D%22M%2010%2C100%2050%2C140%2090%2C100%22%2F%3E%3C%2Fsvg%3E');
+}
 
+/* anchors and btn-link hover must match primary button active color*/
+.btn-link:hover {
+	color: rgba(var(--bs-link-hover-color-rgb), 1)
+}
+a:hover {
+	--bs-link-color-rgb: var(--bs-link-hover-color-rgb);
+}
+/* btn sets a font size 1rem, but when btn-link we want it to inherit, as normal anchors do */
+button.btn.btn-link{
+	font-size: inherit !important;
 }
 
 /* navbar */

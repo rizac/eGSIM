@@ -29,39 +29,51 @@ data_ext = ('hdf', 'csv')
 class URLS:  # noqa
     """Define global URLs, to be used in both urls.py and injected in the web page"""
 
-    # Form specific URLs
-    PREDICTIONS = 'gui/egsim-predictions'  # <path>/<downloaded_file_basename>
-    PREDICTIONS_VISUALIZE = 'gui/egsim-predictions-visualize'
-    PREDICTIONS_PLOT_IMG = 'gui/egsim-predictions-plot'  # <path>/<downloaded_file_basename>  # noqa
-    PREDICTIONS_RESPONSE_TUTORIAL = 'jupyter/predictions-response-tutorial.html'
-    RESIDUALS = 'gui/egsim-residuals'  # <path>/<downloaded_file_basename>
-    RESIDUALS_VISUALIZE = 'gui/egsim-residuals-visualize'
-    RESIDUALS_PLOT_IMG = 'gui/egsim-residuals-plot'  # <path>/<downloaded_file_basename>
-    RESIDUALS_RESPONSE_TUTORIAL = 'jupyter/residuals-response-tutorial.html'
-    FLATFILE_VISUALIZE = 'gui/flatfile_visualization'
-    FLATFILE_META_INFO = 'gui/get_flatfile_meta_info'
-    FLATFILE_PLOT_IMG = 'gui/egsim-flatfile-plot'  # <path>/<downloaded_file_basename>
-    # Misc (URLs shared between forms)
-    GET_GSIMS_FROM_REGION = 'gui/get_models_from_region'
-    FLATFILE_VALIDATE = 'gui/flatfile_validation'
-    GET_GSIMS_INFO = 'gui/get_models_info'
+    # webpage URLs NOTE: DO NOT SUPPLY NESTED PATHS (i.e., NO "/" in PATHS):
+    WEBPAGE_HOME = 'home'
+    WEBPAGE_DATA_PROTECTION = 'https://www.gfz.de/en/data-protection/'
+    WEBPAGE_FLATFILE_COMPILATION_INFO = 'flatfile'
+    WEBPAGE_FLATFILE_INSPECTION_PLOT = 'flatfile-visualize'
+    WEBPAGE_IMPRINT = "imprint"
+    WEBPAGE_PREDICTIONS = 'predictions'
+    WEBPAGE_RESIDUALS = 'residuals'
+    WEBPAGE_REF_AND_LICENSE = "ref_and_license"
 
-    # webpage URLs:
-    HOME_PAGE = 'home'
-    DATA_PROTECTION_PAGE = 'https://www.gfz-potsdam.de/en/data-protection/'
-    FLATFILE_META_INFO_PAGE = 'flatfile-metadata-info'
-    FLATFILE_INSPECTION_PLOT_PAGE = 'flatfile-inspection-plot'
-    IMPRINT_PAGE = "imprint"
-    PREDICTIONS_PAGE = 'predictions'
-    RESIDUALS_PAGE = 'residuals'
-    REF_AND_LICENSE_PAGE = "ref_and_license"
+    # download URls. NOTE: ALL URLS ARE IN THE FORM: <path>/<downloaded_file_basename>
+    DOWNLOAD_PREDICTIONS_DATA = 'download/egsim-predictions'
+    DOWNLOAD_PREDICTIONS_PLOT = 'download/egsim-predictions-plot'
+    DOWNLOAD_RESIDUALS_DATA = 'download/egsim-residuals'
+    DOWNLOAD_RESIDUALS_PLOT = 'download/egsim-residuals-plot'
+    DOWNLOAD_FLATFILE_PLOT = 'download/egsim-flatfile-plot'
+
+    # URLs (usually submit buttons) to visualize data on the page:
+    SUBMIT_PREDICTIONS_VISUALIZATION = 'submit/egsim-predictions'
+    SUBMIT_RESIDUALS_VISUALIZATION = 'submit/egsim-residuals'
+    SUBMIT_FLATFILE_VISUALIZATION = 'submit/flatfile'
+    SUBMIT_FLATFILE_COMPILATION_INFO = 'submit/flatfile_compilation_info'
+
+    # Misc (usually AJAX requests. NOTE: MOST LIKELY THESE URLs ARE SHARED BETWEEN FORMS)
+    GSIMS_FROM_REGION = 'get_models_from_region'
+    FLATFILE_VALIDATION = 'get_flatfile_validation'
+    GSIMS_INFO = 'get_models_info'
+    PREDICTIONS_DOWNLOADED_DATA_TUTORIAL = 'predictions-in-your-code-tutorial.html'
+    RESIDUALS_DOWNLOADED_DATA_TUTORIAL = 'residuals-in-your-code-tutorial.html'
+
+
+# this check is needed to avoid nested paths in url pages
+if any(
+        "/" in getattr(URLS, _) and not getattr(URLS, _).startswith('https://')
+        for _ in dir(URLS) if 'WEBPAGE' in _
+):
+    raise SystemError("Remove '/' in URL WEBPAGES: '/' create nested paths which might "
+                      "mess up requests performed on the page (error 404)")
 
 
 def main(request, page=''):
     """view for the main page"""
     template = 'egsim.html'
     init_data = _get_init_data_json(settings.DEBUG) | \
-        {'currentPage': page or URLS.HOME_PAGE}
+        {'currentPage': page or URLS.WEBPAGE_HOME}
     return render(request, template, context={'debug': settings.DEBUG,
                                               'init_data': init_data,
                                               'references': _get_references()})
@@ -151,36 +163,36 @@ def _get_init_data_json(debug=False) -> dict:
 
     return {
         'pages': {  # tab key => url path (after the first slash)
-            'predictions': URLS.PREDICTIONS_PAGE,
-            'residuals': URLS.RESIDUALS_PAGE,
-            'flatfile_meta_info': URLS.FLATFILE_META_INFO_PAGE,
-            'flatfile_visualize': URLS.FLATFILE_INSPECTION_PLOT_PAGE,
-            'ref_and_license': URLS.REF_AND_LICENSE_PAGE,
-            'imprint': URLS.IMPRINT_PAGE,
-            'home': URLS.HOME_PAGE,
-            'data_protection': URLS.DATA_PROTECTION_PAGE
+            'predictions': URLS.WEBPAGE_PREDICTIONS,
+            'residuals': URLS.WEBPAGE_RESIDUALS,
+            'flatfile_meta_info': URLS.WEBPAGE_FLATFILE_COMPILATION_INFO,
+            'flatfile_visualize': URLS.WEBPAGE_FLATFILE_INSPECTION_PLOT,
+            'ref_and_license': URLS.WEBPAGE_REF_AND_LICENSE,
+            'imprint': URLS.WEBPAGE_IMPRINT,
+            'home': URLS.WEBPAGE_HOME,
+            'data_protection': URLS.WEBPAGE_DATA_PROTECTION
         },
         'urls': {
-            'predictions': URLS.PREDICTIONS,
-            'predictions_visualize': URLS.PREDICTIONS_VISUALIZE,
+            'predictions': URLS.DOWNLOAD_PREDICTIONS_DATA,
+            'predictions_visualize': URLS.SUBMIT_PREDICTIONS_VISUALIZATION,
             'predictions_plot_img': [
-                f'{URLS.PREDICTIONS_PLOT_IMG}.{ext}' for ext in img_ext
+                f'{URLS.DOWNLOAD_PREDICTIONS_PLOT}.{ext}' for ext in img_ext
             ],
-            'predictions_response_tutorial': URLS.PREDICTIONS_RESPONSE_TUTORIAL,
-            'residuals': URLS.RESIDUALS,
-            'residuals_visualize': URLS.RESIDUALS_VISUALIZE,
+            'predictions_response_tutorial': URLS.PREDICTIONS_DOWNLOADED_DATA_TUTORIAL,
+            'residuals': URLS.DOWNLOAD_RESIDUALS_DATA,
+            'residuals_visualize': URLS.SUBMIT_RESIDUALS_VISUALIZATION,
             'residuals_plot_img': [
-                f'{URLS.RESIDUALS_PLOT_IMG}.{ext}' for ext in img_ext
+                f'{URLS.DOWNLOAD_RESIDUALS_PLOT}.{ext}' for ext in img_ext
             ],
-            'get_gsim_info': URLS.GET_GSIMS_INFO,
-            'residuals_response_tutorial': URLS.RESIDUALS_RESPONSE_TUTORIAL,
-            'get_gsim_from_region': URLS.GET_GSIMS_FROM_REGION,
-            'flatfile_meta_info': URLS.FLATFILE_META_INFO,
-            'flatfile_visualize': URLS.FLATFILE_VISUALIZE,
+            'residuals_response_tutorial': URLS.RESIDUALS_DOWNLOADED_DATA_TUTORIAL,
+            'flatfile_meta_info': URLS.SUBMIT_FLATFILE_COMPILATION_INFO,
+            'flatfile_visualize': URLS.SUBMIT_FLATFILE_VISUALIZATION,
             'flatfile_plot_img': [
-                f'{URLS.FLATFILE_PLOT_IMG}.{ext}' for ext in img_ext
+                f'{URLS.DOWNLOAD_FLATFILE_PLOT}.{ext}' for ext in img_ext
             ],
-            'flatfile_validate': URLS.FLATFILE_VALIDATE,
+            'get_gsim_info': URLS.GSIMS_INFO,
+            'get_gsim_from_region': URLS.GSIMS_FROM_REGION,
+            'flatfile_validate': URLS.FLATFILE_VALIDATION,
         },
         'forms': {
             'predictions': form2dict(predictions_form),

@@ -352,6 +352,20 @@ fc-list | grep Encode
 </code></pre>
 More details <a target="_blank" href="https://unix.stackexchange.com/a/305934">here (opens in new tab)</a>
 
+<h3>Configure maximum request size and maximum timeout errors</h3>
+Django does not have a way to do this, and in any case it is better to
+configure these settings only in one place, so we do it in the nginx config file:
+<div>
+<span class="token important">/etc/nginx/sites-available/$DJANGO_PROJECT</span>
+</div>
+Therein, <code>proxy_read_timeout</code> sets the maximum for processing time
+(delegates gunicorn, so if you change this
+the timeout set in
+<span class="token important">$EGSIM_LOG_DIR/gunicorn.log</span>
+<b>that should not be lower than the nginx timeout</b>)
+and <code>client_max_body_size</code> sets the maximum size
+
+(a snippet of the nbinx file is also at the bottom of this document).
 
 <h1>Server installation</h1>
 
@@ -770,23 +784,39 @@ server {
 	keepalive_timeout 70;
 	# certificate (must be configured for https, tutorial not covered here. For non-secure connection, you can comment out the following lines):
 	ssl_certificate /etc/ssl/certs/egsim.chain.txt;  # file is not there by default, to be added
-    ssl_certificate_key /etc/ssl/private/$DOMAIN.key;  # file is not there by default, to be added
-    ssl_session_cache   shared:SSL:10m;
-    ssl_session_timeout 10m;
-    location / {
+	ssl_certificate_key /etc/ssl/private/$DOMAIN.key;  # file is not there by default, to be added
+	ssl_session_cache   shared:SSL:10m;
+	ssl_session_timeout 10m;
+
+	location / {
 		proxy_pass http://localhost:$GUNICORN_PORT;
-		proxy_read_timeout 180s;  # this should match proxy server timeout (gunicorn, uwsgi,...) in the gunicorn service file
+		# Time limits. Keep them all the same for simplicity. IMPORTANT: when changing these, change also the text in custom_timeout_exceeded (see below)
+		proxy_connect_timeout 180s;  # How long to wait for a connection to the upstream
+		proxy_send_timeout 180s;     # How long to wait for the upstream server to send data
+		proxy_read_timeout 180s;     # How long to wait for the upstream server to respond. It should be >= the proxy server timeout (gunicorn, uwsgi,...). See gunicorn service file
 		proxy_set_header Host $http_host;
-       	proxy_redirect off;
-        proxy_set_header X-Forwarded-For $remote_addr;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        client_max_body_size 20m;
+		proxy_redirect off;
+		proxy_set_header X-Forwarded-For $remote_addr;
+		proxy_set_header X-Forwarded-Proto $scheme;
+		client_max_body_size 25M;  # max body size, change also @custom_size_limit_exceeded message if you change this
 	}
 	location /static/ {
 		alias /var/cache/$DJANGO_PROJECT/static/;
 	}
 	location /media/ {
 		alias $EGSIM_DATA_DIR/media/;
+	}
+	# Return a text response for 413 error, likely it is a flatfile size problem
+	error_page 413 = @custom_size_limit_exceeded;
+	# Return a text response for 502 (gunicorn timeout) and 504 (nginx timeout) errors, likely they are timeout problems
+	error_page 502 504 = @custom_timeout_exceeded;
+	# Custom location for 404 error response
+	location @custom_size_limit_exceeded {
+		return 413 'Data size too large (max 25 Mb allowed). If you uploaded a flatfile, try to remove unnecessary fields (columns) and try again';
+	}
+	# Custom location for 500 error response
+	location @custom_timeout_exceeded {
+		return 504 'Processing takes too long (max 180 s allowed). If you can, try to decrease the number of models, imts or flatfile records (rows) and try again';
 	}
 }
 </code></pre>
