@@ -97,6 +97,20 @@ def test_model_info():
     assert all(len(v['hazard_source_models']) > 0 for v in resp_json.values())
     assert response.status_code == 200
 
+    # get request
+    response = client.get(f"/{MODEL_INFO}?lat=45&lon=55")
+    resp_json = response.json()
+    assert list(resp_json) == ['ESHM20Craton']
+    # we should have only one hazard source model (check we do not have anymore
+    # old bug in creating files):
+    assert all(len(v['hazard_source_models']) == 1 for v in resp_json.values())
+    assert response.status_code == 200
+
+    # get request. this raised (bug), check it does not anymore
+    response = client.get(f"/{MODEL_INFO}?name=2014")
+    resp_json = response.json()
+    assert all('2014' in v for v in list(resp_json))
+
 
 def test_not_found(client):
     response = client.post(f"/absgdhfgrorvjlkfn elfnbvenbv",

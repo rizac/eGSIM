@@ -14,8 +14,7 @@ from django.forms.forms import DeclarativeFieldsMetaclass  # noqa
 from django.forms.fields import Field, FloatField
 
 from egsim.api import models
-from egsim.smtk import (validate_inputs, harmonize_input_gsims,
-                        harmonize_input_imts, gsim, registered_gsims)
+from egsim.smtk import (validate_inputs, harmonize_input_gsims, harmonize_input_imts)
 from egsim.smtk.flatfile import FlatfileMetadata
 from egsim.smtk.registry import gsim_info
 from egsim.smtk.validation import IncompatibleModelImtError, ImtError, ModelError
@@ -388,14 +387,18 @@ class GsimInfoForm(GsimForm, APIForm):
         key = 'gsim'
         gmms = self.to_list(self.cleaned_data.get(key))
         if gmms:
+            registered_gmms = {m.lower(): m for m in models.Gsim.names()}
             new_gmms = []
             for gmm in gmms:
-                if gmm not in registered_gsims:
-                    matches = [m for m in registered_gsims if gmm.lower() in m.lower()]
+                gmm_l = gmm.lower()
+                if gmm_l in registered_gmms:
+                    new_gmms.append(registered_gmms[gmm_l])
+                else:
+                    matches = [v for k, v in registered_gmms.items() if gmm.lower() in k]
                     if matches:
-                        new_gmms.extend(m for m in matches if m not in new_gmms)
-                        continue
-                new_gmms.append(gmm)
+                        new_gmms.extend(matches)
+                    else:
+                        new_gmms.append(gmm)
             self.cleaned_data[key] = new_gmms
         return super().clean_gsim()
 
