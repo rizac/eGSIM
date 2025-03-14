@@ -186,7 +186,8 @@ server installation, scroll down
 	<tr>
 		<td><i class="fa fa-file-o"></i></td>
 		<td><span class="token important">/etc/systemd/system/$DJANGO_PROJECT.service</span><br>
-		the Gunicorn script to start the django production server</td>
+		the Gunicorn script to start the django production server. See dedicate section below
+		if you need to modify and/or restart it</td>
 	</tr>
 	<tr>
 		<td><i class="fa fa-file-o"></i></td>
@@ -197,7 +198,8 @@ server installation, scroll down
 	<tr>
 		<td><i class="fa fa-file-o"></i></td>
 		<td><span class="token important">/etc/nginx/sites-available/$DJANGO_PROJECT</span><br>
-		the nginx config for the egsim site</td>
+		the nginx config for the egsim site. See dedicate section below
+		if you need to modify and/or restart it</td>
 	</tr>
 	<tr>
 		<td><i class="fa fa-file-o"></i></td>
@@ -615,12 +617,17 @@ With the Python virtualenv activated, execute:
 
 <h2>Server configuration</h2>
 
-<p>NGINX is the main application server, however, it delegates Gunicorn for
-serving the Python code (everything except static and media files).</p>
-
+<p>
+NGINX is the main application server, however, it delegates Gunicorn for
+serving the Python code (everything except static and media files).
+Technically, we say that Nginx acts as a <b>gateway for</b> or <b>proxy server of</b> Gunicorn.
+</p>
+<p>
 In the following, we will configure Gunicorn and Nginx.
-<p>IMPORTANT: <b>remember that After any modification to the code or the config below,
-before checking the results online, is better to restart the services</b></p>
+<b>IMPORTANT: remember that After any modification to the code or the config below,
+before checking the results online, is better to restart the services
+</b>
+</p>
 
 <pre><code class="language-bash">
 service $DJANGO_PROJECT restart
@@ -637,22 +644,22 @@ service nginx restart
 Check that gunicorn is installed, i.e. the file <code>$VENV_PATH/bin/gunicorn</code> exists
 (otherwise <code>pip install gunicorn</code>)
 
-<details>
-<summary>
-	Start Gunicorn and go to $DOMAIN (from the server or another external computer)
-	to test:
-</summary>
+<p>
+<b>Stop all running egsim services (if any)</b>
 
-	<pre><code class="language-bash">
-	export PYTHONPATH=$EGSIM_CONFIG_DIR; export DJANGO_SETTINGS_MODULE=settings
-	gunicorn --workers=4 --log-file=$EGSIM_LOG_DIR/gunicorn.log --bind=127.0.0.1:$GUNICORN_PORT --bind=[::1]:$GUNICORN_PORT egsim.wsgi:application
-	</code></pre>
+List  all running services via:
+<pre><code class="language-bash">
+systemctl list-units --type=service --state=running
+</code></pre>
+And then, after identifying the old egsim service:
+<pre><code class="language-bash">
+service [old_egsim_unit_file] stop
+</code></pre>
 
-	<!-- <p>Create the systemd task to start automatically egsim django server</p>
-	<pre><code class="language-bash">
-	su $DJANGO_USER
-	</code></pre> -->
-</details>
+<b>Important note</b> without this procedure, if the old service is using the same url
+and port specified in the unit file above, then our service will not work, as the port is
+already in use
+</p>
 
 <p>
 Create the so-called service <i>unit file</i> (<code>touch</code> or
@@ -705,23 +712,6 @@ WantedBy=multi-user.target
 	versions alongside the current)
 	</li>
 </ul>
-
-<p>Stop all running egsim services</p>
-
-List  all running services via:
-<pre><code class="language-bash">
-systemctl list-units --type=service --state=running
-</code></pre>
-And then, after identifying the old egsim service:
-<pre><code class="language-bash">
-service [old_egsim_unit_file] stop
-</code></pre>
-</p>
-<p><b>Important note</b> without this procedure, if the old service is using the same url
-and port specified in the unit file above, then our service will not work, as the port is
-already in use
-</p>
-
 
 <p>Restart the service</p>
 <pre><code class="language-bash">
