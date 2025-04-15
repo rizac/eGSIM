@@ -13,7 +13,6 @@ import numpy as np
 from egsim.smtk.converters import (vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14,
                                    convert_accel_units)
 from egsim.smtk.flatfile import read_flatfile
-from egsim.smtk.registry import sa_period
 
 
 class Esm2018:
