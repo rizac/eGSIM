@@ -22,7 +22,7 @@ class Migration(migrations.Migration):
                 ('license', models.TextField(default=None, null=True)),
                 ('citation', models.TextField(default=None, help_text='Bibliographic citation, as text', null=True)),
                 ('doi', models.TextField(default=None, null=True)),
-                ('media_root_path', models.TextField(help_text='the file path, relative to the media root directory defined in the settings file (MEDIA_ROOT)', unique=True)),
+                ('filepath', models.TextField(help_text='the file absolute path (usually within the MEDIA_ROOT path defined in Django settings)', unique=True)),
             ],
             options={
                 'abstract': False,
@@ -56,7 +56,7 @@ class Migration(migrations.Migration):
                 ('license', models.TextField(default=None, null=True)),
                 ('citation', models.TextField(default=None, help_text='Bibliographic citation, as text', null=True)),
                 ('doi', models.TextField(default=None, null=True)),
-                ('media_root_path', models.TextField(help_text='the file path, relative to the media root directory defined in the settings file (MEDIA_ROOT)', unique=True)),
+                ('filepath', models.TextField(help_text='the file absolute path (usually within the MEDIA_ROOT path defined in Django settings)', unique=True)),
             ],
             options={
                 'abstract': False,
