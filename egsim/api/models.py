@@ -6,9 +6,7 @@ Created on 5 Apr 2019
 @author: riccardo
 """
 from __future__ import annotations
-from os.path import abspath, join, isdir, dirname
-from os import makedirs
-from typing import Any, Union, Iterable, Self
+from typing import Any, Self
 
 from django.db.models import (Model as DjangoDbModel, TextField, BooleanField,
                               Index, URLField, Manager, QuerySet, FloatField)
@@ -112,15 +110,6 @@ class MediaFile(EgsimDbModel):
                          help_text="the file absolute path (usually within the "
                                    "MEDIA_ROOT path defined in Django settings)")
 
-    # @property
-    # def filepath(self):
-    #     """Return the absolute file path of this data file"""
-    #     from django.conf import settings
-    #     return abspath(join(settings.MEDIA_ROOT, self.media_root_path))  # noqa
-
-    # def write_to_filepath(self, media_content: Any, mkdirs=True, **kwargs):
-    #     raise NotImplementedError()
-
     def read_from_filepath(self, **kwargs) -> Any:
         raise NotImplementedError()
 
@@ -137,23 +126,6 @@ class Flatfile(MediaFile, Reference):
     the associated media file is an HDF file representing a valid flatfile (pandas
     DataFrame)
     """
-
-    # def write_to_filepath(self, flatfile: Any, mkdirs=True, **kwargs):
-    #     """Write this instance media file as HDF file on disk
-    #
-    #     @param flatfile: a pandas DataFrame denoting a **valid** flatfile (no check
-    #         or validation will be performed)
-    #     @param mkdirs: recursively create the parent directory of `self.filepath` if
-    #         non-existing
-    #     @param kwargs: additional arguments to pandas `to_hdf` ('format', 'mode'
-    #         and 'key' will be set in this function if not given)
-    #     """
-    #     if mkdirs and not isdir(dirname(self.filepath)):
-    #         makedirs(dirname(self.filepath))
-    #     kwargs.setdefault('format', 'table')
-    #     kwargs.setdefault('mode', 'w')
-    #     kwargs.setdefault('key', self.name)
-    #     flatfile.to_hdf(self.filepath, **kwargs)
 
     def read_from_filepath(self, **kwargs) -> Any:
         """Return this instance media file as flatfile (pandas DataFrame)
@@ -195,31 +167,6 @@ class Regionalization(MediaFile, Reference):
     Note for developers:. See `read_from_filepath` to convert a Feature
     geometry to a shapely `shape` object
     """  # noqa
-
-    # def write_to_filepath(
-    #         self, geojson_features: Union[Iterable[dict], dict], mkdirs=True, **kwargs):
-    #     """Write this instance media file as (geo)JSON FeatureCollection object on disk.
-    #     See this class docstring for info on the geoJSON format
-    #
-    #     @param geojson_features: dict (geoJSON FeatureCollection) or iterable of
-    #         dicts (geoJSON Feature's). See this class docstring for info on the format
-    #     @param mkdirs: recursively create the parent directory of `self.filepath` if
-    #         non-existing
-    #     @param kwargs: additional arguments to `json.dump` ('separators'
-    #         will be set in this function is not given)
-    #     """
-    #     if mkdirs and not isdir(dirname(self.filepath)):
-    #         makedirs(dirname(self.filepath))
-    #     if not isinstance(geojson_features, dict):
-    #         # convert list of geoJSON features into a geojson feature collection:
-    #         geojson_features = {
-    #             "type": "FeatureCollection",
-    #             "features": list(geojson_features),
-    #         }
-    #     import json
-    #     kwargs.setdefault('separators', (',', ':'))
-    #     with open(self.filepath, 'w') as _:
-    #         json.dump(geojson_features, _, **kwargs)
 
     def read_from_filepath(self, **kwargs) -> dict:
         """Return this instance media file as geoJSON FeatureCollection object (dict).
