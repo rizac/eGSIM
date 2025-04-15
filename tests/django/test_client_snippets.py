@@ -1,4 +1,5 @@
 from os.path import dirname, abspath, join, isdir, isfile
+import numpy as np
 import pandas as pd
 from requests import HTTPError
 import pytest
@@ -40,6 +41,78 @@ def test_client_get_predictions(live_server):
     dfr = get_egsim_predictions(
         models, imts, [4, 5], [1, 10, 100],
         base_url=f"{live_server.url}/{PREDICTIONS_URL_PATH}"
+    )
+    file = join(test_data_dir, 'predictions.hdf')
+    if isfile(file):
+        dfr2 = pd.read_hdf(file)
+        pd.testing.assert_frame_equal(
+            dfr, dfr2, check_exact=False, atol=0, rtol=1e-3
+        )
+
+
+def test_client_get_predictions_nga(live_server):
+    models = [
+        "NGAEastUSGSSammons1",
+        "NGAEastUSGSSammons10",
+        "NGAEastUSGSSammons11",
+        "NGAEastUSGSSammons12",
+        "NGAEastUSGSSammons13",
+        "NGAEastUSGSSammons14",
+        "NGAEastUSGSSammons15",
+        "NGAEastUSGSSammons16",
+        "NGAEastUSGSSammons17",
+        "NGAEastUSGSSammons2",
+        "NGAEastUSGSSammons3",
+        "NGAEastUSGSSammons4",
+        "NGAEastUSGSSammons5",
+        "NGAEastUSGSSammons6",
+        "NGAEastUSGSSammons7",
+        "NGAEastUSGSSammons8",
+        "NGAEastUSGSSammons9",
+        "NGAEastUSGSSeed1CCSP",
+        "NGAEastUSGSSeed1CVSP",
+        "NGAEastUSGSSeed2CCSP",
+        "NGAEastUSGSSeed2CVSP",
+        "NGAEastUSGSSeedB_a04",
+        "NGAEastUSGSSeedB_ab14",
+        "NGAEastUSGSSeedB_ab95",
+        "NGAEastUSGSSeedB_bca10d",
+        "NGAEastUSGSSeedB_bs11",
+        "NGAEastUSGSSeedB_sgd02",
+        "NGAEastUSGSSeedFrankel",
+        "NGAEastUSGSSeedGraizer",
+        "NGAEastUSGSSeedGraizer16",
+        "NGAEastUSGSSeedGraizer17",
+        "NGAEastUSGSSeedHA15",
+        "NGAEastUSGSSeedPEER_EX",
+        "NGAEastUSGSSeedPEER_GP",
+        "NGAEastUSGSSeedPZCT15_M1SS",
+        "NGAEastUSGSSeedPZCT15_M2ES",
+        "NGAEastUSGSSeedSP15",
+        "NGAEastUSGSSeedYA15"
+    ]
+    imts = ["PGA", "SA(0.2)", "SA(1.0)", "SA(2.0)"]
+
+    # Magnitudes between 4.0 and 7.5 spaced every 0.25 M units
+    # magnitudes = ["{:.2f}".format(mag) for mag in np.arange(4.0, 7.75, 0.25)]
+    magnitudes: list = np.arange(4.0, 7.75, 0.25).tolist()  # noqa
+    # magnitudes = ["{:.2f}".format(mag) for mag in magnitudes]
+
+    # Distances
+    distances = [1.0, 2.0, 5.0, 7.5, 10.0, 15.0, 20.0, 30.0, 40.0, 50.0,
+                 60.0, 80.0, 100.0, 125.0, 150.0, 175.0, 200.0, 225.0, 250.0]
+    # distances = ["{:.2f}".format(rval) for rval in distances]
+    print(magnitudes)
+    print(distances)
+    # Other rupture parameters
+    rupture_params = {"aspect": 1.5, "dip": 90.0, "ztor": 2.0, "rake": 0.0}
+    # Other site parameters
+    site_params = {"region": 0, "vs30": 760.0, "z1pt0": 25.0, "z2pt5": 1.2,
+                   "vs30measured": True}
+    dfr = get_egsim_predictions(
+        models, imts, magnitudes=magnitudes, distances=distances,
+        base_url=f"{live_server.url}/{PREDICTIONS_URL_PATH}",
+        rupture_params=rupture_params, site_params=site_params
     )
     file = join(test_data_dir, 'predictions.hdf')
     if isfile(file):
