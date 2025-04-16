@@ -32,8 +32,8 @@ The web portal (and API documentation) is available at:
      * [Repopulating the DB](#Re-populating-the-DB)
      * [Admin panel](#admin-panel)
      * [Create a custom management command](#Create-a-custom-management-command)  
-     * [Add new predefined flatfiles](#Add-new-predefined-flatfiles)
-     * [Add new regionalization](#Add-new-regionalization)
+     <!-- * [Add new predefined flatfiles](#Add-new-predefined-flatfiles)
+     * [Add new regionalization](#Add-new-regionalization) -->
      
 
 DISCLAIMER: **This document does not cover the server installation of 
@@ -45,6 +45,10 @@ the web app**, which is publicly available at the URL above.
  - (For developers and contributors) How to install the Django app locally for testing,
    features addition, maintenance
 
+**External data [IMPORTANT]**: As of 2025, the egsim data (predefined flatfiles, 
+regionalizations) has been moved in a separate Nextcloud directory (egsim-data)
+and the documentation in a README file therein, please consult the maintainer 
+for info.
 
 # Installation
 
@@ -439,6 +443,7 @@ new data (regionalizations and flatfiles) that will be
 made available in eGSIM with the `egsim_init` command
 (see [Complete DB reset](#Complete-DB-reset) for details)
 
+<!-- 
 
 ## Add new predefined flatfiles
 
@@ -504,3 +509,4 @@ Implemented flatfiles sources (click on the items below to expand)
 
 - Repopulate all eGSIM tables (command `egsim_init`)
 
+-->

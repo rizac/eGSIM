@@ -23,7 +23,24 @@ def test_initdb(capsys):
     # (django_db uses the fixture django_db_setup, overridden in conftest.py)
     # Here we provide capsys in case we want to test the generated output
     # in more details
-    call_command('egsim_init', interactive=False)
+    call_command('egsim-init', interactive=False)
+    captured = capsys.readouterr()
+    capout = captured.out
+    assert capout and "Unused Flatfile column(s)" not in capout
+    flatfiles_dir = os.path.join(settings.MEDIA_ROOT, 'flatfiles')
+    for ff in os.listdir(flatfiles_dir):
+        dfr: pd.DataFrame = pd.read_hdf(os.path.join(flatfiles_dir, ff))  # noqa
+        assert all(get_dtype_of(dfr[c]) is not None for c in dfr.columns)
+
+
+@pytest.mark.django_db
+def test_egsimdb(capsys):
+    """Test the command initializing the DB with eGSIM data"""
+    # NOTE: the decorator `django_db` already executes the command below
+    # (django_db uses the fixture django_db_setup, overridden in conftest.py)
+    # Here we provide capsys in case we want to test the generated output
+    # in more details
+    call_command('egsim-db')
     captured = capsys.readouterr()
     capout = captured.out
     assert capout and "Unused Flatfile column(s)" not in capout

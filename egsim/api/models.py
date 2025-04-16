@@ -134,7 +134,6 @@ class Flatfile(MediaFile, Reference):
             be set in this function if not given)
         """
         from pandas import read_hdf
-        kwargs.setdefault('key', self.name)
         return read_hdf(self.filepath, **kwargs)
 
 
