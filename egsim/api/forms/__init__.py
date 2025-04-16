@@ -219,7 +219,7 @@ class SHSRForm(EgsimBaseForm):
         """Custom gsim clean.
         The return value will replace self.cleaned_data['gsim']
         """
-        reg_objs = models.Regionalization.queryset('name', 'media_root_path')
+        reg_objs = models.Regionalization.queryset('name')
         value = self.cleaned_data.get('regionalization', None)
         if isinstance(value, str):
             value = [value]
@@ -245,8 +245,6 @@ class SHSRForm(EgsimBaseForm):
         point = Point(lon, lat)
         for reg_obj in self.cleaned_data['regionalization']:  # see clean_regionalization
             reg_name = reg_obj.name
-            if reg_name == 'germany':
-                asd =9
             feat_collection = reg_obj.read_from_filepath()
             for feat in feat_collection['features']:
                 geometry, reg_models = feat['geometry'], feat['properties']['models']

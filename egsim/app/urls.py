@@ -1,6 +1,7 @@
 """eGSIM URL Configuration for the Graphical User Interface (GUI)"""
 from django.http import HttpResponse
 from django.urls import re_path, path
+from django.contrib import admin
 from django.views.decorators.clickjacking import xframe_options_exempt
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic.base import RedirectView
@@ -20,6 +21,7 @@ from .views import (main, URLS, img_ext, data_ext, PlotsImgDownloader,
 
 
 urlpatterns = [
+    path("admin/", admin.site.urls),
     re_path(r'^$', RedirectView.as_view(pattern_name='main', url='home',
                                         permanent=False)),
     re_path((r'^(?P<page>' +

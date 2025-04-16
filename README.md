@@ -1,5 +1,5 @@
 eGSIM is a web service for selecting and testing  ground shaking models (GSIM) 
-in Europe, developed by the [GFZ](https://www.gfz-potsdam.de/) 
+in Europe, developed by the [GFZ](https://www.gfz.de/) 
 in the framework of the Thematic Core Services for Seismology of 
 [EPOS](https://www.epos-eu.org/) under the umbrella of 
 [EFEHR](http://www.efehr.org/en/home/)
@@ -7,7 +7,7 @@ in the framework of the Thematic Core Services for Seismology of
 <p align="middle">
     <a title='EFEHR' href='www.efehr.org'><img height='50' src='http://www.efehr.org/export/system/modules/ch.ethz.sed.bootstrap.efehr2021/resources/img/logos/efehr.png'></a>
     &nbsp;
-    <a title='GFZ' href='https://www.gfz-potsdam.de/'><img height='50' src='https://www.gfz-potsdam.de/fileadmin/gfz/GFZ.svg'></a>
+    <a title='GFZ' href='https://www.gfz.de/'><img height='50' src='https://media.gfz-potsdam.de/gfz/wv/media/pic/logo/2025_GFZ-Wortbildmarke-EN-Helmholtzdunkelblau-RGB.jpg'></a>
     &nbsp;
     <a title='EPOS' href='https://www.epos-eu.org/'><img height='50' src='https://www.epos-eu.org/themes/epos/logo.svg'></a>
     <br>
@@ -15,7 +15,7 @@ in the framework of the Thematic Core Services for Seismology of
 
 The web portal (and API documentation) is available at:
 
-# https://egsim.gfz-potsdam.de
+# https://egsim.gfz.de
 
 ## Citation
 

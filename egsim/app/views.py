@@ -112,7 +112,7 @@ def _get_init_data_json(debug=False) -> dict:
 
     # get regionalization data (for selecting models on a map):
     regionalizations = []
-    for regx in models.Regionalization.queryset('name', 'url', 'media_root_path'):
+    for regx in models.Regionalization.queryset('name', 'url', 'filepath'):
         regionalizations.append({
             'name': regx.name,
             'bbox': _get_bbox(regx),  # tuple (min_lng, min_lat, max_lng, max_lat)
@@ -121,8 +121,7 @@ def _get_init_data_json(debug=False) -> dict:
 
     # get predefined flatfiles info:
     flatfiles = []
-    for ffile in models.Flatfile.queryset(
-            'name', 'display_name', 'url', 'media_root_path'):
+    for ffile in models.Flatfile.queryset('name', 'display_name', 'url'):
         ff_form = FlatfileValidationForm({'flatfile': ffile.name})
         if ff_form.is_valid():
             flatfiles.append({

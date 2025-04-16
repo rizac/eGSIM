@@ -105,7 +105,7 @@ class FlatfileForm(EgsimBaseForm):
             # and in-memory files are used only in some tests
 
         if u_flatfile is None:  # predefined flatfile
-            flatfile_db_obj = models.Flatfile.queryset('name', 'media_root_path').\
+            flatfile_db_obj = models.Flatfile.queryset('name', 'filepath').\
                 filter(name=cleaned_data['flatfile']).first()
             if flatfile_db_obj is None:
                 self.add_error("flatfile", self.ErrMsg.invalid_choice)
