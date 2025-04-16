@@ -349,7 +349,7 @@ export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py migrate eg
 ```
 And then repopulate the db:
 ```bash
-export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py egsim_init
+export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py egsim-init
 ```
 
 Notes: 
@@ -377,7 +377,7 @@ To perform a complete db reset:
      are others, delete all of them)
  - Execute:
    ```bash
-   export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py makemigrations && python manage.py migrate && python manage.py egsim_init
+   export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py makemigrations && python manage.py migrate && python manage.py egsim-init
    ```
  - `git add` the newly created migration file (in dev mode it's 
    `egsim/api/migrations/0001_initial.py`)
@@ -389,7 +389,7 @@ Notes:
    - `makemigrations` creates the necessary migration file(s) from Python 
      code and existing migration file(s)
    - `migrate` re-create the DB via the generated migration file(s)
-   - `egsim_init` repopulates the db with eGSIM data
+   - `egsim-init` repopulates the db with eGSIM data
 
 
 ## Re-populating the DB
@@ -403,7 +403,7 @@ fixed. The operations are similar but simpler than a complete Db Rest:
    - `egsim/db.sqlite3`
 - Execute: 
   ```bash
-  export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py migrate && python manage.py egsim_init
+  export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py migrate && python manage.py egsim-init
   ```
 - [**Optional**] most likely (not tested, please check) you need to re-add 
   the Django admin superuser(s) as explained in the [admin panel](#admin-panel)
@@ -440,7 +440,7 @@ See `egsim/api/management/commands/README.md`.
 
 The next two sections will describe how to store
 new data (regionalizations and flatfiles) that will be
-made available in eGSIM with the `egsim_init` command
+made available in eGSIM with the `egsim-init` command
 (see [Complete DB reset](#Complete-DB-reset) for details)
 
 <!-- 
@@ -469,7 +469,7 @@ made available in eGSIM with the `egsim_init` command
   file name that will be used in the API (if missing, defaults to the file 
   name without extension)
 
-- Repopulate all eGSIM tables (command `egsim_init`)
+- Repopulate all eGSIM tables (command `egsim-init`)
 
 Implemented flatfiles sources (click on the items below to expand)
 
@@ -507,6 +507,6 @@ Implemented flatfiles sources (click on the items below to expand)
   file name that will be used in the API (if missing, defaults to the file 
   name without extension)
 
-- Repopulate all eGSIM tables (command `egsim_init`)
+- Repopulate all eGSIM tables (command `egsim-init`)
 
 -->

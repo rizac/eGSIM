@@ -326,7 +326,7 @@ rm $EGSIM_DATA_DIR/egsim.db
 # create the db and populate it with Django stuff (this is necessary only when changing the DB schema, but for safety):
 (cd $EGSIM_CWD; export PYTHONPATH=$EGSIM_CONFIG_DIR DJANGO_SETTINGS_MODULE=settings; python manage.py migrate)
 # populate the DB with egsim stuff
-(cd $EGSIM_CWD; export PYTHONPATH=$EGSIM_CONFIG_DIR DJANGO_SETTINGS_MODULE=settings; python manage.py egsim_init)
+(cd $EGSIM_CWD; export PYTHONPATH=$EGSIM_CONFIG_DIR DJANGO_SETTINGS_MODULE=settings; python manage.py egsim-init)
 # re-become root (password the usual one with punctuation marks):
 # (without this, the following commands will require you to type the password)
 su
@@ -619,8 +619,7 @@ With the Python virtualenv activated, execute:
 
 <p>Initialize our database (OpenQuake GSIMs IMTs and TRTs)</p>
 <pre><code class="language-bash">
-(cd $EGSIM_CWD; export PYTHONPATH=$EGSIM_CONFIG_DIR DJANGO_SETTINGS_MODULE=settings; python manage.py egsim_init)
-<!--export PYTHONPATH=$EGSIM_CONFIG_DIR; export DJANGO_SETTINGS_MODULE=settings;python manage.py egsim_init-->
+(cd $EGSIM_CWD; export PYTHONPATH=$EGSIM_CONFIG_DIR DJANGO_SETTINGS_MODULE=settings; python manage.py egsim-init)
 </code></pre>
 
 
