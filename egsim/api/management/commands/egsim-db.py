@@ -17,7 +17,8 @@ class Command(BaseCommand):
         for key in dir(models):
             try:
                 cls = getattr(models, key)
-                if issubclass(cls, models.EgsimDbModel) and \
+                if models.__name__ == cls.__module__ and \
+                        issubclass(cls, models.EgsimDbModel) and \
                         not cls._meta.abstract:
                     tables[key] = cls
             except Exception:  # noqa
@@ -45,11 +46,8 @@ class Command(BaseCommand):
                     else:
                         db_model = tables[res]  # noqa
             elif queryset is None:
-                self.stdout.write(
-                    f'{db_model.objects.count()} table rows: ' +
-                    self.style.WARNING(self.rows2str(db_model.objects))
-                )
-                msg = f'Select rows (case insensitive regexp search. {suffix}): '
+                self.print_table(db_model)
+                msg = f'Select rows by name (case insensitive regexp search. {suffix}): '
                 while queryset is None:
                     res = input(msg)
                     if res == quit:
@@ -117,4 +115,42 @@ class Command(BaseCommand):
         if max_items is not None:
             ret += f' (showing first {max_items} only)'
         return ret
+
+    def print_table(self, db_model, max_rows=5):
+        total = db_model.objects.count()
+
+        tbl_header = []
+        tbl_body = []
+        tbl_footer = f"{total:,} total rows"
+        if total <= max_rows + 2:
+            max_rows = total
+        else:
+            tbl_footer += f' ({total - max_rows} remaining rows not shown)'
+
+        objs = db_model.objects.order_by('name').all()[:max_rows]
+        fields: dict[str, int] = {}
+        for field in objs[0]._meta.fields:  # noqa
+            name = field.name
+            val = str(getattr(objs[0], name))
+            if name == 'name':
+                lng = len(val)
+            else:
+                lng = len(name)
+            fields[name] = lng
+            tbl_header.append(name[:max(0, lng - 1)] + '…'
+                              if len(name) > lng else name.ljust(lng))
+        for obj in objs:
+            tbl_line = []
+            tbl_body.append(tbl_line)
+            for name, lng in fields.items():  # noqa
+                val = str(getattr(obj, name))
+                val = val[:max(0, lng - 1)] + '…' if len(val) > lng else val.ljust(lng)
+                tbl_line.append(val)
+
+        table = [
+            "| " + " | ".join(tbl_header) + " | ",
+            "| " + " | ".join(len(x) * '-' for x in tbl_header) + " | "
+        ] + ["| " + " | ".join(x) + " | " for x in tbl_body] + [tbl_footer]
+
+        self.stdout.write(self.style.WARNING("\n".join(table)))
 
