@@ -1,12 +1,12 @@
 from datetime import datetime
-from typing import Optional, Callable
+from typing import Optional, Callable, Any
 
 from django.core.management import BaseCommand
 from django.db import DatabaseError
 from django.db.models import (QuerySet, Field, CharField, IntegerField, DateField,
                               FloatField, Model,
                               DateTimeField, TextField, BooleanField, SmallIntegerField,
-                              PositiveIntegerField)
+                              PositiveIntegerField, ForeignKey)
 
 from egsim.api import models
 
@@ -19,7 +19,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         """Execute the command"""
-        self.stdout.write(self.style.ERROR('Scanning editable db tables...'))
+        self.stdout.write(self.style.ERROR('Scanning Db tables...'))
         tables = {}
         for key in dir(models):
             try:
@@ -31,136 +31,151 @@ class Command(BaseCommand):
             except Exception:  # noqa
                 pass
         db_model: Optional[Model] = None
-        field: Optional[Field] = None
         queryset = None
-        aborted = None
-        while not aborted:
+        resp = None
+        while resp != self.quit:
             if db_model is None:
-                db_model, aborted = self.select_db_model(tables)  # noqa
-            elif field is None:
-                field, aborted, back = self.select_field(db_model)
-                if back:
-                    db_model = None
+                db_model, resp = self.select_db_model(tables)  # noqa
             elif queryset is None:
-                queryset, aborted, back = self.select_db_instances(db_model, field)
-                if back:
-                    field = None
-            else:
-                aborted, action = self.update_db_instance(queryset, field)
-                if action not in ('r', 'c', 't', self.back):
-                    break
-                # move back 1 step (r, self.back) or to (c):
-                queryset = None
-                if action in ('c', 't'):
-                    field = None
-                if action == 't':
+                queryset, resp = self.select_db_instances(db_model)
+                if resp == self.back:
                     db_model = None
-        if aborted:
+            else:
+                resp = self.update_db_instance(queryset)
+                if resp == self.back:
+                    queryset = None
+        if resp == self.quit:
             self.stdout.write(self.style.ERROR('Aborted by user'))
 
-    quit = 'q!'
-    back = '<!'
-    suffix = [f'{quit}: quit', f'{back}: go back']
+    quit = 'q'
+    back = '<'
+    help = '?'  # noqa
+    suffix = {'h': f'{help}: help', 'q': f'{quit}: quit', 'b': f'{back}: go back'}
 
-    def select_db_model(self, tables: dict[str, Model]) -> tuple[Optional[Model], bool]:
+    def select_db_model(self, tables: dict[str, Model]) -> tuple[Optional[Model], str]:
         """Return (DbModel or None, aborted)"""
         self.stdout.write(f'{len(tables)} table(s): ' +
                           self.style.WARNING(" ".join(tables)))
         while True:
-            msg = f'Select a table ({self.suffix[0]}): '
+            msg = f'UPDATE [TABLE] ({self.suffix["q"]}): '
             res = input(msg)
             if res == self.quit:
-                return None, True
+                return None, res
             if res not in tables:
                 self.stdout.write(self.style.ERROR('No matching table'))
             else:
                 self.print_table(tables[res].objects)  # noqa
-                return tables[res], False
+                return tables[res], res
 
-    def select_field(self, db_model: Model) -> tuple[Optional[Field], bool, bool]:
-        """Return (Field or None, aborted, go_back)"""
+    def parse_field_and_value(self, db_model: Model, input_result, *,
+                              allow_pkey=False, allow_editable=False,
+                              allow_fkey=False) -> \
+            tuple[Optional[Field], Optional[Any], str]:
+        """Return (Field, user_input)"""
         fields = {
-            f.name: f for f in db_model._meta.get_fields() if f.__class__ in self.f_types  # noqa
+            f.name: f for f in db_model._meta.get_fields()  # noqa
+            if f.__class__ in self.f_types
         }
-        while True:
-            msg = f'Column name to update ' \
-                  f'(Enter/Return = "hidden" column, {", ".join(self.suffix)}): '
-            res = input(msg) or "hidden"
-            if res not in fields:
-                if res in {self.quit, self.back}:
-                    return None, res == self.quit, res == self.back
-                else:
-                    self.stdout.write(self.style.ERROR('No matching column'))
-            elif fields[res].primary_key:
-                self.stdout.write(self.style.ERROR(f'"{res}" is a primary '
-                                                   f'key column, its values '
-                                                   f'cannot be modified'))
-            elif not fields[res].editable:
-                self.stdout.write(self.style.ERROR(f'"{res}" is not editable'))
-            else:
-                return fields[res], False, False  # noqa
+        resp = input_result.strip()
+        if resp in {self.quit, self.back, self.help}:
+            return None, None, resp
+        resp = resp.split(" ")
+        if len(resp) != 2:
+            self.stdout.write(self.style.ERROR(f'Type [column] [value] '
+                                               f'(space-separated)'))
+        res = resp[0]
+        if res not in fields:
+            self.stdout.write(self.style.ERROR(f'"{res}" is not a column'))
+        elif fields[res].primary_key and not allow_pkey:
+            self.stdout.write(self.style.ERROR(f'"{res}" is a primary '
+                                               f'key column'))
+        elif not fields[res].editable and not allow_editable:
+            self.stdout.write(self.style.ERROR(f'"{res}" is not editable'))
+        elif isinstance(fields[res], ForeignKey) and not allow_fkey:
+            self.stdout.write(self.style.ERROR(f'"{res}" is a foreign key column'))
+        else:
+            field = fields[res]
+            f_type = self.f_types.get(field.__class__)
+            if f_type is None:
+                self.stdout.write(self.style.ERROR(f'Unsupported type for '
+                                                   f'"{field.name}": '
+                                                   f'{field.__class__.__name__}'))
+            res = resp[1]
+            try:
+                val = self.f_types[field.__class__](res)
+                return field, val, input_result
+            except Exception as exc:  # noqa
+                self.stdout.write(self.style.ERROR(f'Invalid value "{res}": {str(exc)}'))
+        return None, None, input_result
 
-    def select_db_instances(self, db_model: Model, field: Field) -> \
-            tuple[Optional[QuerySet], bool, bool]:
-        """Return (QuerySet or None, aborted, go_back)"""
+    def select_db_instances(self, db_model: Model) -> tuple[Optional[QuerySet], str]:
+        """Return (QuerySet, user_input)"""
         while True:
-            msg = f'Row name(s) to update (regexp search, ' \
-                  f'case-insensitive. {", ".join(self.suffix)}): '
-            res = input(msg)
-            if res in {self.quit, self.back}:
-                return None, res == self.quit, res == self.back
-            elif res:
-                # use regexp search (no match)
-                queryset = db_model.objects.filter(name__iregex=res)  # noqa
-                if queryset.count() == 0:
-                    self.stdout.write(self.style.ERROR('No matching row'))
-                else:
-                    self.stdout.write('Matching table row(s): ')
-                    self.print_table(queryset,
-                                     fields={'id', 'name', field.name},
-                                     main_fields=['name', field.name])  # noqa
-                    return queryset, False, False
+            msg = f'WHERE [COLUMN] [VALUE] ' \
+                  f'({self.suffix["h"]}, {self.suffix["q"]}, {self.suffix["b"]}): '
+            field, val, resp = self.parse_field_and_value(db_model, input(msg))
+            if resp == self.help:
+                self.stdout.write('type a column and a value (space separated) '
+                                  'that will be used to select matching rows. '
+                                  'If the columns is a text type, '
+                                  'value can be a regexp. Date-times must be typed '
+                                  'ISO-formatted, boolean can be lower case or 0, 1. '
+                                  'Examples: "hidden true", "hidden 0", "name ^ab.*"')
+                continue
+            elif resp in {self.quit, self.back}:
+                return None, resp
 
-    def update_db_instance(self, queryset: QuerySet, field: Field) -> tuple[bool, str]:
-        """Return (aborted, go_back)"""
-        toggle = 't!'
-        suffix = list(self.suffix)
-        ok = False
-        while not ok:
-            if field.__class__ == BooleanField:
-                suffix.insert(0, f'{toggle}=toggle: invert boolean value of ' 
-                                 f'each row')
-            res = input(f'Set the new value of "{field.name}" '
-                        f'({field.__class__.__name__}) '
-                        f'for each matching row ({", ".join(suffix)}): ')
-            if res in {self.quit, self.back}:
-                return res == self.quit, self.back
+            field_name = field.name
+            if field.__class__ in {TextField, CharField}:
+                field_name += '__iregex'  # use regexp (search, no match)
+            queryset = db_model.objects.filter(**{field_name: val})  # noqa
+            if queryset.count() == 0:
+                self.stdout.write(self.style.ERROR('No matching row'))
             else:
-                try:
-                    if field.__class__ == BooleanField and res == toggle:
-                        true_ids = [_.id for _ in queryset.filter(**{field.name: True})]
-                        self.update_value(queryset.filter(id__in=true_ids), field,
-                                          'false')
-                        self.update_value(queryset.exclude(id__in=true_ids), field,
-                                          'true')
-                        # update res to display as message below:
-                        res = 'true if the value was false, and false ' \
-                              'if it was true'
-                    else:
-                        self.update_value(queryset, field, res)
-                    ok = True
-                except DatabaseError as db_err:
-                    self.stdout.write(self.style.ERROR(f'{str(db_err)}'))
-            if ok:
+                self.stdout.write('Matching table row(s): ')
+                self.print_table(queryset,
+                                 fields={'id', 'name', field.name},
+                                 main_fields=['name', field.name])  # noqa
+                return queryset, resp
+
+    def update_db_instance(self, queryset: QuerySet) -> str:
+        """Return user_input"""
+        while True:
+            msg = f'SET [COLUMN] [NEW VALUE] ' \
+                  f'({self.suffix["h"]}, {self.suffix["q"]}, {self.suffix["b"]}): '
+            field, val, resp = self.parse_field_and_value(queryset.model,
+                                                          input(msg))
+            if resp == self.help:
+                self.stdout.write('type a column and a new value (space separated) '
+                                  'to update the column value of all matching rows. '
+                                  'If the columns is a boolean type, the new value '
+                                  'can be "toggle" to switch old value, row-wise. '
+                                  'Examples: "hidden toggle"')
+                continue
+            elif resp in {self.quit, self.back}:
+                return resp
+
+            try:
+                count = queryset.count()
+                if field.__class__ == BooleanField and val == 'toggle':
+                    true_ids = [_.id for _ in queryset.filter(**{field.name: True})]
+                    queryset.filter(id__in=true_ids).update(**{field.name: False})
+                    queryset.exclude(id__in=true_ids).update(**{field.name: True})
+                    # update res to display as message below:
+                    val = 'true if the value was false, and false ' \
+                          'if it was true'
+                else:
+                    queryset.update(**{field.name: val})
                 self.stdout.write(
                     self.style.SUCCESS(
-                        f'Successfully updated the column "{field.name}" '
-                        f'of the chosen {queryset.count()} table row(s) '
-                        f'(new value: {res})'
+                        f'Successfully updated "{field.name}" '
+                        f'in {count} row(s) '
+                        f'(new value: {str(val)})'
                     )
                 )
-                return False, input('Modify some other row (r), '
-                                    'column (c), table (t) or quit (any key)?')
+                return input(f'What now ({self.suffix["q"]}, {self.suffix["b"]})? ')
+            except DatabaseError as db_err:
+                self.stdout.write(self.style.ERROR(f'{str(db_err)}'))
 
     f_types: dict[type[Field], Callable] = {
         CharField: lambda v: str(v),
@@ -169,22 +184,26 @@ class Command(BaseCommand):
         PositiveIntegerField: lambda v: int(v),
         SmallIntegerField: lambda v: int(v),
         FloatField: lambda v: float(v),
-        BooleanField: lambda v: {'0': False, 'false': False,
+        BooleanField: lambda v: {'0': False, 'false': False, 'toggle': 'toggle',
                                  '1': True, 'true': True}[str(v).lower()],  # noqa
         DateField: lambda v: datetime.strptime(str(v), '%Y-%m-%d').date(),
         DateTimeField: lambda v: datetime.strptime(str(v), '%Y-%m-%d %H:%M:%S')
     }
 
-    def update_value(self, queryset: QuerySet, field: Field, value: str):
-        if field.__class__ not in self.f_types:
-            raise DatabaseError(f'"{field}" type ({field.__class__.__name__}) '
-                                f'is not supported')
-        queryset.update(**{field.name: self.f_types[field.__class__](value)})
-
     def print_table(self, queryset: QuerySet,
                     fields: Optional[set[str]] = None,
                     main_fields: list[str] = ('name',),
                     max_rows=5):
+        """Pretty print the given table rows
+
+        :param queryset: the QuerySet denoting a table rows collection,
+            e.g. `db_model.objects.all()`
+        :param fields: the column names to show. If None (the default), show all columns
+        :param main_fields: list/tuple of the name of the columns where at least
+            th 1st row value should be visible, if longer than the column name length
+            (default: ["name"])
+        :param max_rows: the maximum rows to show (default: 5)
+        """
         total = queryset.count()  # noqa
         tbl_header = []
         tbl_body = []
