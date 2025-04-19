@@ -37,9 +37,9 @@ def test_initdb(capsys):
 
 
 @pytest.mark.django_db
-@patch("builtins.input", side_effect=["Flatfile", "23", "<!",
-                                      "Gsim", "^BindiEtAl2014Rjb$", "h!",
-                                      "q!"])
+@patch("builtins.input", side_effect=["flatfile", "23", "<!",
+                                      "gsim", "", "^BindiEtAl2014Rjb$", "true",
+                                      "", "q!"])
 def test_egsimdb(mocked_input, capsys):
     """Test the command for hiding showing items in the eGSIM db"""
     # NOTE: the decorator `django_db` already executes the command below
@@ -50,7 +50,7 @@ def test_egsimdb(mocked_input, capsys):
     call_command('egsim-db')
     # now the model should be hidden (test `queryset` this time instead of `names()`)
     assert Gsim.queryset('name').filter(name='BindiEtAl2014Rjb').count() == 0
-    assert "No matching rows" in capsys.readouterr().out
+    assert "No matching column" in capsys.readouterr().out
     assert 'Aborted by user' not in capsys.readouterr().out
     call_command('egsim-db')
     assert 'Aborted by user' in capsys.readouterr().out
