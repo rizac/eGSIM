@@ -85,7 +85,7 @@ class Command(BaseCommand):
                                                f'(space-separated)'))
         res = resp[0]
         if res not in fields:
-            self.stdout.write(self.style.ERROR(f'"{res}" is not a column'))
+            self.stdout.write(self.style.ERROR(f'No matching column: "{res}"'))
         elif fields[res].primary_key and not allow_pkey:
             self.stdout.write(self.style.ERROR(f'"{res}" is a primary '
                                                f'key column'))
@@ -124,6 +124,8 @@ class Command(BaseCommand):
                 continue
             elif resp in {self.quit, self.back}:
                 return None, resp
+            elif field is None or val is None:
+                continue
 
             field_name = field.name
             if field.__class__ in {TextField, CharField}:
@@ -154,6 +156,8 @@ class Command(BaseCommand):
                 continue
             elif resp in {self.quit, self.back}:
                 return resp
+            elif field is None or val is None:
+                continue
 
             try:
                 count = queryset.count()
