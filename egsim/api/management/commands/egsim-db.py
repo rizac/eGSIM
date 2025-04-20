@@ -14,7 +14,7 @@ from egsim.api import models
 class Command(BaseCommand):
     help = """Interactive Django command to modify eGSIM table content. 
     Particularly useful to 
-    quickly hide/show items in the API form testing purposes or fixing bugs
+    quickly hide/show items in the API
     """
 
     def handle(self, *args, **options):
@@ -135,9 +135,7 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.ERROR('No matching row'))
             else:
                 self.stdout.write('Matching table row(s): ')
-                self.print_table(queryset,
-                                 fields={'id', 'name', field.name},
-                                 main_fields=['name', field.name])  # noqa
+                self.print_table(queryset, fields=['id', 'name', field.name])
                 return queryset, resp
 
     def update_db_instance(self, queryset: QuerySet) -> str:
@@ -177,7 +175,7 @@ class Command(BaseCommand):
                         f'(new value: {str(val)})'
                     )
                 )
-                return input(f'What now ({self.suffix["q"]}, {self.suffix["b"]})? ')
+                return input(f'What now? ({self.suffix["q"]}, {self.suffix["b"]}): ')
             except DatabaseError as db_err:
                 self.stdout.write(self.style.ERROR(f'{str(db_err)}'))
 
@@ -195,54 +193,62 @@ class Command(BaseCommand):
     }
 
     def print_table(self, queryset: QuerySet,
-                    fields: Optional[set[str]] = None,
-                    main_fields: list[str] = ('name',),
+                    fields: Optional[list[str]] = None,
+                    order_by: Optional[tuple[str]] = ('name',),
+                    max_width: int = 120,
                     max_rows=5):
-        """Pretty print the given table rows
+        """Pretty print the given table rows.
 
         :param queryset: the QuerySet denoting a table rows collection,
             e.g. `db_model.objects.all()`
-        :param fields: the column names to show. If None (the default), show all columns
-        :param main_fields: list/tuple of the name of the columns where at least
-            th 1st row value should be visible, if longer than the column name length
-            (default: ["name"])
+        :param fields: the column names to show. If None (the default), show all columns.
+            The order dictates the priority of the columns when there is extra space
+            available
+        :param order_by: a list of field names whereby the rows will be sorted ascending.
+            Default: ['name']
+        :param max_width: the max table width, in characters
         :param max_rows: the maximum rows to show (default: 5)
         """
         total = queryset.count()  # noqa
-        tbl_header = []
-        tbl_body = []
-        tbl_footer = f"{total:,} rows"
-        if total <= max_rows + 2:
-            max_rows = total
+        msg = f"{total:,} row{'' if total == 1 else 's'}"
+        if total == 0:
+            table = [msg]
         else:
-            tbl_footer += f' ({total - max_rows} remaining rows not shown)'
-
-        objs = queryset.order_by(*main_fields).all()[:max_rows]  # noqa
-        fields_include = fields
-        fields: dict[str, int] = {}
-        for field in objs[0]._meta.fields:  # noqa
-            if fields_include is not None and field.name not in fields_include:
-                continue
-            name = field.name
-            val = str(getattr(objs[0], name))
-            if name in main_fields and len(val) > len(name):
-                lng = len(val)
+            if total <= max_rows + 2:
+                max_rows = total
             else:
-                lng = len(name)
-            fields[name] = lng
-            tbl_header.append(name[:max(0, lng - 1)] + '…'
-                              if len(name) > lng else name.ljust(lng))
-        for obj in objs:
-            tbl_line = []
-            tbl_body.append(tbl_line)
-            for name, lng in fields.items():  # noqa
-                val = str(getattr(obj, name))
-                val = val[:max(0, lng - 1)] + '…' if len(val) > lng else val.ljust(lng)
-                tbl_line.append(val)
+                msg += f' ({total - max_rows} remaining rows not shown)'
+            db_model = queryset.model
+            db_model_fields = {f.name: f for f in db_model._meta.fields}
+            if fields is None:
+                fields = db_model_fields  # noqa
+            else:
+                fields = {n: db_model_fields[n] for n in fields}  # noqa
+            objs = queryset.order_by(*order_by).all()[:max_rows]  # noqa
+            field_lengths: dict[str, int] = {f: len(f) for f in fields}
+            extra_space = max_width - sum(l+2 for l in field_lengths.values())
+            for name, field in fields.items():
+                if extra_space <= 0:
+                    break
+                val = str(getattr(objs[0], name))
+                extra_col_space = min(extra_space, len(val) - field_lengths[name])
+                if extra_col_space > 0:
+                    field_lengths[name] += extra_col_space
+                    extra_space -= extra_col_space
 
-        table = [" " + " | ".join(tbl_header)] + \
-                ["-" + "-|-".join(len(x) * "-" for x in tbl_header) + '-'] + \
-                [" " + " | ".join(x) for x in tbl_body] + \
-                [tbl_footer]
+            def format(string:str, length:int):  # noqa
+                return string[:max(0, length - 1)] + '…' if len(string) > length \
+                    else string.ljust(length)
+
+            tbl_header = [format(n, l) for n, l in field_lengths.items()]
+            tbl_body = [
+                [format(str(getattr(obj, n)), l) for n, l in field_lengths.items()]
+                for obj in objs
+            ]
+
+            table = [" " + "  ".join(tbl_header)] + \
+                    ["-" + "--".join(len(x) * "-" for x in tbl_header) + '-'] + \
+                    [" " + "  ".join(x) for x in tbl_body] + \
+                    [msg]
 
         self.stdout.write(self.style.WARNING("\n".join(table)))

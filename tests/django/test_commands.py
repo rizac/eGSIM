@@ -37,7 +37,7 @@ def test_initdb(capsys):
 
 
 @pytest.mark.django_db
-@patch("builtins.input", side_effect=["flatfile", "23 23", "<",
+@patch("builtins.input", side_effect=["flatfile", "invalid_column 23", "<",
                                       "gsim", "", "name ^BindiEtAl2014Rjb$",
                                       "hidden true",
                                       "q"])
@@ -52,7 +52,7 @@ def test_egsimdb(mocked_input, capsys):
     out_err = capsys.readouterr()
     # now the model should be hidden (test `queryset` this time instead of `names()`)
     assert Gsim.queryset('name').filter(name='BindiEtAl2014Rjb').count() == 0
-    assert "No matching column" in out_err.out
+    assert "No matching column: \"invalid_column\"" in out_err.out
     # assert 'Aborted by user' not in capsys.readouterr().out
     # call_command('egsim-db')
     assert 'Aborted by user' in out_err.out
