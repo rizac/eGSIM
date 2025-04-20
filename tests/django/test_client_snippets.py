@@ -1,6 +1,7 @@
 from os.path import dirname, abspath, join, isdir, isfile
 import numpy as np
 import pandas as pd
+import requests
 from requests import HTTPError
 import pytest
 
@@ -109,17 +110,13 @@ def test_client_get_predictions_nga(live_server):
     # Other site parameters
     site_params = {"region": 0, "vs30": 760.0, "z1pt0": 25.0, "z2pt5": 1.2,
                    "vs30measured": True}
-    dfr = get_egsim_predictions(
-        models, imts, magnitudes=magnitudes, distances=distances,
-        base_url=f"{live_server.url}/{PREDICTIONS_URL_PATH}",
-        rupture_params=rupture_params, site_params=site_params
-    )
-    file = join(test_data_dir, 'predictions.hdf')
-    if isfile(file):
-        dfr2 = pd.read_hdf(file)
-        pd.testing.assert_frame_equal(
-            dfr, dfr2, check_exact=False, atol=0, rtol=1e-3
+    with pytest.raises(requests.HTTPError) as err:
+        dfr = get_egsim_predictions(
+            models, imts, magnitudes=magnitudes, distances=distances,
+            base_url=f"{live_server.url}/{PREDICTIONS_URL_PATH}",
+            rupture_params=rupture_params, site_params=site_params
         )
+    v = str(err.value)
 
 
 def test_predictions_400(live_server):

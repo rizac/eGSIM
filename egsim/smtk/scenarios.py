@@ -10,7 +10,7 @@ import pandas as pd
 from openquake.hazardlib.scalerel import BaseMSR
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib.imt import IMT
-from openquake.hazardlib.contexts import ContextMaker
+from openquake.hazardlib.contexts import ContextMaker, is_modifiable
 from openquake.hazardlib.scalerel.wc1994 import WC1994
 from openquake.hazardlib.geo import Point, Mesh, PlanarSurface
 from openquake.hazardlib.site import Site, SiteCollection
@@ -166,6 +166,20 @@ def build_contexts(
     :return: Context objects in the form of a single numpy recarray of length:
         len(magnitudes) * len(distances)
     """
+    # Fix problem in OQ 3.15 whereby we should supply mags if models are not modifiable:
+    invalid_gmms = [
+        n for n, g in gsims.items() if hasattr(g, 'set_tables')
+        and not is_modifiable(g)
+    ]
+    # provides better error msg
+    if invalid_gmms:
+        if len(invalid_gmms) == 1:
+            prefix = f'{invalid_gmms[0]} is an'
+        else:
+            prefix = f'{len(invalid_gmms)} models are'
+        raise ModelError(f'{prefix} unmodifiable GMPETables not compatible '
+                         f'with this eGSIM version')
+
     cmaker = ContextMaker(r_props.tectonic_region, gsims.values(),
                           oq={"imtls": {"PGA": []}})
     ctxts = []
