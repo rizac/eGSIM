@@ -233,9 +233,6 @@ def get_expected_motions(
                 continue
             imt_names, imt_vals = list(imts_ok.keys()), list(imts_ok.values())
             cmaker = init_context_maker([gsim], imts, [ctx.mag])
-            # cmaker = ContextMaker('*', [gsim], {'imtls': {i: [0] for i in imt_names}})
-            # # TODO above is imtls relevant, or should we use PGA: [0] as in trellis?
-            # #  maybe harmonize and document why we do the line above?
             mean, total, inter, intra = get_ground_motion_values(
                 gsim, imt_vals, cmaker.recarray([ctx]))
             # assign data to our tmp lists:

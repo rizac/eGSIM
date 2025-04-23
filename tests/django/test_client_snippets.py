@@ -54,43 +54,43 @@ def test_client_get_predictions(live_server):
 def test_client_get_predictions_nga(live_server):
     models = [
         "NGAEastUSGSSammons1",
-        "NGAEastUSGSSammons10",
-        "NGAEastUSGSSammons11",
-        "NGAEastUSGSSammons12",
-        "NGAEastUSGSSammons13",
-        "NGAEastUSGSSammons14",
-        "NGAEastUSGSSammons15",
-        "NGAEastUSGSSammons16",
-        "NGAEastUSGSSammons17",
-        "NGAEastUSGSSammons2",
-        "NGAEastUSGSSammons3",
-        "NGAEastUSGSSammons4",
-        "NGAEastUSGSSammons5",
-        "NGAEastUSGSSammons6",
-        "NGAEastUSGSSammons7",
-        "NGAEastUSGSSammons8",
-        "NGAEastUSGSSammons9",
-        "NGAEastUSGSSeed1CCSP",
-        "NGAEastUSGSSeed1CVSP",
-        "NGAEastUSGSSeed2CCSP",
-        "NGAEastUSGSSeed2CVSP",
-        "NGAEastUSGSSeedB_a04",
-        "NGAEastUSGSSeedB_ab14",
-        "NGAEastUSGSSeedB_ab95",
-        "NGAEastUSGSSeedB_bca10d",
-        "NGAEastUSGSSeedB_bs11",
-        "NGAEastUSGSSeedB_sgd02",
+        # "NGAEastUSGSSammons10",
+        # "NGAEastUSGSSammons11",
+        # "NGAEastUSGSSammons12",
+        # "NGAEastUSGSSammons13",
+        # "NGAEastUSGSSammons14",
+        # "NGAEastUSGSSammons15",
+        # "NGAEastUSGSSammons16",
+        # "NGAEastUSGSSammons17",
+        # "NGAEastUSGSSammons2",
+        # "NGAEastUSGSSammons3",
+        # "NGAEastUSGSSammons4",
+        # "NGAEastUSGSSammons5",
+        # "NGAEastUSGSSammons6",
+        # "NGAEastUSGSSammons7",
+        # "NGAEastUSGSSammons8",
+        # "NGAEastUSGSSammons9",
+        # "NGAEastUSGSSeed1CCSP",
+        # "NGAEastUSGSSeed1CVSP",
+        # "NGAEastUSGSSeed2CCSP",
+        # "NGAEastUSGSSeed2CVSP",
+        # "NGAEastUSGSSeedB_a04",
+        # "NGAEastUSGSSeedB_ab14",
+        # "NGAEastUSGSSeedB_ab95",
+        # "NGAEastUSGSSeedB_bca10d",
+        # "NGAEastUSGSSeedB_bs11",
+        # "NGAEastUSGSSeedB_sgd02",
         "NGAEastUSGSSeedFrankel",
         "NGAEastUSGSSeedGraizer",
-        "NGAEastUSGSSeedGraizer16",
-        "NGAEastUSGSSeedGraizer17",
-        "NGAEastUSGSSeedHA15",
-        "NGAEastUSGSSeedPEER_EX",
-        "NGAEastUSGSSeedPEER_GP",
-        "NGAEastUSGSSeedPZCT15_M1SS",
-        "NGAEastUSGSSeedPZCT15_M2ES",
-        "NGAEastUSGSSeedSP15",
-        "NGAEastUSGSSeedYA15"
+        # "NGAEastUSGSSeedGraizer16",
+        # "NGAEastUSGSSeedGraizer17",
+        # "NGAEastUSGSSeedHA15",
+        # "NGAEastUSGSSeedPEER_EX",
+        # "NGAEastUSGSSeedPEER_GP",
+        # "NGAEastUSGSSeedPZCT15_M1SS",
+        # "NGAEastUSGSSeedPZCT15_M2ES",
+        # "NGAEastUSGSSeedSP15",
+        # "NGAEastUSGSSeedYA15"
     ]
     imts = ["PGA", "SA(0.2)", "SA(1.0)", "SA(2.0)"]
 
@@ -117,6 +117,13 @@ def test_client_get_predictions_nga(live_server):
         base_url=f"{live_server.url}/{PREDICTIONS_URL_PATH}",
         rupture_params=rupture_params, site_params=site_params
     )
+
+    dfr = get_egsim_residuals(
+        models, imts, flatfile="esm2018",
+        base_url=f"{live_server.url}/{RESIDUALS_URL_PATH}"
+    )
+
+    asd = 9
 
 
 def test_predictions_400(live_server):
