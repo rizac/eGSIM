@@ -24,7 +24,7 @@ from .flatfile import (FlatfileError, MissingColumnError, FlatfileMetadata,
 from .validation import (validate_inputs, harmonize_input_gsims,
                          harmonize_input_imts, validate_imt_sa_limits, ModelError)
 from .registry import (get_ground_motion_values, Clabel, sa_period,
-                       ground_motion_properties_required_by)
+                       ground_motion_properties_required_by, init_context_maker)
 from .converters import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
 
 
@@ -232,9 +232,10 @@ def get_expected_motions(
             if not imts_ok:
                 continue
             imt_names, imt_vals = list(imts_ok.keys()), list(imts_ok.values())
-            cmaker = ContextMaker('*', [gsim], {'imtls': {i: [0] for i in imt_names}})
-            # TODO above is imtls relevant, or should we use PGA: [0] as in trellis?
-            #  maybe harmonize and document why we do the line above?
+            cmaker = init_context_maker([gsim], imts, [ctx.mag])
+            # cmaker = ContextMaker('*', [gsim], {'imtls': {i: [0] for i in imt_names}})
+            # # TODO above is imtls relevant, or should we use PGA: [0] as in trellis?
+            # #  maybe harmonize and document why we do the line above?
             mean, total, inter, intra = get_ground_motion_values(
                 gsim, imt_vals, cmaker.recarray([ctx]))
             # assign data to our tmp lists:

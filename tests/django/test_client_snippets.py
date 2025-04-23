@@ -110,13 +110,13 @@ def test_client_get_predictions_nga(live_server):
     # Other site parameters
     site_params = {"region": 0, "vs30": 760.0, "z1pt0": 25.0, "z2pt5": 1.2,
                    "vs30measured": True}
-    with pytest.raises(requests.HTTPError) as err:
-        dfr = get_egsim_predictions(
-            models, imts, magnitudes=magnitudes, distances=distances,
-            base_url=f"{live_server.url}/{PREDICTIONS_URL_PATH}",
-            rupture_params=rupture_params, site_params=site_params
-        )
-    v = str(err.value)
+
+    # simple test (should not raise anymore):
+    dfr = get_egsim_predictions(
+        models, imts, magnitudes=magnitudes, distances=distances,
+        base_url=f"{live_server.url}/{PREDICTIONS_URL_PATH}",
+        rupture_params=rupture_params, site_params=site_params
+    )
 
 
 def test_predictions_400(live_server):
