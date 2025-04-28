@@ -276,6 +276,36 @@ class Test:
             assert 'gsim' in self.error_message(resp1) and \
                    'imt' in self.error_message(resp1)
 
+    def test_trellis_error_ngaeast(self,
+                                   # pytest fixtures:
+                                   client):
+        """test trellis distance and distance stdev"""
+        with open(self.request_filepath) as _:
+            inputdic = dict(yaml.safe_load(_))
+
+        inputdic['magnitude'] = [1, 2, 3]  # outside mag bounds for 1st model below
+        inputdic['model'] = [
+            "NGAEastUSGSSammons1",
+            "NGAEastUSGSSammons10"
+        ]
+        # and from now on,
+        resp1 = client.get(self.querystring(inputdic))
+        resp2 = client.post(self.url, data=inputdic,
+                            content_type=MimeType.json)
+        assert resp1.status_code == resp2.status_code == 400
+        err_msg = resp1.content
+        assert err_msg == resp2.content
+        assert err_msg.startswith(b'NGAEastUSGSSammons1: Magnitude 1.00 outside '
+                                  b'of supported range (4.00 to 8.20) (OpenQuake '
+                                  b'ValueError @')
+
+        # test a magnitude compatible with the model:
+        inputdic['magnitude'] = [4.5]
+        resp1 = client.get(self.querystring(inputdic))
+        resp2 = client.post(self.url, data=inputdic,
+                            content_type=MimeType.json)
+        assert resp1.status_code == resp2.status_code == 200
+
     @patch('egsim.smtk.scenarios.get_ground_motion_values', side_effect=ValueError('a'))
     def test_trellis_model_error(
             self,
@@ -290,9 +320,8 @@ class Test:
         resp1 = client.get(self.querystring(inputdic))
         resp2 = client.post(self.url, data=inputdic,
                             content_type=MimeType.json)
-        assert resp1.status_code == resp2.status_code == 400
+        assert resp1.status_code == resp2.status_code == 500
         err_msg = resp1.content
         assert err_msg == resp2.content
-        expected_model = sorted(inputdic['model'])[0]
         assert mock_get_gmv.called
-        assert f'{expected_model}: (ValueError) a' in str(err_msg)
+        assert err_msg.startswith(b'Server error (ValueError): a. ')

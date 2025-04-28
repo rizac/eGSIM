@@ -16,11 +16,12 @@ from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.source.rupture import BaseRupture
 from openquake.hazardlib.source.point import PointSource
 
-from .registry import get_ground_motion_values, Clabel, init_context_maker
+from .registry import Clabel
 from .flatfile import FlatfileMetadata
 from .converters import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
-from .validation import (validate_inputs, harmonize_input_gsims,
-                         harmonize_input_imts, validate_imt_sa_limits, ModelError)
+from .validation import (validate_inputs, harmonize_input_gsims, init_context_maker,
+                         harmonize_input_imts, validate_imt_sa_limits,
+                         get_ground_motion_values)
 
 
 @dataclass
@@ -107,14 +108,12 @@ def get_scenarios_predictions(
         if not imts_ok:
             continue
         imt_names, imt_vals = list(imts_ok.keys()), list(imts_ok.values())
-        try:
-            median, sigma, tau, phi = get_ground_motion_values(gsim, imt_vals, ctxts)
-            data.append(median)
-            columns.extend((i, Clabel.median, gsim_name) for i in imt_names)
-            data.append(sigma)
-            columns.extend((i, Clabel.std, gsim_name) for i in imt_names)
-        except Exception as exc:
-            raise ModelError(f'{gsim_name}: ({exc.__class__.__name__}) {str(exc)}')
+        median, sigma, tau, phi = get_ground_motion_values(gsim, imt_vals, ctxts,
+                                                           model_name=gsim_name)
+        data.append(median)
+        columns.extend((i, Clabel.median, gsim_name) for i in imt_names)
+        data.append(sigma)
+        columns.extend((i, Clabel.std, gsim_name) for i in imt_names)
 
     # distances:
     columns.append((
@@ -158,6 +157,7 @@ def build_contexts(
     then returns them as a numpy recarray
 
     :param gsims: dict of GSIM names mapped to a GSIM instance (class `GMPE`)
+    :param imts: dict of intensity measure names mapped to their IMT instance
     :param magnitudes: the magnitudes
     :param distances: the distances
     :param r_props: a `RuptureContext` object defining the Rupture properties

@@ -2,10 +2,8 @@
 from typing import Union, Iterable, Callable
 import re
 import numpy as np
-from collections.abc import Collection
 
 from openquake.hazardlib import imt as imt_module
-from openquake.hazardlib.contexts import ContextMaker
 from openquake.hazardlib.imt import IMT, from_string as imt_from_string
 from openquake.hazardlib.gsim.base import GMPE, registry, gsim_aliases
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
@@ -168,47 +166,6 @@ def ground_motion_properties_required_by(
     return frozenset(ret)
 
 
-#  maybe not the best place but where otherwise?
-
-def get_ground_motion_values(model: GMPE, imts: list[IMT], ctx: np.recarray):
-    """
-    Compute the ground motion values from the arguments returning 4 arrays each
-    one of shape `( len(ctx), len(imts) )`. This is the main function to compute
-    predictions to be used within the package.
-
-    :param model: the ground motion model instance
-    :param imts: a list of M Intensity Measure Types
-    :param ctx: a numpy recarray of size N created from a given
-        scenario (e.g. `RuptureContext`)
-
-    :return: a tuple of 4-elements: (note: arrays below are simply the transposed
-        matrices of OpenQuake computed values):
-        - an array of shape (N, M) for the means (N=len(ctx), M=len(imts), see above)
-        - an array of shape (N, M) for the TOTAL stddevs
-        - an array of shape (N, M) for the INTER_EVENT stddevs
-        - an array of shape (N, M) for the INTRA_EVENT stddevs
-    """
-    median = np.zeros([len(imts), len(ctx)])
-    sigma = np.zeros_like(median)
-    tau = np.zeros_like(median)
-    phi = np.zeros_like(median)
-    if hasattr(model, 'set_tables'):
-        for mag in np.unique(ctx.mag):
-            idxs = np.where(ctx.mag == mag)[0]
-            median_tmp = np.zeros([len(imts), len(idxs)])
-            sigma_tmp = np.zeros_like(median_tmp)
-            tau_tmp = np.zeros_like(median_tmp)
-            phi_tmp = np.zeros_like(median_tmp)
-            model.compute(ctx[idxs], imts, median_tmp, sigma_tmp, tau_tmp, phi_tmp)
-            median[:, idxs] = median_tmp
-            sigma[:, idxs] = sigma_tmp
-            tau[:, idxs] = tau_tmp
-            phi[:, idxs] = phi_tmp
-    else:
-        model.compute(ctx, imts, median, sigma, tau, phi)
-    return median.T, sigma.T, tau.T, phi.T
-
-
 def gsim_info(model: Union[str, GMPE]) -> tuple[str, list, list, Union[list, None]]:
     """Return the model info as a tuple with elements:
      - the source code documentation (Python docstring) of the model
@@ -225,18 +182,6 @@ def gsim_info(model: Union[str, GMPE]) -> tuple[str, list, list, Union[list, Non
         list(ground_motion_properties_required_by(model) or []),
         get_sa_limits(model)
     )
-
-
-def init_context_maker(gsims: Collection[Union[str, GMPE]],
-                       imts: Collection[Union[str, IMT]],
-                       magnitudes: Collection[float],
-                       tectonic_region='') -> ContextMaker:
-    """initializes a ContextMaker"""
-    param = {
-        "imtls": {i if isinstance(i, str) else imt_name(i): [] for i in imts},
-        "mags":  [f"{mag:.2f}" for mag in magnitudes]
-    }
-    return ContextMaker(tectonic_region, gsims, oq=param)
 
 
 class Clabel:

@@ -50,23 +50,18 @@ class ResidualsForm(GsimImtForm, FlatfileForm, APIForm):
 
         :return: any Python object (e.g., a JSON-serializable dict)
         """
-        try:
-            cleaned_data = self.cleaned_data
-            gsims, imts = cleaned_data["gsim"], cleaned_data["imt"]
-            is_ranking = cleaned_data['ranking']
-            header_sep = Clabel.sep if not cleaned_data.get('multi_header') else None
-            residuals = get_residuals(
-                cleaned_data["gsim"],
-                cleaned_data["imt"],
-                cleaned_data['flatfile'],
-                likelihood=True if is_ranking else cleaned_data['likelihood'],
-                mean=is_ranking,
-                normalise=True if is_ranking else cleaned_data['normalize'],
-                header_sep=None if is_ranking else header_sep)
-            if is_ranking:
-                return get_measures_of_fit(gsims, imts, residuals)
-            return residuals
-        except MissingColumnError as mce:
-            self.add_error('flatfile', f'missing column(s) {str(mce)}')
-        except FlatfileError as err:
-            self.add_error("flatfile", str(err))
+        cleaned_data = self.cleaned_data
+        gsims, imts = cleaned_data["gsim"], cleaned_data["imt"]
+        is_ranking = cleaned_data['ranking']
+        header_sep = Clabel.sep if not cleaned_data.get('multi_header') else None
+        residuals = get_residuals(
+            cleaned_data["gsim"],
+            cleaned_data["imt"],
+            cleaned_data['flatfile'],
+            likelihood=True if is_ranking else cleaned_data['likelihood'],
+            mean=is_ranking,
+            normalise=True if is_ranking else cleaned_data['normalize'],
+            header_sep=None if is_ranking else header_sep)
+        if is_ranking:
+            return get_measures_of_fit(gsims, imts, residuals)
+        return residuals

@@ -16,15 +16,15 @@ from scipy.interpolate import interp1d
 from scipy.special import erf
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib import imt, const
-from openquake.hazardlib.contexts import RuptureContext, ContextMaker
+from openquake.hazardlib.contexts import RuptureContext
 from openquake.hazardlib.scalerel import PeerMSR
 
 from .flatfile import (FlatfileError, MissingColumnError, FlatfileMetadata,
                        ColumnDataError, IncompatibleColumnError, EVENT_ID_COLUMN_NAME)
-from .validation import (validate_inputs, harmonize_input_gsims,
-                         harmonize_input_imts, validate_imt_sa_limits, ModelError)
-from .registry import (get_ground_motion_values, Clabel, sa_period,
-                       ground_motion_properties_required_by, init_context_maker)
+from .validation import (validate_inputs, harmonize_input_gsims, init_context_maker,
+                         harmonize_input_imts, validate_imt_sa_limits,
+                         get_ground_motion_values)
+from .registry import (Clabel, sa_period, ground_motion_properties_required_by)
 from .converters import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
 
 
@@ -226,30 +226,27 @@ def get_expected_motions(
     columns = []
     # Period range for GSIM
     for gsim_name, gsim in gsims.items():
-        try:
-            # validate SA periods:
-            imts_ok = validate_imt_sa_limits(gsim, imts)
-            if not imts_ok:
-                continue
-            imt_names, imt_vals = list(imts_ok.keys()), list(imts_ok.values())
-            cmaker = init_context_maker([gsim], imts, [ctx.mag])
-            mean, total, inter, intra = get_ground_motion_values(
-                gsim, imt_vals, cmaker.recarray([ctx]))
-            # assign data to our tmp lists:
-            columns.extend(product(imt_names, [Clabel.mean], [gsim_name]))
-            data.append(mean)
-            stddev_types = gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if const.StdDev.TOTAL in stddev_types:
-                columns.extend((i, Clabel.total_std, gsim_name) for i in imt_names)
-                data.append(total)
-            if const.StdDev.INTER_EVENT in stddev_types:
-                columns.extend((i, Clabel.inter_ev_std, gsim_name) for i in imt_names)
-                data.append(inter)
-            if const.StdDev.INTRA_EVENT in stddev_types:
-                columns.extend((i, Clabel.intra_ev_std, gsim_name) for i in imt_names)
-                data.append(intra)
-        except Exception as exc:
-            raise ModelError(f'{gsim_name}: ({exc.__class__.__name__}) {str(exc)}')
+        # validate SA periods:
+        imts_ok = validate_imt_sa_limits(gsim, imts)
+        if not imts_ok:
+            continue
+        imt_names, imt_vals = list(imts_ok.keys()), list(imts_ok.values())
+        cmaker = init_context_maker([gsim], imts, [ctx.mag])  # raises ModelExceptionErr
+        mean, total, inter, intra = get_ground_motion_values(
+                gsim, imt_vals, cmaker.recarray([ctx]), model_name=gsim_name)
+        # assign data to our tmp lists:
+        columns.extend(product(imt_names, [Clabel.mean], [gsim_name]))
+        data.append(mean)
+        stddev_types = gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES
+        if const.StdDev.TOTAL in stddev_types:
+            columns.extend((i, Clabel.total_std, gsim_name) for i in imt_names)
+            data.append(total)
+        if const.StdDev.INTER_EVENT in stddev_types:
+            columns.extend((i, Clabel.inter_ev_std, gsim_name) for i in imt_names)
+            data.append(inter)
+        if const.StdDev.INTRA_EVENT in stddev_types:
+            columns.extend((i, Clabel.intra_ev_std, gsim_name) for i in imt_names)
+            data.append(intra)
 
     return pd.DataFrame(columns=pd.MultiIndex.from_tuples(columns),
                         data=np.hstack(data), index=ctx.sids)

@@ -16,11 +16,10 @@ assert isdir(test_data_dir)
 # these must be equal to the values provided in tests.smtk.test_create_data:
 models = ['CauzziEtAl2014', 'BindiEtAl2014Rjb']
 imts = ['PGA', 'SA(0.032)', 'SA(0.034)']
+ffile_path = abspath(join(test_data_dir, 'test_flatfile.csv'))
 
 
 def test_client_get_residuals(live_server):
-    ffile_path = abspath(join(test_data_dir,
-                         'test_flatfile.csv'))
     with open(ffile_path) as fpt:
         dfr = get_egsim_residuals(
             models, imts, fpt, likelihood=False,
@@ -51,7 +50,7 @@ def test_client_get_predictions(live_server):
         )
 
 
-def test_client_get_predictions_nga(live_server):
+def test_client_get_predictions_nga_east(live_server):
     models = [
         "NGAEastUSGSSammons1",
         # "NGAEastUSGSSammons10",
@@ -102,9 +101,7 @@ def test_client_get_predictions_nga(live_server):
     # Distances
     distances = [1.0, 2.0, 5.0, 7.5, 10.0, 15.0, 20.0, 30.0, 40.0, 50.0,
                  60.0, 80.0, 100.0, 125.0, 150.0, 175.0, 200.0, 225.0, 250.0]
-    # distances = ["{:.2f}".format(rval) for rval in distances]
-    print(magnitudes)
-    print(distances)
+
     # Other rupture parameters
     rupture_params = {"aspect": 1.5, "dip": 90.0, "ztor": 2.0, "rake": 0.0}
     # Other site parameters
@@ -118,12 +115,25 @@ def test_client_get_predictions_nga(live_server):
         rupture_params=rupture_params, site_params=site_params
     )
 
-    dfr = get_egsim_residuals(
-        models, imts, flatfile="esm2018",
-        base_url=f"{live_server.url}/{RESIDUALS_URL_PATH}"
-    )
+    with open(ffile_path) as fpt:
+        dfr = get_egsim_residuals(
+            models, imts, fpt, likelihood=False,
+            base_url=f"{live_server.url}/{RESIDUALS_URL_PATH}"
+        )
 
-    asd = 9
+    # dfr = get_egsim_residuals(
+    #     models, imts, flatfile="esm-2018", query_string='(mag > 4) & (mag < 5)',
+    #     base_url=f"{live_server.url}/{RESIDUALS_URL_PATH}"
+    # )
+
+    # ffile_path = abspath(join(test_data_dir,
+    #                           'test_flatfile.csv'))
+    # with open(ffile_path) as fpt:
+    #     dfr = get_egsim_residuals(
+    #         models, imts, fpt, likelihood=False,
+    #         base_url=f"{live_server.url}/{RESIDUALS_URL_PATH}"
+    #     )
+    # asd = 9
 
 
 def test_predictions_400(live_server):

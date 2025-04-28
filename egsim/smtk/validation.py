@@ -1,12 +1,14 @@
 """Validation functions for the strong motion modeller toolkit (smtk) package of eGSIM"""
 from __future__ import annotations
 
-from typing import Union
+from typing import Union, Optional
 from collections.abc import Iterable
 
 import numpy as np
+from openquake.hazardlib.contexts import ContextMaker
 from openquake.hazardlib.imt import IMT
 from openquake.hazardlib.gsim.base import GMPE
+from openquake.hazardlib.gsim.gmpe_table import GMPETable
 
 from .registry import (gsim_name, intensity_measures_defined_for, gsim, imt,
                        get_sa_limits, imt_name, sa_period)
@@ -77,7 +79,7 @@ def validate_inputs(gsims: dict[str, GMPE], imts: dict[str, IMT]):
 
     :param gsims: an iterable of str (model name, see `get_registered_gsim_names`),
         mapped to the GMPE instance, as output from `harmonize_input_gsims`
-    :param imts: an iterable of str (e.g. 'SA(0.1)', 'PGA') mapped to IMT the
+    :param imts: an iterable of str (e.g. 'SA(0.1)', 'PGA') mapped to the IMT
         instance, as output from `harmonize_input_imts`
     """
     imt_names = {n if sa_period(i) is None else n[:2] for n, i in imts.items()}
@@ -114,7 +116,113 @@ def validate_imt_sa_limits(model: GMPE, imts: dict[str, IMT]) -> dict[str, IMT]:
     }
 
 
-# Custom Exceptions:
+def init_context_maker(gsims: Iterable[Union[str, GMPE]],
+                       imts: Iterable[Union[str, IMT]],
+                       magnitudes: Iterable[float],
+                       tectonic_region='') -> ContextMaker:
+    """Initialize a ContextMaker. Raise Model"""
+    param = {
+        "imtls": {i if isinstance(i, str) else imt_name(i): [] for i in imts},
+        "mags":  [f"{mag:.2f}" for mag in magnitudes]
+    }
+    if hasattr(gsims, '__len__'):  # to re-iterate over it in case of exceptions
+        gsims = list(gsims)
+    oq_exceptions = (ValueError, KeyError)
+    try:
+        return ContextMaker(tectonic_region, gsims, oq=param)
+    except oq_exceptions as err:
+        # any error should be returned associated to a model M, when possible. Infer M:
+        if len(gsims) == 1:
+            raise _format_model_error(gsims[0], err)
+        else:
+            for g in gsims:
+                try:
+                    return ContextMaker(tectonic_region, [g], oq=param)
+                except err.__class__ as m_err:  # same error as `err`
+                    raise _format_model_error(g, m_err)
+            raise err
+
+
+def get_ground_motion_values(model: GMPE, imts: list[IMT], ctx: np.recarray, *,
+                             model_name: Optional[str] = None):
+    """
+    Compute the ground motion values from the arguments returning 4 arrays each
+    one of shape `( len(ctx), len(imts) )`. This is the main function to compute
+    predictions to be used within the package.
+
+    :param model: the ground motion model instance
+    :param imts: a list of M Intensity Measure Types
+    :param ctx: a numpy recarray of size N created from a given
+        scenario (e.g. `RuptureContext`)
+    :param model_name: the model name, only used in case of exceptions, if any is
+        raised from OpenQuake. If empty or not given, the name will be inferred
+        from `model`
+
+    :return: a tuple of 4-elements: (note: arrays below are simply the transposed
+        matrices of OpenQuake computed values):
+        - an array of shape (N, M) for the means (N=len(ctx), M=len(imts), see above)
+        - an array of shape (N, M) for the TOTAL stddevs
+        - an array of shape (N, M) for the INTER_EVENT stddevs
+        - an array of shape (N, M) for the INTRA_EVENT stddevs
+    """
+    oq_exceptions = (ValueError, KeyError)
+    median = np.zeros([len(imts), len(ctx)])
+    sigma = np.zeros_like(median)
+    tau = np.zeros_like(median)
+    phi = np.zeros_like(median)
+    if isinstance(model, GMPETable):  # better than `hasattr(model, 'set_tables')`?
+        # GMPETables need to compute their values magnitude-wise. Allocate once
+        # (faster) a copy of variables where we will temporarily set the computed values:
+        m_buf = np.zeros_like(median)
+        s_buf = np.zeros_like(median)
+        t_buf = np.zeros_like(median)
+        p_buf = np.zeros_like(median)
+        start = 0
+        for mag in np.unique(ctx.mag):
+            idxs = np.where(ctx.mag == mag)[0]
+            end = start + len(idxs)
+            # Note: m_buf[:, start:end] creates a view (m_buf values will be updated),
+            # m_buf[:, idxs] creates a *copy* (m_buf won't be updated):
+            try:
+                model.compute(ctx[idxs], imts,
+                              m_buf[:, start:end],
+                              s_buf[:, start:end],
+                              t_buf[:, start:end],
+                              p_buf[:, start:end])
+            except oq_exceptions as exc:
+                raise _format_model_error(model_name or model, exc)
+            # set computed values back to our variables:
+            median[:, idxs] = m_buf[:, start:end]
+            sigma[:, idxs] = s_buf[:, start:end]
+            tau[:, idxs] = t_buf[:, start:end]
+            phi[:, idxs] = p_buf[:, start:end]
+            start = end
+    else:
+        try:
+            model.compute(ctx, imts, median, sigma, tau, phi)
+        except oq_exceptions as exc:
+            raise _format_model_error(model_name or model, exc)
+    return median.T, sigma.T, tau.T, phi.T
+
+
+def _format_model_error(model: Union[GMPE, str], exception: Exception) -> ModelError:
+    """Re-format the given exception into  a ModelError"""
+    suffix = str(exception.__class__.__name__)
+    import sys
+    import traceback
+    exc_type, exc_value, exc_tb = sys.exc_info()
+    tb_list = traceback.extract_tb(exc_tb)
+    if tb_list:
+        fname = tb_list[-1].filename
+        lineno = tb_list[-1].lineno
+        if '/openquake/' in fname and fname.rfind('/') < len(fname) - 3:
+            suffix = f"OpenQuake {suffix} @{fname[fname.rfind('/') + 1:]}:{lineno}"
+
+    return ModelError(f'{model if isinstance(model, str) else gsim_name(model)}: '
+                      f'{str(exception)} ({suffix})')
+
+
+# Custom Exceptions ===========================================================
 
 
 class InputError(ValueError):
