@@ -166,7 +166,7 @@ def build_contexts(
     :return: Context objects in the form of a single numpy recarray of length:
         len(magnitudes) * len(distances)
     """
-    cmaker = init_context_maker(gsims.values(), imts, magnitudes,
+    cmaker = init_context_maker(gsims, imts, magnitudes,
                                 tectonic_region=r_props.tectonic_region)
     ctxts = []
     for i, magnitude in enumerate(magnitudes):

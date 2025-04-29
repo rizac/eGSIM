@@ -116,31 +116,27 @@ def validate_imt_sa_limits(model: GMPE, imts: dict[str, IMT]) -> dict[str, IMT]:
     }
 
 
-def init_context_maker(gsims: Iterable[Union[str, GMPE]],
+def init_context_maker(gsims: dict[str, GMPE],
                        imts: Iterable[Union[str, IMT]],
                        magnitudes: Iterable[float],
                        tectonic_region='') -> ContextMaker:
-    """Initialize a ContextMaker. Raise Model"""
+    """Initialize a ContextMaker. Raise `InvalidModel`"""
     param = {
         "imtls": {i if isinstance(i, str) else imt_name(i): [] for i in imts},
         "mags":  [f"{mag:.2f}" for mag in magnitudes]
     }
-    if hasattr(gsims, '__len__'):  # to re-iterate over it in case of exceptions
-        gsims = list(gsims)
     oq_exceptions = (ValueError, KeyError)
     try:
-        return ContextMaker(tectonic_region, gsims, oq=param)
+        return ContextMaker(tectonic_region, gsims.values(), oq=param)
     except oq_exceptions as err:
-        # any error should be returned associated to a model M, when possible. Infer M:
-        if len(gsims) == 1:
-            raise _format_model_error(gsims[0], err)
-        else:
-            for g in gsims:
-                try:
-                    return ContextMaker(tectonic_region, [g], oq=param)
-                except err.__class__ as m_err:  # same error as `err`
-                    raise _format_model_error(g, m_err)
-            raise err
+        # any error should be returned associated to a model M, when possible.
+        # Infer M (slightly inefficient if len(gsims)==1, but more readable):
+        for g_name, g in gsims.items():
+            try:
+                return ContextMaker(tectonic_region, [g], oq=param)
+            except err.__class__ as m_err:  # same error as `err`
+                raise _format_model_error(g_name, m_err)
+        raise err
 
 
 def get_ground_motion_values(model: GMPE, imts: list[IMT], ctx: np.recarray, *,
@@ -170,9 +166,9 @@ def get_ground_motion_values(model: GMPE, imts: list[IMT], ctx: np.recarray, *,
     sigma = np.zeros_like(median)
     tau = np.zeros_like(median)
     phi = np.zeros_like(median)
-    if isinstance(model, GMPETable):  # better than `hasattr(model, 'set_tables')`?
-        # GMPETables need to compute their values magnitude-wise. Allocate once
-        # (faster) a copy of variables where we will temporarily set the computed values:
+    if isinstance(model, GMPETable):
+        # GMPETables need to compute their values magnitude-wise. Allocate a copy of
+        # variables where we will temporarily buffer the computed values per-magnitude:
         m_buf = np.zeros_like(median)
         s_buf = np.zeros_like(median)
         t_buf = np.zeros_like(median)
@@ -181,8 +177,8 @@ def get_ground_motion_values(model: GMPE, imts: list[IMT], ctx: np.recarray, *,
         for mag in np.unique(ctx.mag):
             idxs = np.where(ctx.mag == mag)[0]
             end = start + len(idxs)
-            # Note: m_buf[:, start:end] creates a view (m_buf values will be updated),
-            # m_buf[:, idxs] creates a *copy* (m_buf won't be updated):
+            # Note: we use buffers to pass *contiguous* slices (`start:end`) and be sure
+            # to update the original array (`idxs` might not be contiguous)
             try:
                 model.compute(ctx[idxs], imts,
                               m_buf[:, start:end],
@@ -196,7 +192,7 @@ def get_ground_motion_values(model: GMPE, imts: list[IMT], ctx: np.recarray, *,
             sigma[:, idxs] = s_buf[:, start:end]
             tau[:, idxs] = t_buf[:, start:end]
             phi[:, idxs] = p_buf[:, start:end]
-            start = end
+            start = end  # move start forward
     else:
         try:
             model.compute(ctx, imts, median, sigma, tau, phi)

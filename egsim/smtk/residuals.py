@@ -224,14 +224,13 @@ def get_expected_motions(
     """
     data = []
     columns = []
-    # Period range for GSIM
+    cmaker = init_context_maker(gsims, imts, [ctx.mag])
     for gsim_name, gsim in gsims.items():
         # validate SA periods:
         imts_ok = validate_imt_sa_limits(gsim, imts)
         if not imts_ok:
             continue
         imt_names, imt_vals = list(imts_ok.keys()), list(imts_ok.values())
-        cmaker = init_context_maker([gsim], imts, [ctx.mag])  # raises ModelExceptionErr
         mean, total, inter, intra = get_ground_motion_values(
                 gsim, imt_vals, cmaker.recarray([ctx]), model_name=gsim_name)
         # assign data to our tmp lists:
