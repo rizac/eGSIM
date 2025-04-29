@@ -249,7 +249,7 @@ class APIFormView(EgsimView):
         try:
             response_function = self.supported_formats()[rformat]
         except KeyError:
-            return self.error_response(f'format: {EgsimBaseForm.ErrMsg.invalid.value}')
+            return self.error_response(f'format: {EgsimBaseForm.ErrMsg.invalid}')
 
         form = self.formclass(data, files)
         if form.is_valid():

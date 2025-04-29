@@ -5,7 +5,6 @@ from django.db.models import QuerySet
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib.imt import IMT
 from typing import Any
-from enum import StrEnum
 
 from shapely.geometry import Point, shape
 from django.forms import Form
@@ -132,9 +131,9 @@ class EgsimBaseForm(Form):
             return False
         return super().has_error(field, code)
 
-    class ErrMsg(StrEnum):
-        """Custom error message enum: maps common Django ValueError's codes
-        to a standardized message string. Usage:
+    class ErrMsg:
+        """Error messages container class: maps common Django ValueError's codes
+        to a standardized message string. Usage within data cleaning:
             raise ValidationError(self.ErrMsg.invalid)
             self.add_error(field, self.ErrMsg.required)
         """
@@ -164,8 +163,8 @@ class EgsimBaseForm(Form):
                 # 2. if the above failed, use err['message']
                 # 3. if the above failed, use the string "unknown error"
                 try:
-                    msg = self.ErrMsg[err['code']].value
-                except KeyError:
+                    msg = getattr(self.ErrMsg, err['code'])
+                except AttributeError:
                     msg = err.get('message', 'unknown error')
                 errors.setdefault(msg, set()).add(param)
 
