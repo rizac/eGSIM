@@ -176,9 +176,9 @@ def get_ground_motion_values(model: GMPE, imts: list[IMT], ctx: np.recarray, *,
         start = 0
         for mag in np.unique(ctx.mag):
             idxs = np.where(ctx.mag == mag)[0]
+            # Note: `idxs` might not be contiguous. To assure that `model.compute` writes
+            # onto the passed array (and not a copy) we will need to use slices:
             end = start + len(idxs)
-            # Note: we use buffers to pass *contiguous* slices (`start:end`) and be sure
-            # to update the original array (`idxs` might not be contiguous)
             try:
                 model.compute(ctx[idxs], imts,
                               m_buf[:, start:end],
