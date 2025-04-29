@@ -185,6 +185,18 @@ server installation, scroll down
 	</tr>
 	<tr>
 		<td><i class="fa fa-file-o"></i></td>
+		<td><span class="token important">$EGSIM_DATA_DIR</span><br>
+		the directory where eGSIM data (flatfiles, regionalizations, db) resides</td>
+	</tr>
+	<tr>
+		<td><i class="fa fa-file-o"></i></td>
+		<td><span class="token important">$EGSIM_SRCDATA_DIR</span><br>
+		the directory where eGSIM source data (raw flatfiles, regionalizations) resides.
+		Content is transferred and kept in synch manually from a Nextcloud folder "egsim-data"
+		</td>
+	</tr>
+	<tr>
+		<td><i class="fa fa-file-o"></i></td>
 		<td><span class="token important">/etc/systemd/system/$DJANGO_PROJECT.service</span><br>
 		the Gunicorn script to start the django production server. See dedicate section below
 		if you need to modify and/or restart it</td>
@@ -888,7 +900,8 @@ var allVars = [
 	'$EGSIM_LOG_DIR',
 	'$EGSIM_CONFIG_DIR',
 	'$EGSIM_CWD',
-	'$GUNICORN_PORT'
+	'$GUNICORN_PORT',
+	'$EGSIM_SRCDATA_DIR'
 ];
 
 // script for custom code on page load:
@@ -926,6 +939,7 @@ window.onload=function(){
 		var currentPython = 'python' + (vars.length >= 2 ? `${vars[0]}.${vars[1]}` : $PYTHON_VERSION);
 		$CURRENT_PYTHON = currentPython;
 		$EGSIM_DATA_DIR = "/var/opt/" + $DJANGO_PROJECT;
+		$EGSIM_SRCDATA_DIR = "/var/opt/" + "egsim-data";
 		$EGSIM_LOG_DIR = "/var/log/" + $DJANGO_PROJECT;
 		$EGSIM_CONFIG_DIR = "/etc/opt/" + $DJANGO_PROJECT;
 		//update everything:

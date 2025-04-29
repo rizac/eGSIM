@@ -7,8 +7,7 @@ import json
 import sys
 from typing import Optional
 
-# from egsim.api.data.flatfiles import get_flatfiles
-from egsim.api.data.flatfile_parsers import Esm2018, KiknetKnet
+from egsim.api.initialization.flatfile_parsers import Esm2018, KiknetKnet
 from egsim.smtk import registered_imts
 from egsim.smtk.flatfile import _load_flatfile_metadata  # noqa
 

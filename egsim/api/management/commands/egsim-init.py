@@ -9,7 +9,7 @@ from egsim.smtk import (registered_gsims, gsim, intensity_measures_defined_for,
                         ground_motion_properties_required_by, get_sa_limits)
 from egsim.smtk.flatfile import FlatfileMetadata
 from ... import models
-from ...data.egsim_init import copy_regionalizations, parse_flatfiles
+from ...initialization.egsim_init import copy_regionalizations, parse_flatfiles
 
 
 # check JSON1 extension (it should be enabled in all newest OSs and Python versions):
