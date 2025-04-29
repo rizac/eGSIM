@@ -185,6 +185,18 @@ server installation, scroll down
 	</tr>
 	<tr>
 		<td><i class="fa fa-file-o"></i></td>
+		<td><span class="token important">$EGSIM_DATA_DIR</span><br>
+		the directory where eGSIM data (flatfiles, regionalizations, db) resides</td>
+	</tr>
+	<tr>
+		<td><i class="fa fa-file-o"></i></td>
+		<td><span class="token important">$EGSIM_SRCDATA_DIR</span><br>
+		the directory where eGSIM source data (raw flatfiles, regionalizations) resides.
+		Content is transferred and kept in synch manually from a Nextcloud folder "egsim-data"
+		</td>
+	</tr>
+	<tr>
+		<td><i class="fa fa-file-o"></i></td>
 		<td><span class="token important">/etc/systemd/system/$DJANGO_PROJECT.service</span><br>
 		the Gunicorn script to start the django production server. See dedicate section below
 		if you need to modify and/or restart it</td>
@@ -326,7 +338,7 @@ rm $EGSIM_DATA_DIR/egsim.db
 # create the db and populate it with Django stuff (this is necessary only when changing the DB schema, but for safety):
 (cd $EGSIM_CWD; export PYTHONPATH=$EGSIM_CONFIG_DIR DJANGO_SETTINGS_MODULE=settings; python manage.py migrate)
 # populate the DB with egsim stuff
-(cd $EGSIM_CWD; export PYTHONPATH=$EGSIM_CONFIG_DIR DJANGO_SETTINGS_MODULE=settings; python manage.py egsim_init)
+(cd $EGSIM_CWD; export PYTHONPATH=$EGSIM_CONFIG_DIR DJANGO_SETTINGS_MODULE=settings; python manage.py egsim-init)
 # re-become root (password the usual one with punctuation marks):
 # (without this, the following commands will require you to type the password)
 su
@@ -619,8 +631,7 @@ With the Python virtualenv activated, execute:
 
 <p>Initialize our database (OpenQuake GSIMs IMTs and TRTs)</p>
 <pre><code class="language-bash">
-(cd $EGSIM_CWD; export PYTHONPATH=$EGSIM_CONFIG_DIR DJANGO_SETTINGS_MODULE=settings; python manage.py egsim_init)
-<!--export PYTHONPATH=$EGSIM_CONFIG_DIR; export DJANGO_SETTINGS_MODULE=settings;python manage.py egsim_init-->
+(cd $EGSIM_CWD; export PYTHONPATH=$EGSIM_CONFIG_DIR DJANGO_SETTINGS_MODULE=settings; python manage.py egsim-init)
 </code></pre>
 
 
@@ -889,7 +900,8 @@ var allVars = [
 	'$EGSIM_LOG_DIR',
 	'$EGSIM_CONFIG_DIR',
 	'$EGSIM_CWD',
-	'$GUNICORN_PORT'
+	'$GUNICORN_PORT',
+	'$EGSIM_SRCDATA_DIR'
 ];
 
 // script for custom code on page load:
@@ -927,6 +939,7 @@ window.onload=function(){
 		var currentPython = 'python' + (vars.length >= 2 ? `${vars[0]}.${vars[1]}` : $PYTHON_VERSION);
 		$CURRENT_PYTHON = currentPython;
 		$EGSIM_DATA_DIR = "/var/opt/" + $DJANGO_PROJECT;
+		$EGSIM_SRCDATA_DIR = "/var/opt/" + "egsim-data";
 		$EGSIM_LOG_DIR = "/var/log/" + $DJANGO_PROJECT;
 		$EGSIM_CONFIG_DIR = "/etc/opt/" + $DJANGO_PROJECT;
 		//update everything:

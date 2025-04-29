@@ -61,5 +61,5 @@ def django_db_setup(django_db_setup, django_db_blocker):  # noqa
     @param django_db_blocker: fixture used in the code to write custom data on the db
     """ # noqa
     with django_db_blocker.unblock():
-        call_command('egsim_init', interactive=False)
+        call_command('egsim-init', interactive=False)
 

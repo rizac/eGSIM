@@ -5,7 +5,6 @@ from django.db.models import QuerySet
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib.imt import IMT
 from typing import Any
-from enum import StrEnum
 
 from shapely.geometry import Point, shape
 from django.forms import Form
@@ -132,9 +131,9 @@ class EgsimBaseForm(Form):
             return False
         return super().has_error(field, code)
 
-    class ErrMsg(StrEnum):
-        """Custom error message enum: maps common Django ValueError's codes
-        to a standardized message string. Usage:
+    class ErrMsg:
+        """Error messages container class: maps common Django ValueError's codes
+        to a standardized message string. Usage within data cleaning:
             raise ValidationError(self.ErrMsg.invalid)
             self.add_error(field, self.ErrMsg.required)
         """
@@ -164,8 +163,8 @@ class EgsimBaseForm(Form):
                 # 2. if the above failed, use err['message']
                 # 3. if the above failed, use the string "unknown error"
                 try:
-                    msg = self.ErrMsg[err['code']].value
-                except KeyError:
+                    msg = getattr(self.ErrMsg, err['code'])
+                except AttributeError:
                     msg = err.get('message', 'unknown error')
                 errors.setdefault(msg, set()).add(param)
 
@@ -219,7 +218,7 @@ class SHSRForm(EgsimBaseForm):
         """Custom gsim clean.
         The return value will replace self.cleaned_data['gsim']
         """
-        reg_objs = models.Regionalization.queryset('name', 'media_root_path')
+        reg_objs = models.Regionalization.queryset('name')
         value = self.cleaned_data.get('regionalization', None)
         if isinstance(value, str):
             value = [value]
@@ -245,8 +244,6 @@ class SHSRForm(EgsimBaseForm):
         point = Point(lon, lat)
         for reg_obj in self.cleaned_data['regionalization']:  # see clean_regionalization
             reg_name = reg_obj.name
-            if reg_name == 'germany':
-                asd =9
             feat_collection = reg_obj.read_from_filepath()
             for feat in feat_collection['features']:
                 geometry, reg_models = feat['geometry'], feat['properties']['models']

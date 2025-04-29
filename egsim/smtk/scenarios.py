@@ -10,18 +10,18 @@ import pandas as pd
 from openquake.hazardlib.scalerel import BaseMSR
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib.imt import IMT
-from openquake.hazardlib.contexts import ContextMaker
 from openquake.hazardlib.scalerel.wc1994 import WC1994
 from openquake.hazardlib.geo import Point, Mesh, PlanarSurface
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.source.rupture import BaseRupture
 from openquake.hazardlib.source.point import PointSource
 
-from .registry import get_ground_motion_values, Clabel
+from .registry import Clabel
 from .flatfile import FlatfileMetadata
 from .converters import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
-from .validation import (validate_inputs, harmonize_input_gsims,
-                         harmonize_input_imts, validate_imt_sa_limits, ModelError)
+from .validation import (validate_inputs, harmonize_input_gsims, init_context_maker,
+                         harmonize_input_imts, validate_imt_sa_limits,
+                         get_ground_motion_values)
 
 
 @dataclass
@@ -98,7 +98,7 @@ def get_scenarios_predictions(
     if site_properties is None:
         site_properties = SiteProperties()
     ctxts = build_contexts(
-        gsims, magnitudes, distances, rupture_properties, site_properties)
+        gsims, imts, magnitudes, distances, rupture_properties, site_properties)
 
     # Get the ground motion values
     data = []
@@ -108,14 +108,12 @@ def get_scenarios_predictions(
         if not imts_ok:
             continue
         imt_names, imt_vals = list(imts_ok.keys()), list(imts_ok.values())
-        try:
-            median, sigma, tau, phi = get_ground_motion_values(gsim, imt_vals, ctxts)
-            data.append(median)
-            columns.extend((i, Clabel.median, gsim_name) for i in imt_names)
-            data.append(sigma)
-            columns.extend((i, Clabel.std, gsim_name) for i in imt_names)
-        except Exception as exc:
-            raise ModelError(f'{gsim_name}: ({exc.__class__.__name__}) {str(exc)}')
+        median, sigma, tau, phi = get_ground_motion_values(gsim, imt_vals, ctxts,
+                                                           model_name=gsim_name)
+        data.append(median)
+        columns.extend((i, Clabel.median, gsim_name) for i in imt_names)
+        data.append(sigma)
+        columns.extend((i, Clabel.std, gsim_name) for i in imt_names)
 
     # distances:
     columns.append((
@@ -150,6 +148,7 @@ def get_scenarios_predictions(
 
 def build_contexts(
         gsims: dict[str, GMPE],
+        imts: dict[str, IMT],
         magnitudes: Collection[float],
         distances: Collection[float],
         r_props: RuptureProperties,
@@ -158,6 +157,7 @@ def build_contexts(
     then returns them as a numpy recarray
 
     :param gsims: dict of GSIM names mapped to a GSIM instance (class `GMPE`)
+    :param imts: dict of intensity measure names mapped to their IMT instance
     :param magnitudes: the magnitudes
     :param distances: the distances
     :param r_props: a `RuptureContext` object defining the Rupture properties
@@ -166,8 +166,8 @@ def build_contexts(
     :return: Context objects in the form of a single numpy recarray of length:
         len(magnitudes) * len(distances)
     """
-    cmaker = ContextMaker(r_props.tectonic_region, gsims.values(),
-                          oq={"imtls": {"PGA": []}})
+    cmaker = init_context_maker(gsims, imts, magnitudes,
+                                tectonic_region=r_props.tectonic_region)
     ctxts = []
     for i, magnitude in enumerate(magnitudes):
         area = r_props.msr.get_median_area(magnitude, r_props.rake)
@@ -184,10 +184,12 @@ def build_contexts(
                                  r_props.tectonic_region,
                                  hypocenter, surface)
         ctx = cmaker.get_ctx(rupture, target_sites)
-        ctxts.append(ctx)
+        rec_array = cmaker.recarray([ctx])
+        rec_array["occurrence_rate"] = 0.0  # only needed in PSHA calculation
+        ctxts.append(rec_array)
 
     # Convert to recarray:
-    return cmaker.recarray(ctxts)
+    return np.hstack(ctxts).view(np.recarray)
 
 
 # utilities:

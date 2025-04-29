@@ -166,34 +166,6 @@ def ground_motion_properties_required_by(
     return frozenset(ret)
 
 
-#  maybe not the best place but where otherwise?
-
-def get_ground_motion_values(model: GMPE, imts: list[IMT], ctx: np.recarray):
-    """
-    Compute the ground motion values from the arguments returning 4 arrays each
-    one of shape `( len(ctx), len(imts) )`. This is the main function to compute
-    predictions to be used within the package.
-
-    :param model: the ground motion model instance
-    :param imts: a list of M Intensity Measure Types
-    :param ctx: a numpy recarray of size N created from a given
-        scenario (e.g. `RuptureContext`)
-
-    :return: a tuple of 4-elements: (note: arrays below are simply the transposed
-        matrices of OpenQuake computed values):
-        - an array of shape (N, M) for the means (N=len(ctx), M=len(imts), see above)
-        - an array of shape (N, M) for the TOTAL stddevs
-        - an array of shape (N, M) for the INTER_EVENT stddevs
-        - an array of shape (N, M) for the INTRA_EVENT stddevs
-    """
-    median = np.zeros([len(imts), len(ctx)])
-    sigma = np.zeros_like(median)
-    tau = np.zeros_like(median)
-    phi = np.zeros_like(median)
-    model.compute(ctx, imts, median, sigma, tau, phi)
-    return median.T, sigma.T, tau.T, phi.T
-
-
 def gsim_info(model: Union[str, GMPE]) -> tuple[str, list, list, Union[list, None]]:
     """Return the model info as a tuple with elements:
      - the source code documentation (Python docstring) of the model

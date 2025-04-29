@@ -20,7 +20,7 @@ from django.utils.datastructures import MultiValueDict
 from egsim.api.urls import RESIDUALS_URL_PATH
 from egsim.api.views import (ResidualsView, APIFormView, as_querystring,
                              read_df_from_csv_stream, read_df_from_hdf_stream,
-                             write_df_to_hdf_stream)
+                             write_df_to_hdf_stream, MimeType)
 from egsim.smtk import read_flatfile
 from egsim.smtk.converters import dataframe2dict
 from egsim.smtk.registry import Clabel
@@ -517,9 +517,106 @@ class Test:
         resp2 = client.post(self.url, data=inputdic,
                             content_type='application/json')
         resp1 = client.get(self.querystring(inputdic))
-        assert resp1.status_code == 400
+        assert resp1.status_code == 500
         err_msg = resp1.content
         assert err_msg == resp2.content
-        expected_model = sorted(inputdic['model'])[0]
+        # expected_model = sorted(inputdic['model'])[0]
         assert mock_get_gmv.called
-        assert f'{expected_model}: (ValueError) a' in str(err_msg)
+        # assert f'{expected_model}: a' in str(err_msg)
+        assert err_msg.startswith(b'Server error (ValueError): a.')
+
+    def test_nga_east(self,
+                      # pytest fixtures:
+                      client):
+        models = [
+            "NGAEastUSGSSammons1",
+            # "NGAEastUSGSSammons10",
+            # "NGAEastUSGSSammons11",
+            # "NGAEastUSGSSammons12",
+            # "NGAEastUSGSSammons13",
+            # "NGAEastUSGSSammons14",
+            # "NGAEastUSGSSammons15",
+            # "NGAEastUSGSSammons16",
+            # "NGAEastUSGSSammons17",
+            # "NGAEastUSGSSammons2",
+            # "NGAEastUSGSSammons3",
+            # "NGAEastUSGSSammons4",
+            # "NGAEastUSGSSammons5",
+            # "NGAEastUSGSSammons6",
+            # "NGAEastUSGSSammons7",
+            # "NGAEastUSGSSammons8",
+            # "NGAEastUSGSSammons9",
+            # "NGAEastUSGSSeed1CCSP",
+            # "NGAEastUSGSSeed1CVSP",
+            # "NGAEastUSGSSeed2CCSP",
+            # "NGAEastUSGSSeed2CVSP",
+            # "NGAEastUSGSSeedB_a04",
+            # "NGAEastUSGSSeedB_ab14",
+            # "NGAEastUSGSSeedB_ab95",
+            # "NGAEastUSGSSeedB_bca10d",
+            # "NGAEastUSGSSeedB_bs11",
+            # "NGAEastUSGSSeedB_sgd02",
+            "NGAEastUSGSSeedFrankel",
+            "NGAEastUSGSSeedGraizer",
+            # "NGAEastUSGSSeedGraizer16",
+            # "NGAEastUSGSSeedGraizer17",
+            # "NGAEastUSGSSeedHA15",
+            # "NGAEastUSGSSeedPEER_EX",
+            # "NGAEastUSGSSeedPEER_GP",
+            # "NGAEastUSGSSeedPZCT15_M1SS",
+            # "NGAEastUSGSSeedPZCT15_M2ES",
+            # "NGAEastUSGSSeedSP15",
+            # "NGAEastUSGSSeedYA15"
+        ]
+        imts = ["PGA", "SA(0.2)", "SA(1.0)", "SA(2.0)"]
+
+        resp2 = client.post(self.url,
+                            data={
+                                'model': models,
+                                'imt': imts,
+                                'flatfile': 'esm2018',
+                                'format': 'hdf'
+                            },
+                            content_type=MimeType.hdf)
+
+        assert resp2.status_code == 400
+        err_msg = resp2.content
+        assert err_msg.startswith(b'NGAEastUSGSSammons1: Magnitude 3.90 outside '
+                                  b'of supported range (4.00 to 8.20) (OpenQuake '
+                                  b'ValueError @')
+
+        # set  a flatfile mag range compatiblw with the model which just raised:
+        resp2 = client.post(self.url,
+                            data={
+                                'model': models,
+                                'imt': imts,
+                                'flatfile': 'esm2018',
+                                # just toi speed up test
+                                'flatfile-query': '(mag > 4.5) & (mag < 4.6)',
+                                'format': 'hdf'
+                            },
+                            content_type=MimeType.hdf)
+
+        assert resp2.status_code == 200
+
+    # def test_residuals_error_ngaeast(self,
+    #                                  # pytest fixtures:
+    #                                  client):
+    #     """test trellis distance and distance stdev"""
+    #     with open(self.request_filepath) as _:
+    #         inputdic = dict(yaml.safe_load(_))
+    #
+    #     inputdic['flatfile'] = 'esm2018'  # outside mag bounds for 1st model below
+    #     inputdic['model'] = [
+    #         "NGAEastUSGSSammons1",
+    #         "NGAEastUSGSSammons10"
+    #     ]
+    #     # and from now on,
+    #     resp1 = client.get(self.querystring(inputdic))
+    #     resp2 = client.post(self.url, data=inputdic,
+    #                         content_type=MimeType.json)
+    #     assert resp1.status_code == resp2.status_code == 400
+    #     err_msg = resp1.content
+    #     assert err_msg == resp2.content
+    #     assert err_msg == b'NGAEastUSGSSammons1: Magnitude 1.00 outside ' \
+    #                       b'of supported range (4.00 to 8.20) (ValueError)'

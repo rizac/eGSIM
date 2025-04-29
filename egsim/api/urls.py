@@ -1,6 +1,5 @@
 """eGSIM RESTAPI URL Configuration"""
 from django.urls import re_path
-from django.contrib import admin
 from django.views.decorators.csrf import csrf_exempt
 
 from .views import PredictionsView, ResidualsView, NotFound, GsimInfoView
@@ -16,7 +15,6 @@ RESIDUALS_URL_PATH = f'{API_PATH}residuals'
 MODEL_INFO = f'{API_PATH}models'
 
 urlpatterns = [
-    re_path(r'^admin/', admin.site.urls),  # added by default by django
     re_path(fr'^{PREDICTIONS_URL_PATH}/?$', csrf_exempt(PredictionsView.as_view())),
     re_path(fr'^{RESIDUALS_URL_PATH}/?$', csrf_exempt(ResidualsView.as_view())),
     re_path(fr'^{MODEL_INFO}/?$', csrf_exempt(GsimInfoView.as_view())),

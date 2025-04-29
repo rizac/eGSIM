@@ -16,6 +16,7 @@ from django.views.generic.base import View
 
 from egsim.smtk.converters import dataframe2dict
 from egsim.smtk.validation import ModelError
+from egsim.smtk.flatfile import FlatfileError, MissingColumnError
 from .forms import APIForm, EgsimBaseForm, GsimInfoForm
 from .forms.scenarios import PredictionsForm
 from .forms.residuals import ResidualsForm
@@ -26,8 +27,8 @@ class MimeType:  # noqa
     loosely copied from mimetypes.types_map
     (https://docs.python.org/stable/library/mimetypes.html)
     """
-    # NOTE: avoid Enums or alike, attributes below will be passed as arg `content_type`
-    # to build Responses and must be pure str (subclasses NOT allowed!)
+    # IMPORTANT: avoid Enums or alike, attributes below will be passed as arg
+    # `content_type` to build Responses and must be pure str (subclasses NOT allowed!)
     csv = "text/csv"
     json = "application/json"
     hdf = "application/x-hdf"
@@ -125,7 +126,7 @@ class EgsimView(View):
         as response body / content
         """
         return self.error_response((
-                f'Server error ({exc.__class__.__name__}) {exc}'.strip() +
+                f'Server error ({exc.__class__.__name__}): {exc}'.strip() +
                 f'. Please contact the server administrator '
                 f'if you think this error is due to a code bug'
         ), status=self.SERVER_ERR_CODE)
@@ -183,17 +184,18 @@ class NotFound(EgsimView):
 
 
 class APIFormView(EgsimView):
-    """EgsimView serving any APIForm output. Please read :class:`ApiForm` and 
-    :class:`EgsimView` docstring for details. In addition, this class handles Form 
-    validation errors returning a 400 HttpResponse with the error message in the 
-    response body / content.
+    """:class:`EgsimView` subclass serving :class:`ApiForm` outputs. This class is an 
+    EgsimView that additonally handles Form validation errors, returning a 400 
+    HttpResponse with the error message in the response body / content.
 
     Usage
     =====
     
-    Simple case: your form `output()` method returns a JSON dict, and your view is 
-    supposed to return MimeType.json ("application/json") content only. Then, implement 
-    a new endpoint in `urls.py`:
+    Given an `APiForm` subclass named `MyApiForm`:
+    
+    Simple case: `MyApiForm.output()` method returns a JSON dict and your view is 
+    supposed to return MimeType.json ("application/json") content only. You only need to
+    implement a new endpoint in `urls.py`:
     
     ```
     urlpatterns = [
@@ -203,24 +205,26 @@ class APIFormView(EgsimView):
     ]
     ```
 
-    Advanced case: create a new :class:`APIFormView` instance by 1) implementing the 
-    class attribute `formclass` and 2) any method `response_[format]` returning the
-    relative HttpResponse (see :class:`MimeType` and `sel.respomse_json`, already 
-    implemented for all subclasses). 
-    During the processing of a request, this class reads the request's body 'format' 
-    parameter (default if missing 'json') redirecting to the relative `response` method, 
-    returning a 400 HttpResponse error if not implemented). Example:
+    Advanced case: create a new :class:`APIFormView` which, during the processing of a 
+    request, reads the request's body 'format' parameter (default if missing 'json') 
+    redirecting to the relative `response` method, and returning a 400 HttpResponse 
+    error if no method is implemented). Implementation example:
     ```
     class MyApiFormView(APIFormView):
 
-        formclass = MyApiForm
+        formclass = MyApiForm  # bind this view to the given ApiForm **class**
+        
+        # for any desired format (see :class:`MimeType`) implement the relative 
+        # `response_[format]` method returning the relative HttpResponse (see also
+        # `self.response_json`, already implemented for all subclasses). Example (hdf):
 
         def response_hdf(self, form_output: Any, form: APIForm, **kwargs) -> HttpResponse:
-            # Form is valid, implement the HttpResponse from the given form output:
-            s_output = ... # serialize `form_output`, e.g. as bytes, and then:
+            # Form is valid. First serialize `form_output`, e.g. as bytes:
+            s_output = ... 
+            # and then implement the HttpResponse from the given form output:
             return HttpResponse(s_output, content_type=MimeType.hdf, ...)
     ```
-    And then bind as usual this class view to an endpoint in `urls.py`, .e.g.:
+    Finally, bind as usual this class view to an endpoint in `urls.py`, .e.g.:
     ```
     urlpatterns = [
         ...
@@ -245,13 +249,11 @@ class APIFormView(EgsimView):
         try:
             response_function = self.supported_formats()[rformat]
         except KeyError:
-            return self.error_response(f'format: {EgsimBaseForm.ErrMsg.invalid.value}')
+            return self.error_response(f'format: {EgsimBaseForm.ErrMsg.invalid}')
 
         form = self.formclass(data, files)
         if form.is_valid():
-            obj = form.output()
-            if form.is_valid():
-                return response_function(self, obj, form)  # noqa
+            return response_function(self, form.output(), form)  # noqa
         return self.error_response(form.errors_json_data()['message'])
 
     @classmethod
@@ -294,8 +296,14 @@ class SmtkView(APIFormView):
         HTTPResponse (Client error)"""
         try:
             return super().response(request=request, data=data, files=files)
+        except MissingColumnError as mce:
+            return self.error_response(f'flatfile: missing column(s) {str(mce)}')
+        except FlatfileError as err:
+            return self.error_response(f"flatfile: {str(err)}")
         except ModelError as m_err:
             return self.error_response(m_err)
+        # any other exception will be handled in self.get and self.post and returned as
+        # 5xx response
 
     def response_csv(  # noqa
             self, form_output: pd.DataFrame, form: APIForm, **kwargs  # noqa
