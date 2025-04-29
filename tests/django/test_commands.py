@@ -55,4 +55,4 @@ def test_egsimdb(mocked_input, capsys):
     assert "No matching column: \"invalid_column\"" in out_err.out
     # assert 'Aborted by user' not in capsys.readouterr().out
     # call_command('egsim-db')
-    assert 'Aborted by user' in out_err.out
+    assert 'Command terminated' in out_err.out

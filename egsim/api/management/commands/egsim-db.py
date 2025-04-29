@@ -44,8 +44,7 @@ class Command(BaseCommand):
                 resp = self.update_db_instance(queryset)
                 if resp == self.back:
                     queryset = None
-        if resp == self.quit:
-            self.stdout.write(self.style.ERROR('Aborted by user'))
+        self.stdout.write(self.style.ERROR('Command terminated'))
 
     quit = 'q'
     back = '<'
