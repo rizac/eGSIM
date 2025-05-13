@@ -318,14 +318,33 @@ typing:
 python -c "import tempfile;print(tempfile.gettempdir())"
 ```
 
+## Re-populating the DB
+
+> Note: the value of `DJANGO_SETTINGS_MODULE` in the examples below 
+> must be changed in production
+
+**When to execute: the database needs to be emptied and repopulated**  
+(e.g., OpenQuake is upgraded, or new regionalization or 
+flatfile was added). **the database schema has not changed (otherwise
+see "Complete Db Reset")**
+
+- delete or rename the database of the settings file used:
+   - `egsim/db.sqlite3`
+- Execute: 
+  ```bash
+  export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py migrate && python manage.py egsim-init
+  ```
+- [**Optional**] most likely (not tested, please check) you need to re-add 
+  the Django admin superuser(s) as explained in the [admin panel](#admin-panel)
+
+
 ## Complete DB reset
 
 > Note: the value of `DJANGO_SETTINGS_MODULE` in the examples below 
 > must be changed in production
 
-We perform a complete DB reset every time we change something 
-in the Database schema (see `egsim.api.models.py`), e.g. a table, 
-a column, a constraint.
+**When to execute: the database schema (columns, tables, constraints) 
+has changed** (see `egsim.api.models.py`)
 
 <details>
 <summary>(if you wonder why we do not use DB migrations, click here)</summary>
@@ -391,24 +410,21 @@ Notes:
    - `migrate` re-create the DB via the generated migration file(s)
    - `egsim-init` repopulates the db with eGSIM data
 
+## Modify eGSIM data from the command line
 
-## Re-populating the DB
- 
-We repopulate the DB when  **its schema has not changed** but its data 
-needs to, e.g., OpenQuake is upgraded, or new data is implemented 
-(new regionalization or flatfile), or a bug in the code has been 
-fixed. The operations are similar but simpler than a complete Db Rest:
+> Note: the value of `DJANGO_SETTINGS_MODULE` in the examples below 
+> must be changed in production
 
-- delete or rename the database of the settings file used:
-   - `egsim/db.sqlite3`
-- Execute: 
-  ```bash
-  export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py migrate && python manage.py egsim-init
-  ```
-- [**Optional**] most likely (not tested, please check) you need to re-add 
-  the Django admin superuser(s) as explained in the [admin panel](#admin-panel)
-   
+**When to execute: mostly when you want to hide a flatfile, model or 
+regionalization from the program usually temporarily** (more complex 
+modifications are possible but do it at your own risk)
 
+Execute the interactive command:
+   ```bash
+   export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py egsim-db
+   ```
+
+<!-- 
 ## Admin panel
 
 > Note: the value of `DJANGO_SETTINGS_MODULE` in the examples below 
@@ -432,8 +448,9 @@ Start the program (see [Usage](#Usage)) and then navigate in the browser to
 *Note: Theoretically, you can modify db data from the browser, e.g., hide some 
 model, regionalization or predefined flatfile. Persistent changes should be
 implemented in Python code and then run a [Complete DB reset](#Complete-DB-reset)*
+-->
 
-
+<!-- 
 ## Create a custom management command
 
 See `egsim/api/management/commands/README.md`.
@@ -443,7 +460,7 @@ new data (regionalizations and flatfiles) that will be
 made available in eGSIM with the `egsim-init` command
 (see [Complete DB reset](#Complete-DB-reset) for details)
 
-<!-- 
+
 
 ## Add new predefined flatfiles
 

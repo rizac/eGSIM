@@ -37,7 +37,7 @@ def get_egsim_predictions(
     A [pandas DataFrame](https://pandas.pydata.org/docs/user_guide/dsintro.html#dataframe)
     
     Each row denotes a scenario (i.e., a combination of a given Rupture and Site)
-    labelled by a unique integer id, incremental and starting from 0 (*), and each column
+    labelled by a unique integer id, incremental and starting from 0, and each column
     denotes:
 
     - a computed prediction if the first chunk of the column name is an intensity
