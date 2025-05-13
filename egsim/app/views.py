@@ -348,7 +348,7 @@ class PredictionsHtmlTutorial(EgsimView):
                  files: Optional[dict] = None) -> HttpResponseBase:
         """Process the response from a given request and the data / files
         extracted from it"""
-        from egsim.api.data.client.snippets.get_egsim_predictions import \
+        from egsim.api.client.snippets.get_egsim_predictions import \
             get_egsim_predictions
         api_form = PredictionsForm({
             'gsim': ['CauzziEtAl2014', 'BindiEtAl2014Rjb'],
@@ -369,7 +369,7 @@ class ResidualsHtmlTutorial(EgsimView):
                  files: Optional[dict] = None) -> HttpResponseBase:
         """Process the response from a given request and the data / files
         extracted from it"""
-        from egsim.api.data.client.snippets.get_egsim_residuals import \
+        from egsim.api.client.snippets.get_egsim_residuals import \
             get_egsim_residuals
         api_form = ResidualsForm({
             'gsim': ['CauzziEtAl2014', 'BindiEtAl2014Rjb'],

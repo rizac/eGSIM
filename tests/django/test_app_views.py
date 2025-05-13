@@ -534,3 +534,12 @@ class Test:
                 assert b'<svg ' in content[:5]
             else:
                 raise ValueError(f'content generated for image format {ext} not tested')
+
+    def test_downloaded_data_tutorials(self):
+        for url in (
+                URLS.PREDICTIONS_DOWNLOADED_DATA_TUTORIAL,
+                URLS.RESIDUALS_DOWNLOADED_DATA_TUTORIAL):
+            client = Client()  # do not use the fixture client as we want
+            response = client.post(f"/{url}", {}, content_type="text/html")
+            assert response.status_code == 200
+            assert response.content.strip().startswith(b'<!DOCTYPE html>')
