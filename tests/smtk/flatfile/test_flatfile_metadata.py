@@ -100,6 +100,8 @@ def check_column_metadata(*, name: str, props: dict):
         if not isinstance(help, str) or not help:
             raise ValueError(f"{prefix} set 'help' to a non empty string, or "
                              f"remove the key entirely")
+        if "  " in help:
+            raise ValueError(f"{name} has a trailing space in its Metadata help. Fix it")
 
     # perform some check on the data type consistencies:
     bounds_symbols = {"<", ">", ">=", "<="}

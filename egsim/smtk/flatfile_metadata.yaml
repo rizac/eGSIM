@@ -39,13 +39,13 @@ repi:
 rrup:
   dtype: float
   help: >-
-    rupture_distance (in km). Missing data (e.g., empty cell, NaN, column not provided) 
+    rupture_distance (in km). Missing data (e.g., empty cell, NaN, column not provided)
     will be replaced with the hypocentral distance, if present
   type: distance
 rjb:
   dtype: float
   help: >-
-    Joyner-Boore distance (in km). Missing data (e.g., empty cell, NaN, column not 
+    Joyner-Boore distance (in km). Missing data (e.g., empty cell, NaN, column not
     provided) will be replaced with the epicentral distance, if present
   type: distance
 rhypo:
@@ -55,15 +55,15 @@ rhypo:
 rx:
   dtype: float
   help: >-
-    Horizontal distance (in km) from the top of the rupture measured perpendicular to 
-    strike. Missing data (e.g., empty cell, NaN, column not provided) will be replaced 
+    Horizontal distance (in km) from the top of the rupture measured perpendicular to
+    strike. Missing data (e.g., empty cell, NaN, column not provided) will be replaced
     with the epicentral distance, if present
   type: distance
 ry0:
   dtype: float
   help: >-
-    Horizontal distance (in km) from the top of the rupture measured parallel to strike. 
-    Missing data (e.g., empty cell, NaN, column not provided) will be replaced with the 
+    Horizontal distance (in km) from the top of the rupture measured parallel to strike.
+    Missing data (e.g., empty cell, NaN, column not provided) will be replaced with the
     epicentral distance, if present
   type: distance
 rvolc:
@@ -105,8 +105,8 @@ rup_width:
   dtype: float
   ">=": 0
   help: >-
-    Down-dip width of the rupture (km). Missing data (e.g., empty cell, NaN, column not 
-    provided) will be derived from the record magnitude using a Magnitude-Scaling 
+    Down-dip width of the rupture (km). Missing data (e.g., empty cell, NaN, column not
+    provided) will be derived from the record magnitude using a Magnitude-Scaling
     Relationship defined for PEER PSHA test cases, and assuming an aspect ratio of 1
   alias: width
   type: rupture
@@ -133,17 +133,17 @@ rake:
 z1pt0:
   dtype: float
   help: >-
-    depth of the layer where seismic waves start to propagate with a speed above 1.0 
-    km/sec, in meters. Missing data (e.g., empty cell, NaN, column not provided) will be 
-    derived from the vs30 (if present) using the Chiou & Youngs (2014) California 
+    depth of the layer where seismic waves start to propagate with a speed above 1.0
+    km/sec, in meters. Missing data (e.g., empty cell, NaN, column not provided) will be
+    derived from the vs30 (if present) using the Chiou & Youngs (2014) California
     model
   alias: z1
   type: site
 z2pt5:
   dtype: float
   help: >-
-    depth of the layer where seismic waves start to propagate with a speed above 
-    2.5 km/sec, in km. Missing data (e.g., empty cell, NaN, column not provided) will 
+    depth of the layer where seismic waves start to propagate with a speed above
+    2.5 km/sec, in km. Missing data (e.g., empty cell, NaN, column not provided) will
     be derived from the vs30 (if present) using the Campbell & Bozorgnia (2014) model
   type: site
 vs30:
@@ -156,7 +156,7 @@ backarc:
   default: false
   type: site
   help: >-
-    whether or not the site is in the subduction backarc. When missing or false, 
+    whether or not the site is in the subduction backarc. When missing or false,
     the site is assumed to be unknown or in the subduction forearc
 sta_lat:
   dtype: float
@@ -192,8 +192,8 @@ region:
   dtype: [0, 1, 2, 3, 4, 5]
   default: 0
   help: >-
-    The ESHM2020 attenuation cluster region to which the site belongs 
-    (https://doi.org/10.1007/s10518-020-00899-9). 0 (default): unknown, 
+    The ESHM2020 attenuation cluster region to which the site belongs
+    (https://doi.org/10.1007/s10518-020-00899-9). 0 (default): unknown,
     1: average / slower, 2: average / faster, 3: fast, 4: average, 5: very slow
   type: site
 geology:
@@ -219,8 +219,8 @@ SA:
   dtype: float
   help: >-
     Spectral Acceleration, in g. SA columns must be supplied in the form "SA(P)",
-    where P denotes the SA period, in seconds. If a specific period is required 
-    for computation but missing in the flatfile, the relative SA value will be 
+    where P denotes the SA period, in seconds. If a specific period is required
+    for computation but missing in the flatfile, the relative SA value will be
     determined for each record by logarithmic interpolation (log10), but in this case
     the flatfile must contain at least two distinct SA columns
   type: intensity
@@ -240,9 +240,9 @@ IA:
 evt_id:
   alias: event_id
   help: >-
-    The ID of the seismic event, used to determine when two records 
-    originate from the same earthquake. IDs do not have a specific data type but 
-    are usually either numeric integers (recommended) or string of text (discouraged, 
+    The ID of the seismic event, used to determine when two records
+    originate from the same earthquake. IDs do not have a specific data type but
+    are usually either numeric integers (recommended) or string of text (discouraged,
     especially for flatfiles with many distinct event IDs)
   type: rupture
 sta_id:

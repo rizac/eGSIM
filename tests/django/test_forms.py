@@ -3,6 +3,7 @@ Tests form validations and errors
 
 Created on 2 Jun 2018
 """
+
 from django.forms import Field
 from typing import Type
 from io import BytesIO
@@ -12,10 +13,11 @@ import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
 from openquake.hazardlib import imt
 
-from egsim.api.forms import (GsimImtForm, GsimFromRegionForm, EgsimBaseForm)
-from egsim.api.forms.flatfile import FlatfileForm, FlatfileValidationForm
+from egsim.api.forms import (GsimImtForm, GsimFromRegionForm, EgsimBaseForm, split_pars)
+from egsim.api.forms.flatfile import FlatfileForm, FlatfileValidationForm, sa_hr_help
 from egsim.api.forms.scenarios import PredictionsForm
 from egsim.smtk import read_flatfile
+from egsim.smtk.flatfile import FlatfileMetadata
 from egsim.smtk.scenarios import RuptureProperties, SiteProperties
 
 GSIM, IMT = 'gsim', 'imt'
@@ -440,3 +442,51 @@ def check_egsim_form(new_class: Type[EgsimBaseForm]):
         # all good. Merge into `field2params`:
         field2params[field] = params
     return field2params
+
+
+def test_split_pars():
+
+    t = "Implements GMPE by Abrahamson, Silva and Kamai developed within the " \
+        "the PEER West 2 Project. This GMPE is described in a paper published in " \
+        "2014 on Earthquake Spectra, Volume 30, Number 3 and titled ‘Summary of " \
+        "the ASK14 Ground Motion Relation for Active Crustal Regions.’."
+
+    splits = split_pars(t)
+    assert len(splits) == 2
+
+    t = "the event time (as ISO formatted string, e.g. 2006-03-31T00:12:24)"
+    splits = split_pars(t)
+    assert len(splits) == 1
+
+
+def test_sa_flatfile_field_help():
+    base_sa_help_text = [
+        "Spectral Acceleration, in g. SA columns must be supplied in the form "
+        "\"SA(P)\", where P denotes the SA period, in seconds.",
+        "If a specific period is required "
+        "for computation but missing in the flatfile, the relative SA value will be "
+        "determined for each record by logarithmic interpolation (log10), but in this "
+        "case the flatfile must contain at least two distinct SA columns"
+    ]
+
+    expected_outputs = [
+        base_sa_help_text[0] + f" {_} " + base_sa_help_text[1] for _ in [
+            f'<b>The only period supported by the selected model is {0.1}</b>.',
+            f'<b>The period range supported by the selected model is [{0.1}, {0.2}] '
+            f'(endpoints included)</b>.',
+            f'<b>The only period supported by all 2 selected models is {0.1}</b>.',
+            f'<b>The period range supported by all 2 selected models is [{0.1}, {0.2}] '
+            f'(endpoints included)</b>.',
+        ]
+    ]
+
+    text = FlatfileMetadata.get_help('SA')
+    assert text == " ".join(base_sa_help_text)
+
+    for expected_text, args in zip(expected_outputs, [
+        (('model1',), text, (0.1,)),
+        (('model1',), text, (0.1, 0.2)),
+        (('model1', 'model2'), text, (0.1,)),
+        (('model1', 'model2'), text, (0.1, 0.2)),
+    ]):
+        assert sa_hr_help(*args) == expected_text

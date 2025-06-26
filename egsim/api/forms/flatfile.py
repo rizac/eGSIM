@@ -15,7 +15,7 @@ from egsim.smtk.flatfile import (read_flatfile, get_dtype_of, FlatfileMetadata,
                                  FlatfileError, FlatfileQueryError,
                                  IncompatibleColumnError)
 from egsim.api import models
-from egsim.api.forms import EgsimBaseForm, APIForm, GsimForm
+from egsim.api.forms import EgsimBaseForm, APIForm, GsimForm, split_pars
 
 
 # Let's provide uploaded flatfile Field in a separate Form as the Field is not
@@ -218,21 +218,9 @@ class FlatfileMetadataInfoForm(GsimForm, APIForm):
         for col in sorted(ff_columns | set(imts)):
             columns.append(get_hr_flatfile_column_meta(col))
             if col == 'SA' and sa_period_limits is not None:
-                sa_p_min, sa_p_max = sa_period_limits
-                help_ = columns[-1]['help'].split('.')
-                the_selected_model = 'the selected model'
-                if len(gsims) > 1:
-                    the_selected_model = f'all {len(gsims)} selected models'
-                new_text = (f' <b>The period range supported by {the_selected_model} '
-                            f'is [{sa_p_min}, {sa_p_max}] (endpoints included)</b>'
-                            if sa_p_min < sa_p_max else
-                            f' <b>The only period supported by {the_selected_model} '
-                            f'is {sa_p_min}</b>')
-                help_.insert(2, new_text)
-                if sa_p_min == sa_p_max:
-                    # only one period: remove last part were we talk about interpolating
-                    help_ = help_[:3]
-                columns[-1]['help'] = ".".join(help_)
+                columns[-1]['help'] = sa_hr_help(
+                    gsims, columns[-1]['help'], sa_period_limits
+                )
 
         return {'columns': columns}
 
@@ -298,3 +286,24 @@ def get_hr_flatfile_column_meta(name: str, values: Optional[pd.Series] = None) -
         'dtype': c_dtype,
         'help': c_help
     }
+
+
+def sa_hr_help(gsims, sa_help: str, sa_p_limits: list[float]) -> str:
+    """
+    builds the SA field help, human readable (hr). The output will be HTML.
+    `sa_help` should be text in flatfile_metadata for the field 'SA'
+    """
+    sa_p_min = sa_p_max = sa_p_limits[0]
+    if len(sa_p_limits) > 1:
+        sa_p_max = sa_p_limits[1]
+    the_selected_model = 'the selected model'
+    if len(gsims) > 1:
+        the_selected_model = f'all {len(gsims)} selected models'
+    new_text = (f'<b>The period range supported by {the_selected_model} '
+                f'is [{sa_p_min}, {sa_p_max}] (endpoints included)</b>.'
+                if sa_p_min < sa_p_max else
+                f'<b>The only period supported by {the_selected_model} '
+                f'is {sa_p_min}</b>.')
+    help_pars = split_pars(sa_help)
+    help_pars = help_pars[:2] + [new_text] + help_pars[2:]
+    return " ".join(s.strip() for s in help_pars)
