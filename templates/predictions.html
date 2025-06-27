@@ -171,46 +171,62 @@
 
 
 		<div class='d-flex flex-column form-control gap-3 '>
-			<div class="d-flex flex-row align-items-baseline gap-1">
+			<div class="d-flex flex-row align-items-baseline gap-2">
 				<span class='text-start' style='flex: 1 1 auto'>Predictions</span>
 			</div>
 			<div class='d-flex flex-column gap-2'>
-				<div class='d-flex flex-row align-items-baseline gap-1'>
-					<div style='flex: 0 0 4.5rem' title='Download predictions (log(predicted values))'>
+				<div class='d-flex flex-row align-items-center'>
+					<div title='Download predictions (log(predicted values))'>
 						Download
 					</div>
-					<select v-model='forms.predictions.format' class='form-control' style='flex: 1 1 auto'>
+
+					<select v-model='forms.predictions.format' class='form-control rounded-end-0 ms-2' style='flex: 1 1 auto'>
 						<option v-for='format in forms.misc.download_formats' :value='format'>
 							{% verbatim %}{{ format }}{% endverbatim %}
 						</option>
 					</select>
-					<button type='button' class='btn btn-outline-primary btn-sm border-0'
+
+					<button
+						type='button'
+						@click="download(`${urls.predictions}.${forms.predictions.format}`, forms.predictions)"
+						class='btn btn-primary border-start-0 rounded-start-0'
+						style='flex: 0 0 3.5rem'>
+							<i class='fa fa-download'></i>
+					</button>
+
+					<button type='button' class='btn btn-outline-primary btn-sm border-0 ms-1'
 							title='how to open the downloaded table in your code (short tutorial)'
 							@click='forms.misc.predictions.tutorial_page_visible=true'>
 						<i class='fa fa-question-circle-o'></i>
 					</button>
-					<button
-						type='button'
-						@click="download(`${urls.predictions}.${forms.predictions.format}`, forms.predictions)"
-						class='btn btn-primary'
-						style='flex: 0 0 3.5rem'>
-							<i class='fa fa-download'></i>
+
+					<!-- anchor to jupyter: use a button for appearance consistency -->
+					<button type='button' class='btn btn-outline-primary btn-sm border-0 ms-1'
+							onclick="window.open('https://github.com/rizac/egsim-client/blob/main/notebook/Model-to-Model.ipynb', '_blank')"
+							title="Download and access data directly in Python code via the API (open Jupyter Notebook example in new tab)">
+						<img src="{% static 'img/logos/jupyter.svg' %}" style="height:1.2rem"/>
 					</button>
 				</div>
 
-				<div class='d-flex flex-row align-items-baseline gap-1'>
-					<div style='flex: 0 0 4.5rem' title='Visualize predictions in interactive plots'>
+				<div class='d-flex flex-row align-items-baseline'>
+
+					<div title='Visualize predictions in interactive plots'>
 						Visualize
 					</div>
-					<select v-model='forms.predictions_plot.plot_type' class='form-control' style='flex: 1 1 auto'>
-						<option v-for="v in forms.misc.predictions_plot.plot_types" :value='v[0]' v-html='v[1]'></option>
-					</select>
-					<button type='button'
-							@click="var data = Object.assign({}, forms.predictions, forms.predictions_plot, {format: 'json'}); post(urls.predictions_visualize, data).then(r => r.json()).then(data => { responses.predictions_plots=data.plots; })"
-							class='btn btn-primary'
-							style='flex: 0 0 3.5rem'>
-						<i class='fa fa-bar-chart'></i>
-					</button>
+
+					<div class='d-flex flex-row align-items-center ms-2' style='flex: 1 1 auto'>
+
+						<select v-model='forms.predictions_plot.plot_type' class='form-control rounded-end-0' style='flex: 1 1 auto'>
+							<option v-for="v in forms.misc.predictions_plot.plot_types" :value='v[0]' v-html='v[1]'></option>
+						</select>
+
+						<button type='button'
+								@click="var data = Object.assign({}, forms.predictions, forms.predictions_plot, {format: 'json'}); post(urls.predictions_visualize, data).then(r => r.json()).then(data => { responses.predictions_plots=data.plots; })"
+								class='btn btn-primary border-start-0 rounded-start-0'
+								style='flex: 0 0 3.5rem'>
+							<i class='fa fa-bar-chart'></i>
+						</button>
+					</div>
 				</div>
 			</div>
 		</div>

@@ -411,27 +411,21 @@ class GsimInfoForm(GsimForm, APIForm):
             doc, imts, gmp, sa_limits = gsim_info(gmm)
             # ground motion properties:
             gmp = {p: FlatfileMetadata.get_help(p) for p in gmp}
-            # remove unnecessary flatfile-related info (everything after first ".")
+            # remove unnecessary flatfile-related info (everything after 1st paragraph)
             # and also jsonify the string (replace " with ''):
             gmp = {
-                k: v[: (v.find('.') + 1) or None].removesuffix(".").replace('"', "''")
+                k: split_pars(v)[0].strip().removesuffix(".").replace('"', "''")
                 for k, v in gmp.items()
             }
-            # pretty print doc (removing all newlines and double quotes, see below):
-            desc = []
-            for line in doc.split("\n"):  # parse line by line
-                line = line.strip()  # remove indentation
-                if not line:
-                    # if line is empty, then add a dot to the last line unless it does
-                    # not already end with punctuation:
-                    if desc and desc[-1][-1] not in {'.', ',', ';', ':', '?', '!'}:
-                        desc[-1] += '.'
-                    continue
-                # avoid \" in json strings, replace with ''
-                desc.append(line.replace('"', "''"))
-            doc = " ".join(desc)
+            # pretty print doc (removing all newlines, double quotes, etc.):
+            doc = " ".join(
+                line.strip().replace("\n", " ").replace("\t", " ").replace('"', "''").
+                replace(":class:`", "`")
+                for line in doc.strip().split("\n") if line.strip()
+            )
             # pretty print imts and add sa_)limits to it:
-            imts = ['SA(PERIOD_IN_S)' if  i == 'SA' else i for i in imts]
+            imts = ['SA(PERIOD_IN_S)' if i == 'SA' else i for i in imts]
+
             ret[gmm] = {
                 'description': doc,
                 'defined_for': imts,
@@ -440,3 +434,47 @@ class GsimInfoForm(GsimForm, APIForm):
                 'hazard_source_models': hazard_source_models.get(gmm)
             }
         return ret
+
+
+def split_pars(text, skip_quotes=("'", '"', '`'), require_uppercase=True):
+    """
+    Splits text in paragraphs, returning them in a list. The list is assured to
+    have at least one element.
+    Paragraphs are defined by text boundaries (start, end) or a dot followed by one or
+    more spaces and, if `require_uppercase` is True (the default), an uppercase
+    alphabetic letter (which will be the first letter of the next paragraph)
+    """
+    in_quote = None
+    i = 0
+    length = len(text)
+    split = []
+    last_j = 0
+    while i < length:
+        char = text[i]
+
+        # Toggle quote context
+        if char in skip_quotes:
+            if in_quote is None:
+                in_quote = char
+            elif in_quote == char:
+                in_quote = None
+            i += 1
+            continue
+
+        # Look for: . + at least one whitespace + capital letter
+        if in_quote is None and char == '.':
+            j = i + 1
+            # Skip one or more whitespace characters
+            while j < length and text[j].isspace():
+                j += 1
+            # Check for capital letter
+            if j < length and (not require_uppercase or text[j].isupper()):
+                split.append(text[last_j: j])
+                last_j = j
+
+        i += 1
+
+    if last_j < len(text):
+        split.append(text[last_j:])
+
+    return split or ['']
