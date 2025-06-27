@@ -79,10 +79,17 @@ class Command(BaseCommand):
         resp = input_result.strip()
         if resp in {self.quit, self.back, self.help}:
             return None, None, resp
-        resp = shlex.split(resp)
+        try:
+            resp = shlex.split(resp)
+        except ValueError as sh_err:
+            self.stdout.write(self.style.ERROR(str(sh_err))
+            return None, None, input_result
+
         if len(resp) != 2:
             self.stdout.write(self.style.ERROR(f'Type [column] [value] '
                                                f'(space-separated)'))
+            return None, None, input_result
+
         res = resp[0]
         if res not in fields:
             self.stdout.write(self.style.ERROR(f'No matching column: "{res}"'))
@@ -106,6 +113,8 @@ class Command(BaseCommand):
                 return field, val, input_result
             except Exception as exc:  # noqa
                 self.stdout.write(self.style.ERROR(f'Invalid value "{res}": {str(exc)}'))
+                return None, None, input_result
+
         return None, None, input_result
 
     def select_db_instances(self, db_model: Model) -> tuple[Optional[QuerySet], str]:
