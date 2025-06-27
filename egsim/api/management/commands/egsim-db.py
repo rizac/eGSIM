@@ -82,7 +82,7 @@ class Command(BaseCommand):
         try:
             resp = shlex.split(resp)
         except ValueError as sh_err:
-            self.stdout.write(self.style.ERROR(str(sh_err))
+            self.stdout.write(self.style.ERROR(str(sh_err)))
             return None, None, input_result
 
         if len(resp) != 2:
