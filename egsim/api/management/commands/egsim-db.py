@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Optional, Callable, Any
+import shlex
 
 from django.core.management import BaseCommand
 from django.db import DatabaseError
@@ -78,7 +79,7 @@ class Command(BaseCommand):
         resp = input_result.strip()
         if resp in {self.quit, self.back, self.help}:
             return None, None, resp
-        resp = resp.split(" ")
+        resp = shlex.split(resp)
         if len(resp) != 2:
             self.stdout.write(self.style.ERROR(f'Type [column] [value] '
                                                f'(space-separated)'))
