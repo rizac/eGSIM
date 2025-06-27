@@ -171,8 +171,11 @@
 
 
 		<div class='d-flex flex-column form-control gap-3 '>
-			<div class="d-flex flex-row align-items-baseline gap-1">
+			<div class="d-flex flex-row align-items-baseline gap-2">
 				<span class='text-start' style='flex: 1 1 auto'>Predictions</span>
+				<a href='https://github.com/rizac/egsim-client/blob/main/notebook/Model-to-Model.ipynb'
+					   title="Download and access data directly in Python code via the API (open Jupyter Notebook example in new tab)"
+					   target="_blank"><img src="{% static 'img/logos/jupyter.svg' %}" style="height:1.2rem"/></a>
 			</div>
 			<div class='d-flex flex-column gap-2'>
 				<div class='d-flex flex-row align-items-baseline gap-1'>
@@ -189,6 +192,7 @@
 							@click='forms.misc.predictions.tutorial_page_visible=true'>
 						<i class='fa fa-question-circle-o'></i>
 					</button>
+
 					<button
 						type='button'
 						@click="download(`${urls.predictions}.${forms.predictions.format}`, forms.predictions)"
