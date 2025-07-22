@@ -603,6 +603,9 @@ def get_ground_motion_property_values(
         series = pd.Series(np.full(len(flatfile), fill_value=False))
     elif gm_property == 'rvolc' and series is None:
         series = pd.Series(np.full(len(flatfile), fill_value=0, dtype=int))
+    elif gm_property == 'region' and series is None:
+        series = pd.Series(np.full(len(flatfile), fill_value=0, dtype=int))
+
     if series is None:
         raise MissingColumnError(gm_property)
     return series

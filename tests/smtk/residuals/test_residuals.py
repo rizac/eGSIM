@@ -70,6 +70,19 @@ def test_residuals_error():
     res_df = get_residuals(gsims, imts, flatfile)
 
 
+def test_kotha_with_no_region_provided():
+    """KothaEtAl2020ESHM20 requires the 'region' column in a flatfile. Test that
+     residuals can be computed also with a flatfile without the region field (default 0)
+    """
+    flatfile = read_flatfile(os.path.join(BASE_DATA_PATH,
+                             "test_flatfile_esm_2018_SA_mag_greater_than_7.hdf"))
+    assert 'region' not in flatfile.columns
+    gsims = ['KothaEtAl2020ESHM20']
+    imts = ['PGA']
+    flatfile = flatfile[(flatfile.index >= 75) & (flatfile.index <= 77)]
+    res_df = get_residuals(gsims, imts, flatfile)
+
+
 def test_residuals_execution():
     """
     Tests basic execution of residuals - not correctness of values
