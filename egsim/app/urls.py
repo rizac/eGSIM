@@ -27,7 +27,7 @@ urlpatterns = [
                        URLS.WEBPAGE_RESIDUALS,
                        URLS.WEBPAGE_FLATFILE_INSPECTION_PLOT,
                        URLS.WEBPAGE_FLATFILE_COMPILATION_INFO,
-                       URLS.WEBPAGE_IMPRINT, URLS.WEBPAGE_REF_AND_LICENSE]) +
+                       URLS.WEBPAGE_IMPRINT, URLS.WEBPAGE_CITATIONS_AND_LICENSE]) +
              ')/?$'), main),
 
     re_path(

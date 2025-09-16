@@ -24,6 +24,8 @@ from ..smtk.registry import Clabel
 
 img_ext = ('png', 'pdf', 'svg')
 data_ext = ('hdf', 'csv')
+oq_version = '3.15.0'
+oq_gmm_refs_page = "https://docs.openquake.org/oq-engine/3.15/reference/"
 
 
 class URLS:  # noqa
@@ -37,7 +39,7 @@ class URLS:  # noqa
     WEBPAGE_IMPRINT = "imprint"
     WEBPAGE_PREDICTIONS = 'predictions'
     WEBPAGE_RESIDUALS = 'residuals'
-    WEBPAGE_REF_AND_LICENSE = "ref_and_license"
+    WEBPAGE_CITATIONS_AND_LICENSE = "citations_and_license"
 
     # download URls. NOTE: ALL URLS ARE IN THE FORM: <path>/<downloaded_file_basename>
     DOWNLOAD_PREDICTIONS_DATA = 'download/egsim-predictions'
@@ -74,9 +76,17 @@ def main(request, page=''):
     template = 'egsim.html'
     init_data = _get_init_data_json(settings.DEBUG) | \
         {'currentPage': page or URLS.WEBPAGE_HOME}
-    return render(request, template, context={'debug': settings.DEBUG,
-                                              'init_data': init_data,
-                                              'references': _get_references()})
+    return render(
+        request,
+        template,
+        context={
+            'debug': settings.DEBUG,
+            'init_data': init_data,
+            'oq_version': oq_version,
+            'oq_gmm_refs_page': oq_gmm_refs_page,
+            'references': _get_references()
+        }
+    )
 
 
 def _get_init_data_json(debug=False) -> dict:
@@ -166,7 +176,7 @@ def _get_init_data_json(debug=False) -> dict:
             'residuals': URLS.WEBPAGE_RESIDUALS,
             'flatfile_meta_info': URLS.WEBPAGE_FLATFILE_COMPILATION_INFO,
             'flatfile_visualize': URLS.WEBPAGE_FLATFILE_INSPECTION_PLOT,
-            'ref_and_license': URLS.WEBPAGE_REF_AND_LICENSE,
+            'citations_and_license': URLS.WEBPAGE_CITATIONS_AND_LICENSE,
             'imprint': URLS.WEBPAGE_IMPRINT,
             'home': URLS.WEBPAGE_HOME,
             'data_protection': URLS.WEBPAGE_DATA_PROTECTION
@@ -433,13 +443,15 @@ def get_html_tutorial(
             title, expr, _to_html(eval(expr, {'dframe': dataframe}), max_rows=3)]
         )
 
-    return render(request, 'downloaded-data-tutorial.html',
-                  context={
-                      'key': key,
-                      'dataframe_html': dataframe_html,
-                      'dataframe_info': dataframe_info,
-                      'py_select_snippets': py_select_snippets
-                  })
+    return render(
+        request,
+        'downloaded-data-tutorial.html',
+        context={
+            'key': key,
+            'dataframe_html': dataframe_html,
+            'dataframe_info': dataframe_info,
+            'py_select_snippets': py_select_snippets
+    })
 
 
 def _to_html(dataframe, **kwargs):

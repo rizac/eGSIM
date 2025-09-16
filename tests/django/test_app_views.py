@@ -543,3 +543,16 @@ class Test:
             response = client.post(f"/{url}", {}, content_type="text/html")
             assert response.status_code == 200
             assert response.content.strip().startswith(b'<!DOCTYPE html>')
+
+    def test_oq_version(self):
+        """Test oq_version matches. Because we do provide our 'oq_version' global
+        variable to speedup HTML page rendering in egsim.app.views, we need to be
+        sure it matches current OQ version """
+        from openquake.engine import __version__ as real_oq_version
+        from egsim.app.views import oq_version as egsim_claimed_oq_version
+        assert real_oq_version == egsim_claimed_oq_version
+
+        # if the test above fails, also change this:!!!
+        from egsim.app.views import oq_gmm_refs_page
+        assert oq_gmm_refs_page == \
+               "https://docs.openquake.org/oq-engine/3.15/reference/"

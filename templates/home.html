@@ -87,7 +87,7 @@
 				<img src="{% static 'img/logos/sera.png' %}" style="height:3rem"/>
 			</a>
 
-			<a href='#' @click="currentPage = pages.ref_and_license">
+			<a href='#' @click="currentPage = pages.citations_and_license">
 				<img class='me-1' style='height:2.8rem' src="{% static 'img/logos/agpl.svg' %}">
 				<img style="height:2.8rem" src="{% static 'img/logos/cc.svg' %}" />
 				<img style="height:2.8rem" src="{% static 'img/logos/by.svg' %}" />
@@ -110,7 +110,7 @@
 				GitHub Repository</a> with the desired label (e.g. bug, enhancement, question, help)
 			</div>
 			<div class='d-flex gap-2 justify-content-center align-items-center'>
-				<button type="button" class='btn btn-link p-0' @click="currentPage = pages.ref_and_license">Citation</button>
+				<button type="button" class='btn btn-link p-0' @click="currentPage = pages.citations_and_license">Citations & License</button>
 				<button type="button" class='btn btn-link p-0' @click="currentPage = pages.imprint">Imprint</button>
 				<a :href='pages.data_protection' target="_blank">Data Protection</a>
 			</div>
