@@ -8,14 +8,14 @@ import re
 
 from shapely.geometry import shape
 
-from django.http import FileResponse, HttpResponseBase, HttpRequest
+from django.http import FileResponse, HttpResponseBase, HttpRequest, JsonResponse
 from django.shortcuts import render
 from django.conf import settings
 
 from ..api import models
 from ..api.forms.flatfile import (FlatfileMetadataInfoForm,
                                   FlatfileValidationForm)
-from ..api.forms import APIForm, EgsimBaseForm
+from ..api.forms import APIForm, EgsimBaseForm, SHSRForm
 from ..api.forms.residuals import ResidualsForm
 from ..api.forms.scenarios import PredictionsForm
 from ..api.views import MimeType, EgsimView
@@ -322,6 +322,20 @@ def form2dict(form: EgsimBaseForm, compact=False) -> dict:
                     continue
         ret[form.param_name_of(field_name)] = value
     return ret
+
+
+class GsimFromRegion(EgsimView):
+    """View handling clicks on the GUI map and returning region-selected model(s)"""
+
+    def response(self,
+                 request: HttpRequest,
+                 data: dict,
+                 files: Optional[dict] = None) -> HttpResponseBase:
+        form = SHSRForm(data)
+        model_names = []
+        if form.is_valid():
+            model_names = sorted(form.get_region_selected_model_names())
+        return JsonResponse({'models': model_names}, status=200)
 
 
 class PlotsImgDownloader(EgsimView):

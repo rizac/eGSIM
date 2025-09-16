@@ -210,6 +210,7 @@ class SHSRForm(EgsimBaseForm):
     latitude = FloatField(min_value=-90., max_value=90., required=False)
     longitude = FloatField(min_value=-180., max_value=180., required=False)
     regionalization = Field(required=False)  # Note: with a ModelChoiceField the
+
     # benefits of handling validation are outweighed by the fixes needed here and there
     # to make values JSON serializable, so we opt for a CharField + custom validation
     # in `clean_regionalization`
@@ -237,8 +238,8 @@ class SHSRForm(EgsimBaseForm):
         """
         gsims = {}
         cleaned_data = self.cleaned_data
-        lon = cleaned_data.get('longitude', None)
-        lat = cleaned_data.get('latitude', None)
+        lon = cleaned_data.get('longitude')
+        lat = cleaned_data.get('latitude')
         if lat is None or lon is None:
             return gsims
         point = Point(lon, lat)
@@ -270,19 +271,27 @@ class GsimForm(SHSRForm):
         """Custom gsim clean.
         The return value will replace self.cleaned_data['gsim']
         """
-        # Implementation note: as of 2024, the 1st arg to ValidationError is not
-        # really used, just pass the right `code` arg (see `error_json_data`)
         key = 'gsim'
+        if (
+                self.cleaned_data.get('longitude') is None and
+                self.cleaned_data.get('longitude') is None and
+                self.cleaned_data.get(key) is None
+        ):
+            self.add_error(
+                key,
+                f"{self.ErrMsg.required}. It can be omitted only if both latitude "
+                f"and longitude parameters are provided"
+            )
+            return {}
+
         value = self.to_list(self.cleaned_data.get(key))
         value.extend(m for m in self.get_region_selected_model_names() if m not in value)
-        if not value:
-            self.add_error(key, self.ErrMsg.required)
-            return {}
         ret = {}
-        try:
-            ret = harmonize_input_gsims(value)
-        except ModelError as err:
-            self.add_error(key, f'invalid model(s) {str(err)}')
+        if value:
+            try:
+                ret = harmonize_input_gsims(value)
+            except ModelError as err:
+                self.add_error(key, f'invalid model(s) {str(err)}')
         return ret
 
     @staticmethod
@@ -353,19 +362,6 @@ class APIForm(EgsimBaseForm):
         :return: any Python object (e.g., a JSON-serializable dict)
         """
         raise NotImplementedError()
-
-
-class GsimFromRegionForm(SHSRForm, APIForm):
-    """API Form returning a list of models from a given location and optional
-    seismic hazard source regionalizations (SHSR)"""
-
-    def output(self) -> dict:
-        """Compute and return the output from the input data (`self.cleaned_data`).
-        This method must be called after checking that `self.is_valid()` is True
-
-        :return: any Python object (e.g., a JSON-serializable dict)
-        """
-        return {'models': sorted(self.get_region_selected_model_names())}
 
 
 class GsimInfoForm(GsimForm, APIForm):
