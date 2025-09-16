@@ -30,6 +30,20 @@ def error_message(response: HttpResponse):
 @pytest.mark.django_db
 def test_model_info():
     client = Client()
+
+    # Test no params provided:
+    response = client.get(f"/{MODEL_INFO}")
+    assert response.status_code == 400
+    assert error_message(response) == \
+           "name: missing parameter is required. " \
+           "It can be omitted only if both latitude " \
+           "and longitude parameters are provided"
+
+    # Test bug found by reviewer (scientific paper summer 2095):
+    response = client.get(f"/{MODEL_INFO}?lat=35.0&lon=-116.0")
+    assert response.status_code == 200
+    assert response.json() == {}
+
     dict_keys = {
         'defined_for', 'description', 'hazard_source_models',
         'requires', 'sa_period_limits'

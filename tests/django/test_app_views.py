@@ -543,3 +543,48 @@ class Test:
             response = client.post(f"/{url}", {}, content_type="text/html")
             assert response.status_code == 200
             assert response.content.strip().startswith(b'<!DOCTYPE html>')
+
+    def test_oq_version(self):
+        """Test oq_version matches. Because we do provide our 'oq_version' global
+        variable to speedup HTML page rendering in egsim.app.views, we need to be
+        sure it matches current OQ version """
+        from openquake.engine import __version__ as real_oq_version
+        from egsim.app.views import oq_version as egsim_claimed_oq_version
+        assert real_oq_version == egsim_claimed_oq_version
+
+        # if the test above fails, also change this:!!!
+        from egsim.app.views import oq_gmm_refs_page
+        assert oq_gmm_refs_page == \
+               "https://docs.openquake.org/oq-engine/3.15/reference/"
+
+    def test_select_models_from_region(self):
+        """
+        Test the models selection via map clicks. Use US because more borderline case
+        """
+        client = Client()  # do not use the fixture client as we want
+        url = URLS.GSIMS_FROM_REGION
+
+        response = client.post(
+            f"/{url}",
+            json.dumps({'lat': 35, 'lon': -116}),
+            content_type="application/json"
+        )
+        assert response.status_code == 200
+        assert len(response.json()['models']) == 0
+
+        response = client.post(
+            f"/{url}",
+            json.dumps({'lat': 35, 'lon': -79}),
+            content_type="application/json"
+        )
+        assert response.status_code == 200
+        assert response.json()['models'] == ['ESHM20Craton']
+
+        # this view does not raise even when errors are provided:
+        response = client.post(
+            f"/{url}",
+            json.dumps({}),  # <- no params, error in principle (not in this view)
+            content_type="application/json"
+        )
+        assert response.status_code == 200
+        assert response.json()['models'] == []

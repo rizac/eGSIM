@@ -5,14 +5,17 @@ from django.views.decorators.clickjacking import xframe_options_exempt
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic.base import RedirectView
 
-from egsim.api.views import (PredictionsView, ResidualsView, GsimInfoView, NotFound,
-                             APIFormView)
-from egsim.api.forms import GsimFromRegionForm
+from egsim.api.views import (
+    PredictionsView, ResidualsView, GsimInfoView, NotFound, APIFormView
+)
 from egsim.api.forms.flatfile import FlatfileValidationForm, FlatfileMetadataInfoForm
-from .forms import (PredictionsVisualizeForm, ResidualsVisualizeForm,
-                    FlatfileVisualizeForm)
-from .views import (main, URLS, img_ext, data_ext, PlotsImgDownloader,
-                    PredictionsHtmlTutorial, ResidualsHtmlTutorial)
+from .forms import (
+    PredictionsVisualizeForm, ResidualsVisualizeForm, FlatfileVisualizeForm
+)
+from .views import (
+    main, URLS, img_ext, data_ext, PlotsImgDownloader, GsimFromRegion,
+    PredictionsHtmlTutorial, ResidualsHtmlTutorial
+)
 
 
 # IMPORTANT: ALL VIEWS (except HTML pages) SHOULD INHERIT FROM api.views.EgsimView
@@ -27,7 +30,7 @@ urlpatterns = [
                        URLS.WEBPAGE_RESIDUALS,
                        URLS.WEBPAGE_FLATFILE_INSPECTION_PLOT,
                        URLS.WEBPAGE_FLATFILE_COMPILATION_INFO,
-                       URLS.WEBPAGE_IMPRINT, URLS.WEBPAGE_REF_AND_LICENSE]) +
+                       URLS.WEBPAGE_IMPRINT, URLS.WEBPAGE_CITATIONS_AND_LICENSE]) +
              ')/?$'), main),
 
     re_path(
@@ -82,10 +85,7 @@ urlpatterns = [
         APIFormView.as_view(formclass=FlatfileValidationForm)
     ),
 
-    path(
-        URLS.GSIMS_FROM_REGION,
-        APIFormView.as_view(formclass=GsimFromRegionForm)
-    ),
+    path(URLS.GSIMS_FROM_REGION, GsimFromRegion.as_view()),
     path(URLS.GSIMS_INFO, GsimInfoView.as_view()),
 
     # test code returning specific response (in this case, no EgsimView required):

@@ -13,7 +13,7 @@ import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
 from openquake.hazardlib import imt
 
-from egsim.api.forms import (GsimImtForm, GsimFromRegionForm, EgsimBaseForm, split_pars)
+from egsim.api.forms import (GsimImtForm, EgsimBaseForm, split_pars, SHSRForm)
 from egsim.api.forms.flatfile import FlatfileForm, FlatfileValidationForm, sa_hr_help
 from egsim.api.forms.scenarios import PredictionsForm
 from egsim.smtk import read_flatfile
@@ -58,7 +58,9 @@ class Test:
         assert not form.is_valid()
         assert form.errors_json_data()['message'] == \
                'imt: invalid intensity measure(s) BindiEtAl2014Rjb, abcde; ' \
-               'model: missing parameter is required'
+               'model: missing parameter is required. ' \
+               'It can be omitted only if both latitude ' \
+               'and longitude parameters are provided'
 
     def test_imt_invalid(self):
         data = {
@@ -315,24 +317,20 @@ class Test:
         assert not is_valid
 
     def test_get_gsim_from_region(self):
-        form = GsimFromRegionForm({'lat': 50, 'lon': 7})
+        form = SHSRForm({'lat': 50, 'lon': 7})
         assert form.is_valid()
         models = form.get_region_selected_model_names()
         assert len(models) == 12
-        assert type(form.output()['models']) is list
-        assert form.output()['models'] == sorted(models)
 
         for reg in ['share', ['share']]:  # test string == single string item list
-            form = GsimFromRegionForm({'lat': 50, 'lon': 7, 'regionalization': reg})
+            form = SHSRForm({'lat': 50, 'lon': 7, 'regionalization': reg})
             assert form.is_valid()
             models = form.get_region_selected_model_names()
             assert len(models) == 5
-            assert form.output()['models'] == sorted(models)
 
-        form = GsimFromRegionForm({'lat': 51, 'lon': 10, 'regionalization': ['germany']})
+        form = SHSRForm({'lat': 51, 'lon': 10, 'regionalization': ['germany']})
         assert form.is_valid()
         models = form.get_region_selected_model_names()
-        assert form.output()['models'] == sorted(models)
         assert len(models) == 5
 
 
