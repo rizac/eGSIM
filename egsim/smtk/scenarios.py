@@ -315,8 +315,7 @@ def sites_at_distance(
                 _rup_to_point(dist, surface, origin_location, azimuth, 'rjb')
             )
         elif dist_type == "rrup":
-            # FIXME (horrible hack): dist 0 is buggy, set it to 0.0075 (the smallest
-            #  dist which gives results consistent with cloe by distances
+            # FIXME temporary hack: distances below 0.0075 are buggy:
             dist = max(dist, 0.0075)
             locations.append(
                 _rup_to_point(dist, surface, origin_location, azimuth, 'rrup')
