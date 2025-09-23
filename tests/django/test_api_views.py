@@ -9,7 +9,7 @@ import urllib.request
 
 from django.http import HttpResponse
 
-from egsim.api.urls import MODEL_INFO
+from egsim.api.urls import MODEL_INFO_URL_PATH
 
 from django.test.client import Client
 
@@ -32,7 +32,7 @@ def test_model_info():
     client = Client()
 
     # Test no params provided:
-    response = client.get(f"/{MODEL_INFO}")
+    response = client.get(f"/{MODEL_INFO_URL_PATH}")
     assert response.status_code == 400
     assert error_message(response) == \
            "name: missing parameter is required. " \
@@ -40,7 +40,7 @@ def test_model_info():
            "and longitude parameters are provided"
 
     # Test bug found by reviewer (scientific paper summer 2095):
-    response = client.get(f"/{MODEL_INFO}?lat=35.0&lon=-116.0")
+    response = client.get(f"/{MODEL_INFO_URL_PATH}?lat=35.0&lon=-116.0")
     assert response.status_code == 200
     assert response.json() == {}
 
@@ -49,7 +49,7 @@ def test_model_info():
         'requires', 'sa_period_limits'
     }
     data = {'name': ['CauzziEtAl2014']}  # "name" or "model" are equivalent param names
-    response = client.post(f"/{MODEL_INFO}",
+    response = client.post(f"/{MODEL_INFO_URL_PATH}",
                            json.dumps(data),
                            content_type="application/json")
     assert response.status_code == 200
@@ -61,7 +61,7 @@ def test_model_info():
     assert all(v['hazard_source_models'] is None for v in resp_json.values())
 
     data = {'model': ['BindiEtAl2014Rjb', 'CauzziEtAl2014']}
-    response = client.post(f"/{MODEL_INFO}",
+    response = client.post(f"/{MODEL_INFO_URL_PATH}",
                            json.dumps(data),
                            content_type="application/json")
     assert response.status_code == 200
@@ -73,7 +73,7 @@ def test_model_info():
     assert all(v['hazard_source_models'] is None for v in resp_json.values())
 
     data = {'model': ['zww', 'CauzziEtAl2014']}
-    response = client.post(f"/{MODEL_INFO}",
+    response = client.post(f"/{MODEL_INFO_URL_PATH}",
                            json.dumps(data),
                            content_type="application/json")
     assert response.status_code == 400
@@ -81,14 +81,14 @@ def test_model_info():
 
     # partial names: raises (NOTE: we can also supply "name" instead pf "model"):
     data = {'name': 'cauzzi'}
-    response = client.post(f"/{MODEL_INFO}",
+    response = client.post(f"/{MODEL_INFO_URL_PATH}",
                            json.dumps(data),
                            content_type="application/json")
     assert response.status_code == 200
 
     # partial names: raises (NOTE: we can also supply "name" instead pf "model"):
     data = {'lat': 45, 'lon': 47}
-    response = client.post(f"/{MODEL_INFO}",
+    response = client.post(f"/{MODEL_INFO_URL_PATH}",
                            json.dumps(data),
                            content_type="application/json")
     resp_json = response.json()
@@ -98,7 +98,7 @@ def test_model_info():
 
     # germany:
     data = {'lat': 50, 'lon': 10}
-    response = client.post(f"/{MODEL_INFO}",
+    response = client.post(f"/{MODEL_INFO_URL_PATH}",
                            json.dumps(data),
                            content_type="application/json")
     resp_json = response.json()
@@ -112,7 +112,7 @@ def test_model_info():
     assert response.status_code == 200
 
     # get request
-    response = client.get(f"/{MODEL_INFO}?lat=45&lon=55")
+    response = client.get(f"/{MODEL_INFO_URL_PATH}?lat=45&lon=55")
     resp_json = response.json()
     assert list(resp_json) == ['ESHM20Craton']
     # we should have only one hazard source model (check we do not have anymore
@@ -121,7 +121,7 @@ def test_model_info():
     assert response.status_code == 200
 
     # get request. this raised (bug), check it does not anymore
-    response = client.get(f"/{MODEL_INFO}?name=2014")
+    response = client.get(f"/{MODEL_INFO_URL_PATH}?name=2014")
     resp_json = response.json()
     assert all('2014' in v for v in list(resp_json))
 
