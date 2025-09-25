@@ -83,7 +83,7 @@
 				<img src="{% static 'img/logos/openquake.png' %}" style="height:3.8rem"/>
 			</a>
 
-			<a target="_blank" class='me-2' href='http://www.sera-eu.org/'>
+			<a target="_blank" class='me-2' href='https://sera-ta.eucentre.it/'>
 				<img src="{% static 'img/logos/sera.png' %}" style="height:3rem"/>
 			</a>
 
@@ -110,9 +110,21 @@
 				GitHub Repository</a> with the desired label (e.g. bug, enhancement, question, help)
 			</div>
 			<div class='d-flex gap-2 justify-content-center align-items-center'>
-				<button type="button" class='btn btn-link p-0' @click="currentPage = pages.citations_and_license">Citations & License</button>
-				<button type="button" class='btn btn-link p-0' @click="currentPage = pages.imprint">Imprint</button>
-				<a :href='pages.data_protection' target="_blank">Data Protection</a>
+				<button type="button" class='btn btn-link p-0' @click="currentPage = pages.citations_and_license">
+					Citations & License
+				</button>
+				<button type="button" class='btn btn-link p-0' @click="currentPage = pages.api_doc">
+					API Doc
+				</button>
+				<a href='https://github.com/rizac/egsim-client' target="_blank">
+					API Code Examples
+				</a>
+				<button type="button" class='btn btn-link p-0' @click="currentPage = pages.imprint">
+					Imprint
+				</button>
+				<a :href='pages.data_protection' target="_blank">
+					Data Protection
+				</a>
 			</div>
 		</div>
 	</div>
