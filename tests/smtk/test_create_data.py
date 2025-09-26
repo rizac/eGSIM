@@ -29,8 +29,14 @@ def test_create_predictions_is_consistent_with_preexecuted_output():
     """
     dfr = get_scenarios_predictions(models, imts, [4, 5], [1, 10, 100])
     file = join(test_data_dir, 'predictions.hdf')
-    dfr2 = pd.read_hdf(file)
-    pd.testing.assert_frame_equal(dfr, dfr2)  # noqa
+    dfr2: pd.DataFrame = pd.read_hdf(file)  # noqa
+    # we have all columns that were present in legacy code:
+    assert not set(dfr2.columns) - set(dfr.columns)
+    # code modifications of sept 2025 add more metadata columns. Check this:
+    assert all(
+        c.startswith(f'{Clabel.input} ') for c in dfr.columns if c not in dfr2.columns
+    )
+    pd.testing.assert_frame_equal(dfr[dfr2.columns], dfr2, rtol=1e-4, atol=0)
 
 
 def test_create_residuals_is_consistent_with_preexecuted_output():

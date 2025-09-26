@@ -115,29 +115,27 @@ def get_scenarios_predictions(
         data.append(sigma)
         columns.extend((i, Clabel.std, gsim_name) for i in imt_names)
 
-    # distances:
-    columns.append((
-        Clabel.input,
-        str(FlatfileMetadata.get_type(site_properties.distance_type).value),
-        site_properties.distance_type
-    ))
-    # values: [d1...dN, ..., d1...dN], (concat [d1...dN] len(magnitudes) times)
-    data.append(np.tile(distances, len(magnitudes)).reshape(len(ctxts), 1))
-    # magnitudes:
-    columns.append((
-        Clabel.input,
-        str(FlatfileMetadata.get_type(Clabel.mag).value),
-        Clabel.mag
-    ))
-    # values: [M1, ..., M1, Mn, ... Mn] (repeating each Mi len(distances) times)
-    data.append(np.repeat(magnitudes, len(distances)).reshape(len(ctxts), 1))
+    # get interesting fields (only those registered in flatfile):
+    meta_fields = [c for c in ctxts.dtype.names if FlatfileMetadata.has(c)]
+
+    # get the matrix of data (stack the scalar fields into a 2D NumPy array):
+    meta_data = np.column_stack([ctxts[name] for name in meta_fields])
+
+    # build our dataframe data (horizontal concat data + meta_data into data):
+    data.append(meta_data)
+    # build our dataframe columns (append the meta_data columns from meta_columns):
+    meta_columns = [
+        (Clabel.input, str(FlatfileMetadata.get_type(m).value), m) for m in meta_fields
+    ]
+    columns.extend(meta_columns)
 
     # compute final DataFrame:
     output = pd.DataFrame(columns=columns, data=np.hstack(data))
+
     # sort columns (maybe we could use reindex but let's be more explicit):
     computed_cols = set(output.columns)
     expected_cols = \
-        list(product(imts, [Clabel.median, Clabel.std], gsims)) + columns[-2:]
+        list(product(imts, [Clabel.median, Clabel.std], gsims)) + meta_columns
     output = output[[c for c in expected_cols if c in computed_cols]].copy()
     if header_sep:
         output.columns = [header_sep.join(c) for c in output.columns]
@@ -171,19 +169,24 @@ def build_contexts(
     ctxts = []
     for i, magnitude in enumerate(magnitudes):
         area = r_props.msr.get_median_area(magnitude, r_props.rake)
-        surface = create_planar_surface(r_props.initial_point, r_props.strike,
-                                        r_props.dip, area, r_props.aspect,
-                                        r_props.ztor)
-        hypocenter = get_hypocentre_on_planar_surface(surface,
-                                                      r_props.hypocenter_location)
-        # this is the old rupture.target.sites:
-        target_sites = get_target_sites(hypocenter, surface, distances,
-                                        **asdict(s_props))
-
-        rupture = create_rupture(i, magnitude, r_props.rake,
-                                 r_props.tectonic_region,
-                                 hypocenter, surface)
-        ctx = cmaker.get_ctx(rupture, target_sites)
+        surface = create_planar_surface(
+            r_props.initial_point, r_props.strike, r_props.dip, area, r_props.aspect,
+            r_props.ztor
+        )
+        hypocenter = get_hypocentre_on_planar_surface(
+            surface, r_props.hypocenter_location
+        )
+        target_sites = get_target_sites(
+            hypocenter, surface, distances, **asdict(s_props)
+        )
+        rupture = create_rupture(
+            i, magnitude, r_props.rake, r_props.tectonic_region, hypocenter, surface
+        )
+        ctx = cmaker.get_ctx(
+            rupture,
+            target_sites,
+            distances=distances if s_props.distance_type == 'rrup' else None
+        )
         rec_array = cmaker.recarray([ctx])
         rec_array["occurrence_rate"] = 0.0  # only needed in PSHA calculation
         ctxts.append(rec_array)
