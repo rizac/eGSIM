@@ -7,6 +7,7 @@ import pytest
 from egsim.api.client.snippets.get_egsim_predictions import get_egsim_predictions
 from egsim.api.client.snippets.get_egsim_residuals import get_egsim_residuals
 from egsim.api.urls import PREDICTIONS_URL_PATH, RESIDUALS_URL_PATH
+from egsim.smtk.registry import Clabel
 
 test_data_dir = join(dirname(dirname(abspath(__file__))), 'data')
 
@@ -43,10 +44,18 @@ def test_client_get_predictions(live_server):
     )
     file = join(test_data_dir, 'predictions.hdf')
     if isfile(file):
-        dfr2 = pd.read_hdf(file)
+        dfr2: pd.DataFrame = pd.read_hdf(file)  # noqa
+        # new code (sept 2025) puts more metadata in dfr. so check common columns first:
         pd.testing.assert_frame_equal(
-            dfr, dfr2, check_exact=False, atol=0, rtol=1e-3
+            dfr[dfr2.columns], dfr2, check_exact=False, atol=0, rtol=1e-3
         )
+        # and now check that what we wrote in addition is just metadata:
+        for c in dfr.columns:
+            if c not in dfr2.columns:
+                if isinstance(c, str):
+                    assert c.startswith(f'{Clabel.input} ')
+                else:
+                    assert c[0] == Clabel.input
 
 
 def test_client_get_predictions_nga_east(live_server):

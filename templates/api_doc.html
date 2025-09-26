@@ -1,0 +1,115 @@
+<div class='d-flex flex-column'
+	 style='padding: 3rem calc(0.5*(100vw - 45rem)); flex:1 1 auto; overflow:auto'>
+	<h2>eGSIM API documentation</h2>
+	<div style='text-align: justify'>
+	<p>
+	A web Application Programming Interface (API) is a simple interface that allows
+	a client to talk to the web service by sending a request (the client message
+	asking the service to perform an action or provide information) and receiving a
+	response (the answer from the service containing the requested data, e.g.,
+	a web page, an image).
+	</p>
+	<p>
+	As in many web services, the eGSIM API can be accessed through the web browser
+	via keyboard and mouse interactions, or more programmatically and flexibly via software
+	code. In the latter case, we recommend the usage of the eGSIM API through Python code
+	and consult our
+	<a href="https://github.com/rizac/egsim-client" target="_blank">online  examples</a>
+	in Jupyter Notebook: therein,
+	you can see how we access the API via a single main function that
+	can also be used seamlessly in any Python module or, with slight modifications,
+	in any programming language.
+	</p>
+	<p>
+	For a more low-level approach, e.g., using command line tools like
+	<span style='font-family:monospace'>curl</span>, or for Python users who want more
+	configuration options in their code, here below a
+	short documentation of the eGSIM API.
+	</p>
+	</div>
+	<!--<ul>
+		<li>GET requests, where the input parameters are
+			encoded as text at the end of the request URL. GET requests are easy to use and
+			suited for simple requests and responses (e.g. simple request parameters and
+			plain or JSON text responses)</li>
+
+		<li>POST requests, where the data is send to the given URL separately. These
+			requests are slightly more complex but more flexible, e.g., they allow
+			to input files to be uploaded to the server</li>
+	</ul>
+
+	You do not need specialized software to get started: any browser, the command-line
+	tool <code>curl</code>, or short code snippets in common languages
+	(such as <code>Python</code>) will work to interact with the API.
+
+	This documentation aims to help you quickly understand how to integrate eGSIM into
+	your workflow, whether you are exploring data manually or incorporating it into
+	automated analysis pipelines.
+
+	</p>-->
+	{% for title, service in api_doc.items %}
+		<h3 class='mt-3'>{{ title }}</h3>
+
+		<p>Response format(s): {{ service.response_format }}</p>
+		<p>Request URL: <a href='{{ service.url_path }}' target='_blank'>{{ service.url_path }}</a></p>
+		<p>Request type: {{ service.type }}</p>
+		<p>Request parameters:</p>
+
+		<table class='table border'>
+			<tr>
+				<th class='bg-success-subtle'>Name(s)</th><th class='bg-success-subtle'>Description</th>
+				{% for name, val in service.params.items %}
+					<tr>
+						<th>{{ val.names|join:", " }}</th>
+						<td>{{ val.help | safe }}</td>
+					</tr>
+				{% endfor %}
+			</td>
+		</table>
+	{% endfor %}
+
+	<span class='text-muted small'>Note: multi-value parameters can be input
+		in GET requests either providing the parameters more than once, or
+		concatenating the values with commas (,)
+	</span>
+	<!-- <h3>Models info</h3>
+	<p>URL: site/{{ api_doc.model_info_url }}</p>
+	<p>Type: GET or POST</p>
+	<p>Parameters:</p>
+	<table class='table border'>
+		<tr>
+			<td>Name(s)</td><td>Type</td><td>Description</td>
+			{% for name, val in api_doc.model_info_params.items %}
+				<tr>
+					<td>{{ val.names|join:", " }}</td>
+					<td>{% if val.choices %}
+							A value to be chosen from:
+							{{ val.choices|join:", " }}
+						{% else %}
+							{{ val.type }}
+						{% endif %}
+					</td>
+					<td>{{ val.help }}</td>
+				</tr>
+			{% endfor %}
+		</td>
+	</table>
+
+
+	<h3>Model-to-model</h3>
+	<p>URL: site/{{ api.predictions_url }}</p>
+	<p>Type: GET or POST</p>
+	<p>Parameters:
+	<br>
+	{{ api_doc.model_to_model_params_table | safe }}
+	</p>
+
+	<h3>Model-to-data</h3>
+	<p>URL: site/{{ api.residuals_url }}</p>
+	<p>Type: GET or POST</p>
+	<p>Parameters:
+	<br>
+	{{ api_doc.model_to_data_params_table | safe }}
+	</p> -->
+
+</div>

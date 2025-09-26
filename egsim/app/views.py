@@ -2,10 +2,12 @@
 Django views for the eGSIM app (web app with frontend)
 """
 from io import BytesIO, StringIO
+from itertools import chain
 from os.path import splitext
-from typing import Optional
+from typing import Optional, Union, Type
 import re
 
+from django.forms import IntegerField, BooleanField, CharField, FloatField
 from shapely.geometry import shape
 
 from django.http import FileResponse, HttpResponseBase, HttpRequest, JsonResponse
@@ -15,10 +17,11 @@ from django.conf import settings
 from ..api import models
 from ..api.forms.flatfile import (FlatfileMetadataInfoForm,
                                   FlatfileValidationForm)
-from ..api.forms import APIForm, EgsimBaseForm, SHSRForm
+from ..api.forms import APIForm, EgsimBaseForm, SHSRForm, GsimInfoForm
 from ..api.forms.residuals import ResidualsForm
-from ..api.forms.scenarios import PredictionsForm
-from ..api.views import MimeType, EgsimView
+from ..api.forms.scenarios import PredictionsForm, ArrayField
+from ..api.urls import MODEL_INFO_URL_PATH, RESIDUALS_URL_PATH, PREDICTIONS_URL_PATH
+from ..api.views import MimeType, EgsimView, GsimInfoView, PredictionsView, ResidualsView
 from .forms import PredictionsVisualizeForm, FlatfileVisualizeForm
 from ..smtk.registry import Clabel
 
@@ -40,6 +43,7 @@ class URLS:  # noqa
     WEBPAGE_PREDICTIONS = 'predictions'
     WEBPAGE_RESIDUALS = 'residuals'
     WEBPAGE_CITATIONS_AND_LICENSE = "citations_and_license"
+    WEBPAGE_API_DOC = "api_doc"
 
     # download URls. NOTE: ALL URLS ARE IN THE FORM: <path>/<downloaded_file_basename>
     DOWNLOAD_PREDICTIONS_DATA = 'download/egsim-predictions'
@@ -71,25 +75,137 @@ if any(
                       "mess up requests performed on the page (error 404)")
 
 
+########################################################
+# Views functions/ classes (helpers / utilities below) #
+########################################################
+
+
 def main(request, page=''):
     """view for the main page"""
-    template = 'egsim.html'
-    init_data = _get_init_data_json(settings.DEBUG) | \
-        {'currentPage': page or URLS.WEBPAGE_HOME}
+    regionalizations = list(models.Regionalization.queryset())
+    flatfiles = list(models.Flatfile.queryset())
+    init_data = get_init_data_json(regionalizations, flatfiles, settings.DEBUG)
+    init_data['currentPage'] = page or URLS.WEBPAGE_HOME
     return render(
         request,
-        template,
+        template_name='egsim.html',
         context={
             'debug': settings.DEBUG,
             'init_data': init_data,
             'oq_version': oq_version,
             'oq_gmm_refs_page': oq_gmm_refs_page,
-            'references': _get_references()
+            'references': get_references(regionalizations, flatfiles),
+            'api_doc': get_api_doc_data(
+                regionalizations, flatfiles, f'{request.scheme}://{request.get_host()}'
+            )
         }
     )
 
 
-def _get_init_data_json(debug=False) -> dict:
+class GsimFromRegion(EgsimView):
+    """View handling clicks on the GUI map and returning region-selected model(s)"""
+
+    def response(self,
+                 request: HttpRequest,
+                 data: dict,
+                 files: Optional[dict] = None) -> HttpResponseBase:
+        form = SHSRForm(data)
+        model_names = []
+        if form.is_valid():
+            model_names = sorted(form.get_region_selected_model_names())
+        return JsonResponse({'models': model_names}, status=200)
+
+
+class PlotsImgDownloader(EgsimView):
+
+    def response(self,
+                 request: HttpRequest,
+                 data: dict,
+                 files: Optional[dict] = None) -> HttpResponseBase:
+        """Process the response from a given request and the data / files
+        extracted from it"""
+        filename = request.path[request.path.rfind('/') + 1:]
+        img_format = splitext(filename)[1][1:].lower()
+        try:
+            content_type = getattr(MimeType, img_format)
+        except AttributeError:
+            return self.error_response(f'Invalid format "{img_format}"')
+
+        from plotly import graph_objects as go, io as pio
+        fig = go.Figure(data=data['data'], layout=data['layout'])
+        # fix for https://github.com/plotly/plotly.py/issues/3469:
+        pio.full_figure_for_development(fig, warn=False)
+        img_bytes = fig.to_image(
+            format=img_format, width=data['width'], height=data['height'], scale=5
+        )
+        return FileResponse(
+            BytesIO(img_bytes),
+            content_type=content_type,
+            filename=filename,
+            as_attachment=True
+        )
+
+
+class PredictionsHtmlTutorial(EgsimView):
+
+    def response(self,
+                 request: HttpRequest,
+                 data: dict,
+                 files: Optional[dict] = None) -> HttpResponseBase:
+        """Process the response from a given request and the data / files
+        extracted from it"""
+        from egsim.api.client.snippets.get_egsim_predictions import \
+            get_egsim_predictions
+        api_form = PredictionsForm({
+            'gsim': ['CauzziEtAl2014', 'BindiEtAl2014Rjb'],
+            'imt': ['PGA', 'SA(0.1)'],
+            'magnitude': [4, 5, 6],
+            'distance': [10, 100]
+        })
+        return render(
+            request,
+            template_name='downloaded-data-tutorial.html',
+            context=get_html_tutorial_context(
+                'predictions', api_form, get_egsim_predictions
+            )
+        )
+
+
+class ResidualsHtmlTutorial(EgsimView):
+
+    def response(self,
+                 request: HttpRequest,
+                 data: dict,
+                 files: Optional[dict] = None) -> HttpResponseBase:
+        """Process the response from a given request and the data / files
+        extracted from it"""
+        from egsim.api.client.snippets.get_egsim_residuals import \
+            get_egsim_residuals
+        api_form = ResidualsForm({
+            'gsim': ['CauzziEtAl2014', 'BindiEtAl2014Rjb'],
+            'imt': ['PGA'],
+            'data-query': '(mag > 7) & (vs30 > 1100)',
+            'flatfile': 'esm2018'
+        })
+        return render(
+            request,
+            template_name='downloaded-data-tutorial.html',
+            context=get_html_tutorial_context(
+                'residuals', api_form, get_egsim_residuals
+            )
+        )
+
+
+######################
+# Utilities / Helpers
+######################
+
+
+def get_init_data_json(
+        db_regionalizations: list[models.Regionalization],
+        db_flatfiles: list[models.Flatfile],
+        debug=False
+) -> dict:
     """Return the JSON data to be passed to the browser at startup to initialize
     the page content
 
@@ -122,16 +238,16 @@ def _get_init_data_json(debug=False) -> dict:
 
     # get regionalization data (for selecting models on a map):
     regionalizations = []
-    for regx in models.Regionalization.queryset('name', 'url', 'filepath'):
+    for regx in db_regionalizations:
         regionalizations.append({
             'name': regx.name,
-            'bbox': _get_bbox(regx),  # tuple (min_lng, min_lat, max_lng, max_lat)
+            'bbox': get_bbox(regx),  # tuple (min_lng, min_lat, max_lng, max_lat)
             'url': regx.url or ""
         })
 
     # get predefined flatfiles info:
     flatfiles = []
-    for ffile in models.Flatfile.queryset('name', 'display_name', 'url'):
+    for ffile in db_flatfiles:
         ff_form = FlatfileValidationForm({'flatfile': ffile.name})
         if ff_form.is_valid():
             flatfiles.append({
@@ -179,7 +295,8 @@ def _get_init_data_json(debug=False) -> dict:
             'citations_and_license': URLS.WEBPAGE_CITATIONS_AND_LICENSE,
             'imprint': URLS.WEBPAGE_IMPRINT,
             'home': URLS.WEBPAGE_HOME,
-            'data_protection': URLS.WEBPAGE_DATA_PROTECTION
+            'data_protection': URLS.WEBPAGE_DATA_PROTECTION,
+            'api_doc': URLS.WEBPAGE_API_DOC
         },
         'urls': {
             'predictions': URLS.DOWNLOAD_PREDICTIONS_DATA,
@@ -220,11 +337,7 @@ def _get_init_data_json(debug=False) -> dict:
                 'predictions': {
                     'msr': predictions_form.fields['msr'].choices,
                     'region': predictions_form.fields['region'].choices,
-                    'help': {
-                        PredictionsForm.param_names_of(n)[0]: f.help_text
-                        for n, f in PredictionsForm.declared_fields.items()
-                        if getattr(f, 'help_text', n).lower() != n.lower()
-                    },
+                    'help': form2help(PredictionsForm),
                     'tutorial_page_visible': False
                 },
                 'predictions_plot': {
@@ -233,19 +346,11 @@ def _get_init_data_json(debug=False) -> dict:
                 },
                 'flatfile_visualize': {
                     'selected_flatfile_fields': [],
-                    'help': {
-                        FlatfileVisualizeForm.param_names_of(n)[0]: f.help_text
-                        for n, f in FlatfileVisualizeForm.declared_fields.items()
-                        if getattr(f, 'help_text', n).lower() != n.lower()
-                    }
+                    'help': form2help(FlatfileVisualizeForm),
                 },
                 'residuals': {
                     'selected_flatfile_fields': [],
-                    'help': {
-                        ResidualsForm.param_names_of(n)[0]: f.help_text
-                        for n, f in ResidualsForm.declared_fields.items()
-                        if getattr(f, 'help_text', n).lower() != n.lower()
-                    },
+                    'help': form2help(ResidualsForm),
                     'tutorial_page_visible': False
                 },
                 'flatfile_meta_info': {},
@@ -268,7 +373,133 @@ def _get_init_data_json(debug=False) -> dict:
     }
 
 
-def _get_bbox(reg: models.Regionalization) -> list[float]:
+def get_references(
+        db_regionalizations: list[models.Regionalization],
+        db_flatfiles: list[models.Flatfile]
+):
+    """Return the references of the data used by the program"""
+    refs = {}
+    for item in chain(db_regionalizations, db_flatfiles):
+        url = item.url
+        if not url:
+            url = item.doi
+            if url and not url.startswith('http'):
+                url = f'https://doi.org/{url}'
+        if not url:
+            continue
+        name = item.display_name or item.name
+        refs[name] = url
+    return refs
+
+
+def get_api_doc_data(
+        db_regionalizations: list[models.Regionalization],
+        db_flatfiles: list[models.Flatfile],
+        url_host
+):
+    model_info_params = form2help(GsimInfoForm, compact=False)
+    model_to_model_params = form2help(PredictionsForm, compact=False)
+    model_to_data_params = form2help(ResidualsForm, compact=False)
+
+    # API ModelInfo: customize help text of parameter "model":
+    model_info_params['gsim']['help'] = (
+        'A string of text to be used for search and return the matching models (search '
+        'is case-insensitive)'
+    )
+
+    # API ModelToData: customize help text of parameter "model":
+    refs = [
+        _.url if _.url else f'https://doi.org/{_.doi}' if _.doi else ''
+        for _ in db_flatfiles
+    ]
+    refs = [f"<a target='_blank' href='{r}'>{r}</a>" for r in refs if r]
+    if refs:
+        refs = list(set(refs))  # remove duplicates
+        refs = f'. For ref., see: {", ".join(refs)}'
+    flatfile_help = (
+        'The flatfile containing observed ground motion properties and intensity '
+        'measures. If user-defined (file upload in CSV or HDF format), please consult '
+        'the Python notebook examples or the GUI. When predefined, the value must be '
+        f'chosen from: {", ".join(_.name for _ in db_flatfiles)}{refs}'
+    )
+    model_to_data_params['flatfile']['help'] = flatfile_help
+
+    # All APIs: customize help text of parameter "regionalization":
+    refs = [
+        _.url if _.url else f'https://doi.org/{_.doi}' if _.doi else ''
+        for _ in db_regionalizations
+    ]
+    refs = [f"<a target='_blank' href='{r}'>{r}</a>" for r in refs if r]
+    if refs:
+        refs = list(set(refs))  # remove duplicates
+        refs = f'. For ref., see: {", ".join(refs)}'
+    regionalizations_help = (
+        'The regionalization to be used for searching the models selected for '
+        'the given geographic location (parameters latitude and longitude). '
+        'If no geographic location is provided, this '
+        'parameter is ignored. Values can be one or more string of texts to be '
+        f'chosen from {", ".join(_.name for _ in db_regionalizations)}. If missing, '
+        f'all regionalizations are used{refs}'
+    )
+    model_info_params['regionalization']['help'] = regionalizations_help
+    model_to_model_params['regionalization']['help'] = regionalizations_help
+    model_to_data_params['regionalization']['help'] = regionalizations_help
+
+    # All APIs: replace https://... with anchor tags:
+    for form_params in (model_info_params, model_to_model_params, model_to_data_params):
+        for key in form_params:
+            form_params[key]['help'] = re.sub(
+                r"(https?\:\/\/.*?)\)",
+                r"<a target='_blank' href='\1'>\1</a>)",
+                form_params[key]['help']
+            )
+
+    # add format param:
+    model_info_formats = list(GsimInfoView.supported_formats())
+    if len(model_info_formats) > 1:
+        model_info_params['format'] = {
+            'names': ['format'],
+            'help': (f'The response format. A value to be chosen from: '
+                     f'{", ".join(model_info_formats)}')
+        }
+    model_to_model_formats = list(PredictionsView.supported_formats())
+    if len(model_to_model_formats) > 1:
+        model_to_model_params['format'] = {
+            'names': ['format'],
+            'help': (f'The response format. A value to be chosen from: '
+                     f'{", ".join(model_to_model_formats)}')
+        }
+    model_to_data_formats = list(ResidualsView.supported_formats())
+    if len(model_to_data_formats) > 1:
+        model_to_data_params['format'] = {
+            'names': ['format'],
+            'help': (f'The response format. A value to be chosen from: '
+                     f'{", ".join(model_to_data_formats)}')
+        }
+
+    return {
+        'Model info': {
+            'response_format': ", ".join(_.upper() for _ in model_info_formats),
+            'url_path': f'{url_host}/{MODEL_INFO_URL_PATH}',
+            'type': 'GET or POST',
+            'params': model_info_params
+        },
+        'Model-to-Model': {
+            'response_format': ", ".join(_.upper() for _ in model_to_model_formats),
+            'url_path': f'{url_host}/{PREDICTIONS_URL_PATH}',
+            'type': 'GET or POST',
+            'params': model_to_model_params
+        },
+        'Model-to-Data': {
+            'response_format': ", ".join(_.upper() for _ in model_to_data_formats),
+            'url_path': f'{url_host}/{RESIDUALS_URL_PATH}',
+            'type': 'POST (GET with pre-defined flatfiles only)',
+            'params': model_to_data_params
+        },
+    }
+
+
+def get_bbox(reg: models.Regionalization) -> list[float]:
     """Return the bounds of all the regions coordinates in the given regionalization
 
     @param return: the 4-element list (minx, miny, maxx, maxy) i.e.
@@ -285,21 +516,70 @@ def _get_bbox(reg: models.Regionalization) -> list[float]:
     return bounds
 
 
-def _get_references():
-    """Return the references of the data used by the program"""
-    refs = {}
-    for model_cls in [models.Regionalization, models.Flatfile]:
-        for item in model_cls.queryset().values():
-            url = item.get('url', '')
-            if not url:
-                url = item.get('doi', '')
-                if url and not url.startswith('http'):
-                    url = f'https://doi.org/{url}'
-            if not url:
-                continue
-            name = item.get('display_name', None) or item['name']
-            refs[name] = url
-    return refs
+def form2help(form: Union[EgsimBaseForm, Type[EgsimBaseForm]], compact=True) -> dict:
+    """
+    Return the given form in a dict with all field names mapped to their help text
+
+    If compact is False (default: True) each dict value is not a string but a dict
+    with two keys: names (mapped to all parameter names, 1st is the default) and
+    help (a more verbose, human-readable form of the field help text, including also
+    other information such as data types and possible choices)
+    """
+    help_texts = {n: str(f.help_text) or '' for n, f in form.declared_fields.items()}
+    if compact:
+        return help_texts
+    ret = {}
+    for n, f in form.declared_fields.items():
+        choices = [_[1] for _ in getattr(f, 'choices', [])]
+        extra_help = ''
+        if choices:
+            extra_help = 'The value must to be chosen from ' + ", ".join(choices)
+        else:
+            plural = isinstance(f, ArrayField)
+            num_fields = 0
+            if plural:
+                num_fields = len(f.base_fields)
+                f = f.base_fields[0]
+
+            if isinstance(f, FloatField):
+                if plural:
+                    extra_help = f'The values must all be numeric'
+                else:
+                    extra_help = f'The value must be numeric'
+            elif isinstance(f, IntegerField):  # after FloatField
+                if plural:
+                    extra_help = f'The values must all be numeric integers'
+                else:
+                    extra_help = f'The value must be a numeric integer'
+            elif isinstance(f, BooleanField):
+                if plural:
+                    extra_help = f'The values must all be true or false'
+                else:
+                    extra_help = f'The value must be true or false'
+            elif isinstance(f, CharField):
+                if plural:
+                    extra_help = f'The values must all be strings of text'
+                else:
+                    extra_help = f'The value must be a string of text'
+
+            if extra_help and num_fields > 1:
+                extra_help.replace('The values ', f'The {num_fields} values')
+            elif not extra_help and plural:
+                if num_fields == 1:
+                    extra_help = f'The values can be provided multiple times'
+                else:
+                    extra_help = f'The value must be provided {num_fields} times'
+
+        help_text = help_texts[n]
+        if help_text and extra_help:
+            help_text += f'. {extra_help}'
+        elif extra_help:
+            help_text = extra_help
+        ret[n] = {
+            'names': form.param_names_of(n),
+            'help': help_text
+        }
+    return ret
 
 
 def form2dict(form: EgsimBaseForm, compact=False) -> dict:
@@ -324,95 +604,12 @@ def form2dict(form: EgsimBaseForm, compact=False) -> dict:
     return ret
 
 
-class GsimFromRegion(EgsimView):
-    """View handling clicks on the GUI map and returning region-selected model(s)"""
-
-    def response(self,
-                 request: HttpRequest,
-                 data: dict,
-                 files: Optional[dict] = None) -> HttpResponseBase:
-        form = SHSRForm(data)
-        model_names = []
-        if form.is_valid():
-            model_names = sorted(form.get_region_selected_model_names())
-        return JsonResponse({'models': model_names}, status=200)
-
-
-class PlotsImgDownloader(EgsimView):
-
-    def response(self,
-                 request: HttpRequest,
-                 data: dict,
-                 files: Optional[dict] = None) -> HttpResponseBase:
-        """Process the response from a given request and the data / files
-        extracted from it"""
-        filename = request.path[request.path.rfind('/')+1:]
-        img_format = splitext(filename)[1][1:].lower()
-        try:
-            content_type = getattr(MimeType, img_format)
-        except AttributeError:
-            return self.error_response(f'Invalid format "{img_format}"')
-
-        from plotly import graph_objects as go, io as pio
-        fig = go.Figure(data=data['data'], layout=data['layout'])
-        # fix for https://github.com/plotly/plotly.py/issues/3469:
-        pio.full_figure_for_development(fig, warn=False)
-        img_bytes = fig.to_image(
-            format=img_format, width=data['width'], height=data['height'], scale=5
-        )
-        return FileResponse(BytesIO(img_bytes), content_type=content_type,
-                            filename=filename, as_attachment=True)
-
-
-class PredictionsHtmlTutorial(EgsimView):
-
-    def response(self,
-                 request: HttpRequest,
-                 data: dict,
-                 files: Optional[dict] = None) -> HttpResponseBase:
-        """Process the response from a given request and the data / files
-        extracted from it"""
-        from egsim.api.client.snippets.get_egsim_predictions import \
-            get_egsim_predictions
-        api_form = PredictionsForm({
-            'gsim': ['CauzziEtAl2014', 'BindiEtAl2014Rjb'],
-            'imt': ['PGA', 'SA(0.1)'],
-            'magnitude': [4, 5, 6],
-            'distance': [10, 100]
-        })
-        return get_html_tutorial(
-            request, 'predictions', api_form, get_egsim_predictions
-        )
-
-
-class ResidualsHtmlTutorial(EgsimView):
-
-    def response(self,
-                 request: HttpRequest,
-                 data: dict,
-                 files: Optional[dict] = None) -> HttpResponseBase:
-        """Process the response from a given request and the data / files
-        extracted from it"""
-        from egsim.api.client.snippets.get_egsim_residuals import \
-            get_egsim_residuals
-        api_form = ResidualsForm({
-            'gsim': ['CauzziEtAl2014', 'BindiEtAl2014Rjb'],
-            'imt': ['PGA'],
-            'data-query': '(mag > 7) & (vs30 > 1100)',
-            'flatfile': 'esm2018'
-        })
-        return get_html_tutorial(
-            request, 'residuals', api_form, get_egsim_residuals
-        )
-
-
-def get_html_tutorial(
-        request,
+def get_html_tutorial_context(
         key: str,
         api_form: APIForm,
         api_client_function
-) -> HttpResponseBase:
-
+) -> dict:
+    """Return the context (dict) for the Django rendering of the HTML tutorial page"""
     # create dataframe htm:
     s = StringIO()
     if not api_form.is_valid():
@@ -420,12 +617,12 @@ def get_html_tutorial(
                          'Cannot execute Python code')
 
     dataframe = api_form.output()
-    s.write(_to_html(dataframe))
+    s.write(to_html(dataframe))
 
     if key == 'residuals':
         s.write('Or, if ranking=True:')
         api_form.cleaned_data['ranking'] = True
-        s.write(_to_html(api_form.output()))
+        s.write(to_html(api_form.output()))
 
     dataframe_html = s.getvalue()
 
@@ -442,7 +639,7 @@ def get_html_tutorial(
         'Select by model (BindiEtAl2014Rjb)':
             'dframe[[c for c in dframe.columns if c.endswith(" BindiEtAl2014Rjb")]]',
         'Select all input data':
-            f'dframe[[c for c in dframe.columns if c.startswith("{Clabel.input } ")]]',
+            f'dframe[[c for c in dframe.columns if c.startswith("{Clabel.input} ")]]',
     }
     if key == 'residuals':
         py_select_exprs['Select by metric type (Total residuals)'] = \
@@ -454,21 +651,18 @@ def get_html_tutorial(
     py_select_snippets = []
     for title, expr in py_select_exprs.items():
         py_select_snippets.append([
-            title, expr, _to_html(eval(expr, {'dframe': dataframe}), max_rows=3)]
+            title, expr, to_html(eval(expr, {'dframe': dataframe}), max_rows=3)]
         )
 
-    return render(
-        request,
-        'downloaded-data-tutorial.html',
-        context={
-            'key': key,
-            'dataframe_html': dataframe_html,
-            'dataframe_info': dataframe_info,
-            'py_select_snippets': py_select_snippets
-    })
+    return {
+        'key': key,
+        'dataframe_html': dataframe_html,
+        'dataframe_info': dataframe_info,
+        'py_select_snippets': py_select_snippets
+    }
 
 
-def _to_html(dataframe, **kwargs):
+def to_html(dataframe, **kwargs):
     kwargs.setdefault('classes', 'table table-bordered table-light my-0')
     kwargs.setdefault('border', 0)
     kwargs.setdefault('max_rows', 3)

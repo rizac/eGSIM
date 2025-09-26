@@ -13,11 +13,14 @@
 			<i class="fa fa-database me-1"></i> Data
 		</button>
 		<ul class="dropdown-menu bg-dark rounded-top-0">
-			<li><button type="button" class="dropdown-item" @click="currentPage = pages.flatfile_meta_info">Compilation</button></li>
-			<li><button type="button" class="dropdown-item" @click="currentPage = pages.flatfile_visualize">Visual inspection</button></li>
+			<li><button type="button" class="dropdown-item" @click="currentPage = pages.flatfile_meta_info">
+				Compilation
+			</button></li>
+			<li><button type="button" class="dropdown-item" @click="currentPage = pages.flatfile_visualize">
+				Visual inspection
+			</button></li>
 		</ul>
 	</li>
-
 
 	<button type="button" class='nav-link' @click="currentPage = pages.residuals">
 		<i class="fa fa-bar-chart me-1"></i> Model-to-Data Comparison
@@ -33,26 +36,56 @@
 
 	<button type="button" class="nav-link dropdown-toggle" data-bs-toggle="dropdown" role="button"
 			title='API examples in Python (Jupyter Notebooks)'>
-		<img src="{% static 'img/logos/jupyter.svg' %}" style="height:1.2rem" class='me-1' /> API
+		 API
 	</button>
 	<ul class="dropdown-menu bg-dark rounded-top-0">
-		<li><a class="dropdown-item" href='https://github.com/rizac/egsim-client/blob/main/notebook/Model-to-Model.ipynb'
-			   target="_blank"><i class="fa fa-file me-1"></i> Basic Usage and Overview (Model-to-Model)</a></li>
-		<li><a class="dropdown-item" href='https://github.com/rizac/egsim-client/blob/main/notebook/Model-to-Data.ipynb'
-			   target="_blank"><i class="fa fa-file me-1"></i> Basic Usage and Overview (Model-to-Data)</a></li>
-		<li><a class="dropdown-item" href='https://github.com/rizac/egsim-client/blob/main/notebook/Comparing Observations and Simulations.ipynb'
-			   target="_blank"><i class="fa fa-file me-1"></i> Comparing Observations and Simulations (Model-to-Data)</a></li>
-		<li><a class="dropdown-item" href='https://github.com/rizac/egsim-client/blob/main/notebook/Exploring Models using Dimensionality Reduction.ipynb'
-			   target="_blank"><i class="fa fa-file me-1"></i> Exploring Models using Dimensionality Reduction (Model-to-Data)</a></li>
+		<li><button type="button" class="dropdown-item" @click="currentPage = pages.api_doc">
+			<i class="fa fa-file me-2"></i>Documentation
+		</button></li>
+		<li><hr class="dropdown-divider bg-light"></li>
+		<li><h6 class="dropdown-header">
+			<img title="Jupyter Notebook" src="{% static 'img/logos/jupyter.svg' %}" style="height:1.2rem" class='me-2' />
+			Code tutorials
+		</h6></li>
+		<li><a class="dropdown-item"
+			   href='https://github.com/rizac/egsim-client/blob/main/notebook/Model-to-Model.ipynb'
+			   target="_blank">
+			<img title="Python" src="{% static 'img/logos/Python-logo.svg' %}" style="height:1.2rem" class='me-2' />
+			 Model-to-Model: Basic Usage and Overview
+		</a></li>
+		<li><a class="dropdown-item"
+			   href='https://github.com/rizac/egsim-client/blob/main/notebook/Model-to-Data.ipynb'
+			   target="_blank">
+			<img title="Python" src="{% static 'img/logos/Python-logo.svg' %}" style="height:1.2rem" class='me-2' />
+			 Model-to-Data: Basic Usage and Overview
+		</a></li>
+		<li><a class="dropdown-item"
+			   href='https://github.com/rizac/egsim-client/blob/main/notebook/Comparing Observations and Simulations.ipynb'
+			   target="_blank">
+			<img title="Python" src="{% static 'img/logos/Python-logo.svg' %}" style="height:1.2rem" class='me-2' />
+			Comparing Observations and Simulations
+		</a></li>
+		<li><a class="dropdown-item"
+			   href='https://github.com/rizac/egsim-client/blob/main/notebook/Exploring Models using Dimensionality Reduction.ipynb'
+			   target="_blank">
+			<img title="Python" src="{% static 'img/logos/Python-logo.svg' %}" style="height:1.2rem" class='me-2'/>
+			Exploring Models using Dimensionality Reduction
+		</a></li>
 	</ul>
 
 	<button type="button" class="nav-link dropdown-toggle" data-bs-toggle="dropdown" role="button">
 		<i class="fa fa-bars"></i>
 	</button>
 	<ul class="dropdown-menu bg-dark rounded-top-0">
-		<li><button type="button" class="dropdown-item" @click="currentPage = pages.citations_and_license"><i class="fa fa-address-card-o me-1"></i>Citations & License</button></li>
-		<li><button type="button" class="dropdown-item" @click="currentPage = pages.imprint">Imprint</button></li>
-		<li><a class="dropdown-item" :href='pages.data_protection' target="_blank">Data Protection</a></li>
+		<li><button type="button" class="dropdown-item" @click="currentPage = pages.citations_and_license">
+			<i class="fa fa-address-card-o me-2"></i>Citations & License
+		</button></li>
+		<li><button type="button" class="dropdown-item" @click="currentPage = pages.imprint">
+			Imprint
+		</button></li>
+		<li><a class="dropdown-item" :href='pages.data_protection' target="_blank">
+			Data Protection
+		</a></li>
 	</ul>
 
 </nav>

@@ -111,10 +111,14 @@ def test_distance_imt_trellis():
     ref = ref.iloc[1:, :].copy()
     # usual tests:
     assert len(ref) == len(dfr)
-    assert not set(ref.columns) ^ set(dfr.columns)
+    # columns if ref (legacy dataframe) are present in dfr (new one):
+    assert not set(ref.columns) - set(dfr.columns)
+    # code after sept 2025 adds new metadata to the dfr. Check it is actually
+    # metadata (starts with CLabel.input):
+    assert all(c[0] == Clabel.input for c in dfr.columns if c not in ref.columns)
 
     # Now compare trellis values:
-    for c in dfr.columns:
+    for c in ref.columns:
         if c[0] == Clabel.input:
             if c[-1] == 'rrup':
                 # distances are messed up, let's just test they are
@@ -178,12 +182,21 @@ def test_magnitude_imt_trellis():
 
     ref = open_ref_hdf("trellis_vs_magnitude.hdf")
     assert len(ref) == len(dfr)
-    assert not set(ref.columns) ^ set(dfr.columns)
+    # columns if ref (legacy dataframe) are present in dfr (new one):
+    assert not set(ref.columns) - set(dfr.columns)
+    # code after sept 2025 adds new metadata to the dfr. Check it is actually
+    # metadata (starts with CLabel.input):
+    assert all(c[0] == Clabel.input for c in dfr.columns if c not in ref.columns)
 
     # Now compare trellis values:
-    for c in dfr.columns:
+    for c in ref.columns:
         if c[0] == Clabel.input:
-            assert (dfr[c] == ref[c]).all()  # noqa
+            if c[-1] == 'mag':
+                # legacy dataframe magnitude has some rounding problems,
+                # relax comparison conditions:
+                assert np.allclose(dfr[c], ref[c])
+            else:
+                assert (dfr[c] == ref[c]).all()  # noqa
             continue
 
         if all(_ for _ in c):  # columns denoting medians and sttdev
@@ -260,10 +273,14 @@ def test_magnitude_distance_spectra_trellis():
     ref = open_ref_hdf("trellis_spectra.hdf")
 
     assert len(ref) == len(dfr)
-    assert not set(ref.columns) ^ set(dfr.columns)  # noqa
+    # columns if ref (legacy dataframe) are present in dfr (new one):
+    assert not set(ref.columns) - set(dfr.columns)
+    # code after sept 2025 adds new metadata to the dfr. Check it is actually
+    # metadata (starts with CLabel.input):
+    assert all(c[0] == Clabel.input for c in dfr.columns if c not in ref.columns)
 
     # compare trellis values:
-    for c in dfr.columns:
+    for c in ref.columns:
         if c[0] == Clabel.input:
             assert (dfr[c] == ref[c]).all()  # noqa
             continue

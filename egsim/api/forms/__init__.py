@@ -210,7 +210,6 @@ class SHSRForm(EgsimBaseForm):
     latitude = FloatField(min_value=-90., max_value=90., required=False)
     longitude = FloatField(min_value=-180., max_value=180., required=False)
     regionalization = Field(required=False)  # Note: with a ModelChoiceField the
-
     # benefits of handling validation are outweighed by the fixes needed here and there
     # to make values JSON serializable, so we opt for a CharField + custom validation
     # in `clean_regionalization`

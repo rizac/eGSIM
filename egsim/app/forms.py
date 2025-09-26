@@ -41,12 +41,12 @@ class PredictionsVisualizeForm(PredictionsForm):
 
     def output(self) -> dict:
         dataframe = super().output()
-        dist_col_lbl_selector = (
-            Clabel.input,
-            ColumnType.distance.value,
-            slice(None)
-        )
-        dist_col = dataframe.loc[:, dist_col_lbl_selector].columns[0]
+        # dist_col_lbl_selector = (
+        #     Clabel.input,
+        #     ColumnType.distance.value,
+        #     slice(None)
+        # )
+        dist_col = (Clabel.input, ColumnType.distance.value, Clabel.rrup)
         mag_col = (Clabel.input, ColumnType.rupture.value, Clabel.mag)
         mag_label = mag_col[-1].title()
         dist_label = dist_col[-1].title()

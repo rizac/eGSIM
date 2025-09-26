@@ -63,6 +63,9 @@
 	<template v-else-if="currentPage==pages.imprint">
 	{% include "imprint.html" %}
 	</template>
+	<template v-else-if="currentPage==pages.api_doc">
+	{% include "api_doc.html" %}
+	</template>
 	<template v-else>
 	{% include "home.html" %}
 	</template>
