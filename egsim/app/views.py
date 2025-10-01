@@ -110,10 +110,10 @@ class GsimFromRegion(EgsimView):
                  data: dict,
                  files: Optional[dict] = None) -> HttpResponseBase:
         form = SHSRForm(data)
-        model_names = []
+        gm_models = []
         if form.is_valid():
-            model_names = sorted(form.get_region_selected_model_names())
-        return JsonResponse({'models': model_names}, status=200)
+            gm_models = form.get_region_selected_model_names()
+        return JsonResponse({'models': gm_models}, status=200)
 
 
 class PlotsImgDownloader(EgsimView):
@@ -543,22 +543,22 @@ def form2help(form: Union[EgsimBaseForm, Type[EgsimBaseForm]], compact=True) -> 
 
             if isinstance(f, FloatField):
                 if plural:
-                    extra_help = f'The values must all be numeric'
+                    extra_help = f'The values must be numeric'
                 else:
                     extra_help = f'The value must be numeric'
             elif isinstance(f, IntegerField):  # after FloatField
                 if plural:
-                    extra_help = f'The values must all be numeric integers'
+                    extra_help = f'The values must be numeric integers'
                 else:
                     extra_help = f'The value must be a numeric integer'
             elif isinstance(f, BooleanField):
                 if plural:
-                    extra_help = f'The values must all be true or false'
+                    extra_help = f'The values must be either true or false'
                 else:
                     extra_help = f'The value must be true or false'
             elif isinstance(f, CharField):
                 if plural:
-                    extra_help = f'The values must all be strings of text'
+                    extra_help = f'The values must be strings of text'
                 else:
                     extra_help = f'The value must be a string of text'
 

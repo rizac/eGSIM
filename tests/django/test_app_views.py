@@ -578,7 +578,7 @@ class Test:
             content_type="application/json"
         )
         assert response.status_code == 200
-        assert response.json()['models'] == ['ESHM20Craton']
+        assert response.json()['models'] == {'ESHM20Craton': ['global_stable']}
 
         # this view does not raise even when errors are provided:
         response = client.post(
@@ -587,4 +587,4 @@ class Test:
             content_type="application/json"
         )
         assert response.status_code == 200
-        assert response.json()['models'] == []
+        assert response.json()['models'] == {}
