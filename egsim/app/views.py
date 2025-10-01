@@ -75,9 +75,9 @@ if any(
                       "mess up requests performed on the page (error 404)")
 
 
-########################################################
-# Views functions/ classes (helpers / utilities below) #
-########################################################
+############################################
+# Django Views (helpers + utilities below) #
+############################################
 
 
 def main(request, page=''):
@@ -110,13 +110,14 @@ class GsimFromRegion(EgsimView):
                  data: dict,
                  files: Optional[dict] = None) -> HttpResponseBase:
         form = SHSRForm(data)
-        model_names = []
+        gm_models = []
         if form.is_valid():
-            model_names = sorted(form.get_region_selected_model_names())
-        return JsonResponse({'models': model_names}, status=200)
+            gm_models = form.get_region_selected_model_names()
+        return JsonResponse({'models': gm_models}, status=200)
 
 
 class PlotsImgDownloader(EgsimView):
+    """View returning the browser displayed plots in image format"""
 
     def response(self,
                  request: HttpRequest,
@@ -147,6 +148,7 @@ class PlotsImgDownloader(EgsimView):
 
 
 class PredictionsHtmlTutorial(EgsimView):
+    """View returning the HTML page(s) explaining predictions table structure"""
 
     def response(self,
                  request: HttpRequest,
@@ -172,6 +174,7 @@ class PredictionsHtmlTutorial(EgsimView):
 
 
 class ResidualsHtmlTutorial(EgsimView):
+    """View returning the HTML page(s) explaining residuals table structure"""
 
     def response(self,
                  request: HttpRequest,
@@ -253,7 +256,7 @@ def get_init_data_json(
             flatfiles.append({
                 'value': ffile.name,
                 'name': ffile.name,
-                'innerHTML': f'{ffile.name} ({ffile.display_name})',  # noqa
+                'innerHTML': get_display_name(ffile, extended=True),
                 'url': ffile.url,  # noqa
                 'columns': ff_form.output()['columns']
             })
@@ -380,15 +383,11 @@ def get_references(
     """Return the references of the data used by the program"""
     refs = {}
     for item in chain(db_regionalizations, db_flatfiles):
-        url = item.url
-        if not url:
-            url = item.doi
-            if url and not url.startswith('http'):
-                url = f'https://doi.org/{url}'
+        url = get_url(item)
         if not url:
             continue
-        name = item.display_name or item.name
-        refs[name] = url
+        refs[get_display_name(item)] = url
+
     return refs
 
 
@@ -407,15 +406,22 @@ def get_api_doc_data(
         'is case-insensitive)'
     )
 
+    # All APIs: replace https://... with anchor tags:
+    # DO THIS NOW before manipulating other refs and links (see below)
+    for form_params in (model_info_params, model_to_model_params, model_to_data_params):
+        for key in form_params:
+            form_params[key]['help'] = re.sub(
+                r"(https?\:\/\/.*?)\)",
+                r"<a target='_blank' href='\1'>\1</a>)",
+                form_params[key]['help']
+            )
+
     # API ModelToData: customize help text of parameter "model":
-    refs = [
-        _.url if _.url else f'https://doi.org/{_.doi}' if _.doi else ''
-        for _ in db_flatfiles
-    ]
-    refs = [f"<a target='_blank' href='{r}'>{r}</a>" for r in refs if r]
+
+    refs = get_hyperlink_text(db_flatfiles)
     if refs:
-        refs = list(set(refs))  # remove duplicates
-        refs = f'. For ref., see: {", ".join(refs)}'
+        refs = f'. For ref., see: {refs}'
+
     flatfile_help = (
         'The flatfile containing observed ground motion properties and intensity '
         'measures. If user-defined (file upload in CSV or HDF format), please consult '
@@ -425,14 +431,11 @@ def get_api_doc_data(
     model_to_data_params['flatfile']['help'] = flatfile_help
 
     # All APIs: customize help text of parameter "regionalization":
-    refs = [
-        _.url if _.url else f'https://doi.org/{_.doi}' if _.doi else ''
-        for _ in db_regionalizations
-    ]
-    refs = [f"<a target='_blank' href='{r}'>{r}</a>" for r in refs if r]
+
+    refs = get_hyperlink_text(db_regionalizations)
     if refs:
-        refs = list(set(refs))  # remove duplicates
-        refs = f'. For ref., see: {", ".join(refs)}'
+        refs = f'. For ref., see: {refs}'
+
     regionalizations_help = (
         'The regionalization to be used for searching the models selected for '
         'the given geographic location (parameters latitude and longitude). '
@@ -444,15 +447,6 @@ def get_api_doc_data(
     model_info_params['regionalization']['help'] = regionalizations_help
     model_to_model_params['regionalization']['help'] = regionalizations_help
     model_to_data_params['regionalization']['help'] = regionalizations_help
-
-    # All APIs: replace https://... with anchor tags:
-    for form_params in (model_info_params, model_to_model_params, model_to_data_params):
-        for key in form_params:
-            form_params[key]['help'] = re.sub(
-                r"(https?\:\/\/.*?)\)",
-                r"<a target='_blank' href='\1'>\1</a>)",
-                form_params[key]['help']
-            )
 
     # add format param:
     model_info_formats = list(GsimInfoView.supported_formats())
@@ -499,6 +493,47 @@ def get_api_doc_data(
     }
 
 
+def get_hyperlink_text(
+        db_objs: list[Union[models.Flatfile, models.Regionalization]],
+        sep=', '
+):
+    """
+    Return all references URL from the given objects, in a string containing
+    a series of anchor tags `<a ref='...'>` concatenated with `sep` (", " by default)
+    """
+    refs = {}
+    for db_obj in db_objs:
+        url = get_url(db_obj)
+        if not url:
+            continue
+        name = get_display_name(db_obj)
+        refs[name] = f"<a target='_blank' href='{url}'>{name}</a>"
+
+    if not refs:
+        return ""
+    return sep.join(refs[k] for k in sorted(refs))
+
+
+def get_display_name(
+        obj: Union[models.Flatfile, models.Regionalization],
+        extended=False
+) -> str:
+    """return the name from the given Database obj, assuring it is not empty (either
+    display_name or name, or, if extended is True (default: False) both of them"""
+    display_name = obj.display_name
+    name = obj.name
+    if not display_name:
+        return name
+    return f'{name} ({display_name})' if extended else display_name
+
+
+def get_url(obj: models.Reference) -> str:
+    """return the URL or the DOI url from the given Reference obj"""
+    if obj.url:
+        return obj.url
+    return f'https://doi.org/{obj.doi}' if obj.doi else ''
+
+
 def get_bbox(reg: models.Regionalization) -> list[float]:
     """Return the bounds of all the regions coordinates in the given regionalization
 
@@ -543,22 +578,22 @@ def form2help(form: Union[EgsimBaseForm, Type[EgsimBaseForm]], compact=True) -> 
 
             if isinstance(f, FloatField):
                 if plural:
-                    extra_help = f'The values must all be numeric'
+                    extra_help = f'The values must be numeric'
                 else:
                     extra_help = f'The value must be numeric'
             elif isinstance(f, IntegerField):  # after FloatField
                 if plural:
-                    extra_help = f'The values must all be numeric integers'
+                    extra_help = f'The values must be numeric integers'
                 else:
                     extra_help = f'The value must be a numeric integer'
             elif isinstance(f, BooleanField):
                 if plural:
-                    extra_help = f'The values must all be true or false'
+                    extra_help = f'The values must be either true or false'
                 else:
                     extra_help = f'The value must be true or false'
             elif isinstance(f, CharField):
                 if plural:
-                    extra_help = f'The values must all be strings of text'
+                    extra_help = f'The values must be strings of text'
                 else:
                     extra_help = f'The value must be a string of text'
 
