@@ -1,8 +1,5 @@
-/* This is an input[type=text] where the v-model is an array represented on the
-input as space space separated list (comma is also allowed)
-*/
 EGSIM.component('array-input', {
-	// input for numeric arrays
+	// <input> for numeric arrays, to be typed as space- or comma-separated numbers
 	props: {
 		'modelValue': { type: Array }, // <- this is the value of v-model
 		'placeholder': { type: String, default: "type values comma- or space-separated"}
@@ -45,8 +42,9 @@ EGSIM.component('array-input', {
 	}
 });
 
+
 EGSIM.component('array-div', {
-	// div including an array-input with the option to
+	// <div> including an array-input with the option to
 	// easily type linear or log evenly spaced numbers
 	props: {
 		modelValue: { type: Array },
@@ -148,7 +146,9 @@ EGSIM.component('array-div', {
 	}
 });
 
+
 EGSIM.component('gsim-select', {
+	// <div> including a <select> for the Ground motion models selection
 	props: {
 		modelValue: {type: Array},  // [NOTE: VUE model] Array of selected ground motion model names
 		models: {type: Array},  // [Note: Ground Motion models] Array of available models. Each model is an objects with keys: name, warning, imts
@@ -404,11 +404,8 @@ EGSIM.component('gsim-select', {
 });
 
 
-/**
- * HTML component representing the form element of IMTs and SA periods
- */
 EGSIM.component('imt-select', {
-	//https://vuejs.org/v2/guide/components-props.html#Prop-Types:
+	// <div> including a <select> for the intensity measure types selection
 	props: {
 		modelValue: { type: Array },  // [Vue model] Array of IMT names, with or without arguments
 		imts: { type: Array },  // input IMTs (without arguments, so 'SA', not 'SA(1.0)')
@@ -481,16 +478,17 @@ EGSIM.component('imt-select', {
 });
 
 
-/**
- * HTML component representing a map of regionalizations allowing models selection
- */
 EGSIM.component('gsim-map', {
+	// <div> that will be bound to a Leaflet Map for the Ground motion models selection
+	// on geographic location (based on a list of chosen regionalizations)
 	props: {
 		regionalizations: {type: Array},  // Array of Objects with keys name, bbox, url
 		regionSelectedUrl: {type: String}
 	},
 	data(){
-		return {map: null};  // leaflet map
+		return {
+			map: null  // leaflet map
+		};
 	},
 	emits: ['gsim-selected', 'gsim-unselected'],
 	template: `<div ref="mapDiv" style='cursor:pointer'></div>`,
@@ -640,10 +638,7 @@ EGSIM.component('gsim-map', {
 			}else if (latLng[1] < -180){
 				latLng[1] = 180 + (latLng[1] % 180)
 			}
-			// Destroy existing markers marker (or move existing one):
-			this.map.eachLayer((layer) => { if (layer instanceof L.Marker){ layer.remove(); }});
-			// ad new marker:
-			var marker = L.marker(latLng).addTo(this.map);
+
 			// query data:
 			var data = {
 				'latitude': latLng[0],
@@ -660,21 +655,97 @@ EGSIM.component('gsim-map', {
 				body: JSON.stringify(data),
 			}).then(response => {
 				return response.json();
-			}).then(json_data => {
-				let models = json_data.models;
-				if (models.length){
-					this.$emit('gsim-selected', models);
-					marker.on('click', e => {
-						this.$emit('gsim-unselected', models);
-						marker.remove();
-					});
+			}).then(jsonData => {
+				var popupApp = this.buildPopupVueApp(jsonData);
+				const container = document.createElement("div");
+				// container.className = 'd-flex flex-column';
+				popupApp.mount(container);
+
+				const popup = L.popup({ maxWidth: "auto" })
+					.setLatLng(latLng)
+					.setContent(container)
+					.openOn(this.map);
+
+				this.map.once("popupclose", () => {
+					popupApp.unmount();
+				});
+			});
+		},
+		buildPopupVueApp(jsonData){
+			var modelRegs = jsonData.models;  // model -> Array of regionalizations
+			var modelSelected = {};
+			for(var m of Object.keys(modelRegs)){
+				modelSelected[m] = true;
+			}
+			var regUrl = {};
+			for(var r of this.regionalizations){
+				regUrl[r.name] = r.url;
+			}
+			var parent = this;
+			return Vue.createApp({
+				data: () => ({ parent: parent, modelSelected: modelSelected, modelRegs: modelRegs, regUrl: regUrl }),
+				template: `
+				<div v-if='Object.keys(modelRegs).length < 1'>
+					<h6 class='text-nowrap mb-0'>No model applicable here</h6>
+				</div>
+				<div v-else class='d-flex flex-column gap-2'>
+					<h6 class='text-nowrap mb-0'>Models applicable here</h6>
+					<div style='max-height:33vh;overflow-y:auto;overflow-x:hidden'>
+					<table class="table-sm">
+						<tr class='border-bottom'>
+							<th>Name</th><th title='Name of the regionalization that is the source of the model assignment'>Source regionalization</th>
+						</tr>
+						<tr v-for="name in Object.keys(modelSelected)" :key="name">
+							<td>
+								<label class='text-nowrap'>
+									<input type="checkbox" v-model="modelSelected[name]" class='me-1'>{{ name }}
+								</label>
+							</td>
+							<td>
+								<div v-for="reg in modelRegs[name]" class='text-nowrap'>
+									<template v-if="regUrl[reg]" >
+										<a target="_blank" href="regUrl[reg]"
+											:title="reg + ' (click for ref. in new browser tab)'">
+											 {{ reg }} <i class="fa fa-external-link"></i>
+										</a>
+									</template><template v-else>
+									{{ reg }}
+									</template>
+								</div>
+							</td>
+						</tr>
+					</table>
+					</div>
+					<div class='d-flex flex-row gap-2 pt-2 border-top justify-content-center'>
+						<button type='button' :disabled="!Object.keys(modelSelected).some(m => modelSelected[m])"
+							class='btn btn-primary btn-sm' @click="selectAll">
+							Select
+						</button>
+						<button type='button' :disabled="!Object.keys(modelSelected).some(m => modelSelected[m])"
+							class='btn btn-primary btn-sm' @click="deselectAll">
+							Deselect
+						</button>
+					</div>
+				</div>
+				`,
+				methods: {
+					selectAll() {
+						this.parent.$emit("gsim-selected", Object.keys(this.modelSelected).
+							filter(m => this.modelSelected[m]));
+					},
+					deselectAll() {
+						this.parent.$emit("gsim-unselected", Object.keys(this.modelSelected).
+							filter(m => this.modelSelected[m]));
+					}
 				}
 			});
 		}
 	}
 })
 
+
 EGSIM.component('flatfile-select', {
+	// <div> including a <select> for the Flatfiles selection
 	props: {
 		flatfiles: {type: Array},  // Array of Objet with keys value (str or File), key, innerHTML, url, columns
 		modelValue: {type: [String, File], default: null},
