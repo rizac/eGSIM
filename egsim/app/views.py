@@ -403,8 +403,9 @@ def get_api_doc_data(
 
     # API ModelInfo: customize help text of parameter "model":
     model_info_params['gsim']['help'] = (
-        'A string of text to be used for search and return the matching models (search '
-        'is case-insensitive)'
+        'The input model(s). Input a string of text to be used to return the matching '
+        'models (the search is case-insensitive). The OpenQuake model names generally '
+        'follow the format [AuthorYearAdditionalInformation]'
     )
 
     # All APIs: replace https://... with anchor tags:
@@ -421,33 +422,29 @@ def get_api_doc_data(
 
     refs = get_hyperlink_text(db_flatfiles)
     if refs:
-        refs = f'. For ref., see: {refs}'
+        refs = f'. References: {refs}'
 
     flatfile_help = (
-        'The flatfile containing observed ground motion properties and intensity '
-        'measures. If user-defined (file upload in CSV or HDF format), please consult '
-        'the Python notebook examples or the GUI. When predefined, the value must be '
-        f'chosen from: {", ".join(_.name for _ in db_flatfiles)}{refs}'
+        'When user-defined, it must be uploaded with the request. When pre-defined, '
+        f'the value must be chosen from: {", ".join(_.name for _ in db_flatfiles)}. '
+        f'For a correct usage, please consult the Python notebook examples or the GUI'
+        f'{refs}'
     )
-    model_to_data_params['flatfile']['help'] = flatfile_help
+    model_to_data_params['flatfile']['help'] += f". {flatfile_help}"
 
     # All APIs: customize help text of parameter "regionalization":
 
     refs = get_hyperlink_text(db_regionalizations)
     if refs:
-        refs = f'. For ref., see: {refs}'
+        refs = f'. References: {refs}'
 
     regionalizations_help = (
-        'The regionalization to be used for searching the models selected for '
-        'the given geographic location (parameters latitude and longitude). '
-        'If no geographic location is provided, this '
-        'parameter is ignored. Values can be one or more string of texts to be '
-        f'chosen from {", ".join(_.name for _ in db_regionalizations)}. If missing, '
-        f'all regionalizations are used{refs}'
+        'Values can be one or more string of texts to be '
+        f'chosen from {", ".join(_.name for _ in db_regionalizations)}{refs}'
     )
-    model_info_params['regionalization']['help'] = regionalizations_help
-    model_to_model_params['regionalization']['help'] = regionalizations_help
-    model_to_data_params['regionalization']['help'] = regionalizations_help
+    model_info_params['regionalization']['help'] += regionalizations_help
+    model_to_model_params['regionalization']['help'] += regionalizations_help
+    model_to_data_params['regionalization']['help'] += regionalizations_help
 
     # add format param:
     model_info_formats = list(GsimInfoView.supported_formats())

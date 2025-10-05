@@ -36,7 +36,7 @@ class FlatfileForm(EgsimBaseForm):
 
     # Custom API param names (see doc of `EgsimBaseForm._field2params` for details):
     _field2params: dict[str, tuple[str]] = {
-        'selexpr': ('flatfile-query', 'data-query', 'selection-expression'),
+        'selexpr': ('flatfile-query', 'data-query'),
         'flatfile': ('flatfile', 'data')
     }
     flatfile = CharField(

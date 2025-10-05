@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from django.db.models import QuerySet
-from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib.imt import IMT
 from typing import Any
 
@@ -209,9 +208,30 @@ class GsimForm(EgsimBaseForm):
 
     # Set simple Fields and perform validation in `clean_gsim` and `clean_imt`:
     gsim = Field(required=False, help_text="Ground shaking intensity Model(s)")
-    latitude = FloatField(min_value=-90., max_value=90., required=False)
-    longitude = FloatField(min_value=-180., max_value=180., required=False)
-    regionalization = Field(required=False)
+    latitude = FloatField(min_value=-90., max_value=90., required=False,
+                          help_text="The latitude of the geographic location for "
+                                    "model selection. This parameter is mandatory "
+                                    "if no model name is provided, otherwise is "
+                                    "optional. See also parameter regionalization "
+                                    "to configure which regionalizations will be used"
+                          )
+    longitude = FloatField(min_value=-180., max_value=180., required=False,
+                           help_text="The longitude of the geographic location for "
+                                     "model selection. This parameter is mandatory "
+                                     "if no model name is provided, otherwise is "
+                                     "optional. See also parameter regionalization "
+                                     "to configure which regionalizations will be used"
+                           )
+    regionalization = Field(required=False,
+                            help_text='The regionalization(s) to be used for searching '
+                                      'the models applicable on the given geographic '
+                                      'location (parameters latitude and longitude). '
+                                      'Each regionalization is a mapping of regions and '
+                                      'models applicable on that region. '
+                                      'If no geographic location is provided, this '
+                                      'parameter is ignored. With geographic location '
+                                      'provided, it defaults to all implemented '
+                                      'regionalizations if missing')
     # Note above: do not use ModelChoiceField (overkill), validate in self.validate_gsim
 
     def clean(self) -> dict:
