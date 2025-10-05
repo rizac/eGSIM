@@ -17,7 +17,7 @@ from django.conf import settings
 from ..api import models
 from ..api.forms.flatfile import (FlatfileMetadataInfoForm,
                                   FlatfileValidationForm)
-from ..api.forms import APIForm, EgsimBaseForm, SHSRForm, GsimInfoForm
+from ..api.forms import APIForm, EgsimBaseForm, GsimForm, GsimInfoForm
 from ..api.forms.residuals import ResidualsForm
 from ..api.forms.scenarios import PredictionsForm, ArrayField
 from ..api.urls import MODEL_INFO_URL_PATH, RESIDUALS_URL_PATH, PREDICTIONS_URL_PATH
@@ -109,10 +109,11 @@ class GsimFromRegion(EgsimView):
                  request: HttpRequest,
                  data: dict,
                  files: Optional[dict] = None) -> HttpResponseBase:
-        form = SHSRForm(data)
-        gm_models = []
+        form = GsimForm(data)
         if form.is_valid():
-            gm_models = form.get_region_selected_model_names()
+            gm_models = form.cleaned_data['regionalization']
+        else:
+            gm_models = {}
         return JsonResponse({'models': gm_models}, status=200)
 
 

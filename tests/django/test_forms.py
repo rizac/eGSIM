@@ -13,7 +13,7 @@ import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
 from openquake.hazardlib import imt
 
-from egsim.api.forms import (GsimImtForm, EgsimBaseForm, split_pars, SHSRForm)
+from egsim.api.forms import (GsimImtForm, EgsimBaseForm, split_pars, GsimForm)
 from egsim.api.forms.flatfile import FlatfileForm, FlatfileValidationForm, sa_hr_help
 from egsim.api.forms.scenarios import PredictionsForm
 from egsim.smtk import read_flatfile
@@ -317,20 +317,23 @@ class Test:
         assert not is_valid
 
     def test_get_gsim_from_region(self):
-        form = SHSRForm({'lat': 50, 'lon': 7})
+        form = GsimForm({'lat': 50, 'lon': 7})
         assert form.is_valid()
-        models = form.get_region_selected_model_names()
+        models = form.cleaned_data['regionalization']
         assert len(models) == 12
 
         for reg in ['share', ['share']]:  # test string == single string item list
-            form = SHSRForm({'lat': 50, 'lon': 7, 'regionalization': reg})
+            form = GsimForm({'lat': 50, 'lon': 7, 'regionalization': reg})
             assert form.is_valid()
-            models = form.get_region_selected_model_names()
+            models = form.cleaned_data['regionalization']
             assert len(models) == 5
 
-        form = SHSRForm({'lat': 51, 'lon': 10, 'regionalization': ['germany']})
+        form = GsimForm({'lat': 51, 'lon': 10, 'regionalization': ['.\n..???.u6asd']})
+        assert not form.is_valid()
+
+        form = GsimForm({'lat': 51, 'lon': 10, 'regionalization': ['germany']})
         assert form.is_valid()
-        models = form.get_region_selected_model_names()
+        models = form.cleaned_data['regionalization']
         assert len(models) == 5
 
 

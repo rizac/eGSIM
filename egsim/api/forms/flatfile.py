@@ -168,9 +168,10 @@ class FlatfileMetadataInfoForm(GsimForm, APIForm):
     of models"""
 
     def clean(self):
+        cleaned_data = super().clean()
         unique_imts = FlatfileMetadata.get_intensity_measures()
 
-        for m_name, model in self.cleaned_data['gsim'].items():
+        for m_name, model in cleaned_data['gsim'].items():
             imts = intensity_measures_defined_for(model)
             unique_imts &= set(imts)
             if not unique_imts:
@@ -179,7 +180,7 @@ class FlatfileMetadataInfoForm(GsimForm, APIForm):
         if 'SA' in unique_imts:
             inf = float('inf')
             min_p, max_p = -inf, inf
-            for m_name, model in self.cleaned_data['gsim'].items():
+            for m_name, model in cleaned_data['gsim'].items():
                 p_bounds = get_sa_limits(model)
                 if p_bounds is None:
                     # FIXME: we assume a model supporting SA with no period limits
@@ -190,13 +191,13 @@ class FlatfileMetadataInfoForm(GsimForm, APIForm):
             if min_p > max_p:
                 unique_imts -= {'SA'}
             elif -inf < min_p <= max_p < inf:
-                self.cleaned_data['sa_period_limits'] = [min_p, max_p]
+                cleaned_data['sa_period_limits'] = [min_p, max_p]
 
         if not unique_imts:
             self.add_error('gsim', 'No intensity measure defined for all models')
 
-        self.cleaned_data['imt'] = sorted(unique_imts)
-        return self.cleaned_data
+        cleaned_data['imt'] = sorted(unique_imts)
+        return cleaned_data
 
     def output(self) -> dict:
         """Compute and return the output from the input data (`self.cleaned_data`).

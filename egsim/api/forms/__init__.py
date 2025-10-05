@@ -196,102 +196,72 @@ class EgsimBaseForm(Form):
         return field,  # <- tuple!
 
 
-class SHSRForm(EgsimBaseForm):
-    """Base class for all Form accepting a list of models in form of location
-    (lat lon) and optional list of seismic hazard source regionalizations (SHSR)"""
-
-    # Custom API param names (see doc of `EgsimBaseForm._field2params` for details):
-    _field2params: dict[str, tuple[str]] = {
-        'latitude': ('latitude', 'lat'),
-        'longitude': ('longitude', 'lon'),
-        'regionalization': ('regionalization', 'shsr')
-    }
-
-    latitude = FloatField(min_value=-90., max_value=90., required=False)
-    longitude = FloatField(min_value=-180., max_value=180., required=False)
-    regionalization = Field(required=False)  # Note: with a ModelChoiceField the
-    # benefits of handling validation are outweighed by the fixes needed here and there
-    # to make values JSON serializable, so we opt for a CharField + custom validation
-    # in `clean_regionalization`
-
-    def clean_regionalization(self) -> QuerySet[models.Regionalization]:
-        """Custom gsim clean.
-        The return value will replace self.cleaned_data['gsim']
-        """
-        reg_objs = models.Regionalization.queryset('name')
-        value = self.cleaned_data.get('regionalization', None)
-        if isinstance(value, str):
-            value = [value]
-        if value:
-            reg_objs = reg_objs.filter(name__in=value)
-        return reg_objs
-
-    def get_region_selected_model_names(self) -> dict[str, list[str]]:
-        """Get the ground motion model names from the chosen regionalization(s),
-        lat and lon. This method should be invoked only if `self.is_valid()` returns
-        True (form successfully validated).
-        Empty / not provided `lat` ar `lon` will return an empty dict,
-        empty not provided regionalizations will default to all implemented ones.
-        The returned dict keys are ground motion models, mapped to the hazard source
-        regionalizations they were defined for (e.g. {'CauzziEtAl2014: ['share']})
-        """
-        gsims = {}
-        cleaned_data = self.cleaned_data
-        lon = cleaned_data.get('longitude')
-        lat = cleaned_data.get('latitude')
-        if lat is None or lon is None:
-            return gsims
-        point = Point(lon, lat)
-        for reg_obj in self.cleaned_data['regionalization']:  # see clean_regionalization
-            reg_name = reg_obj.name
-            feat_collection = reg_obj.read_from_filepath()
-            for feat in feat_collection['features']:
-                geometry, reg_models = feat['geometry'], feat['properties']['models']
-                reg_models = [r for r in reg_models if reg_name not in gsims.get(r, [])]
-                # if we already have all models, skip check:
-                if not reg_models:
-                    continue
-                if shape(geometry).contains(point):
-                    for model in reg_models:
-                        gsims.setdefault(model, []).append(reg_name)
-        return gsims
-
-
-class GsimForm(SHSRForm):
+class GsimForm(EgsimBaseForm):
     """Base abstract-like form for any form requiring Gsim selection"""
 
     # Custom API param names (see doc of `EgsimBaseForm._field2params` for details):
-    _field2params: dict[str, list[str]] = {'gsim': ('model', 'gsim', 'gmm')}
+    _field2params: dict[str, list[str]] = {
+        'gsim': ('model', 'gsim', 'gmm'),
+        'latitude': ('latitude', 'lat'),
+        'longitude': ('longitude', 'lon'),
+        # 'regionalization': ('regionalization', 'shsr')
+    }
 
     # Set simple Fields and perform validation in `clean_gsim` and `clean_imt`:
     gsim = Field(required=False, help_text="Ground shaking intensity Model(s)")
+    latitude = FloatField(min_value=-90., max_value=90., required=False)
+    longitude = FloatField(min_value=-180., max_value=180., required=False)
+    regionalization = Field(required=False)
+    # Note above: do not use ModelChoiceField (overkill), validate in self.validate_gsim
 
-    def clean_gsim(self) -> dict[str, GMPE]:
-        """Custom gsim clean.
-        The return value will replace self.cleaned_data['gsim']
+    def clean(self) -> dict:
         """
+        Custom clean handling gsim clean depending on other fields. Populates:
+            cleaned_data['gsim'] with a dict[str, GMPE]
+        and optionally (if lat, lon or regionalization has been selected):
+            cleaned_data['regionalization'] wih a dict[str, list[str]] (model name mapped
+            to the list of matching regionalization names)
+        """
+        cleaned_data = super().clean()
         key = 'gsim'
-        if (
-                self.cleaned_data.get('longitude') is None and
-                self.cleaned_data.get('longitude') is None and
-                self.cleaned_data.get(key) is None
-        ):
+        lat = cleaned_data.get('latitude')
+        lon = cleaned_data.get('longitude')
+        if lat is None and lon is None and cleaned_data.get(key) is None:
             self.add_error(
                 key,
                 f"{self.ErrMsg.required}. It can be omitted only if both latitude "
                 f"and longitude parameters are provided"
             )
-            return {}
+            return cleaned_data
 
-        value = self.to_list(self.cleaned_data.get(key))
-        value.extend(m for m in self.get_region_selected_model_names() if m not in value)
-        ret = {}
-        if value:
+        models_list = self.to_list(cleaned_data.get(key))
+
+        r_key = 'regionalization'
+        if lat is None or lon is None:
+            cleaned_data[r_key] = {}
+        else:
             try:
-                ret = harmonize_input_gsims(value)
+                cleaned_data[r_key] = get_region_selected_model_names(
+                    lat, lon, cleaned_data.get(r_key)
+                )
+                # add region-selected models that are not already in value
+                models_list.extend(
+                    m for m in cleaned_data[r_key] if m not in models_list
+                )
+            except ValueError as verr:
+                self.add_error(
+                    'regionalization', self.ErrMsg.invalid_choice + f': {verr}'
+                )
+                return cleaned_data
+
+        models = {}
+        if models_list:
+            try:
+                models = harmonize_input_gsims(models_list)
             except ModelError as err:
                 self.add_error(key, f'invalid model(s) {str(err)}')
-        return ret
+        cleaned_data[key] = models
+        return cleaned_data
 
     @staticmethod
     def to_list(value) -> list:
@@ -302,6 +272,53 @@ class GsimForm(SHSRForm):
         if type(value) is not list:
             value = [value]
         return value
+
+
+def get_region_selected_model_names(
+        lat: float, lon: float, reg_names=None
+) -> dict[str, list[str]]:
+    """Get the ground motion model names from the chosen regionalization(s),
+    lat and lon. This method should be invoked only if `self.is_valid()` returns
+    True (form successfully validated).
+    Empty / not provided `lat` ar `lon` will return an empty dict,
+    empty not provided regionalizations will default to all implemented ones.
+    The returned dict keys are ground motion models, mapped to the hazard source
+    regionalizations they were defined for (e.g. {'CauzziEtAl2014: ['share']})
+
+    :param reg_names: sequence of strings or None, indicating the names of the
+        regionalizations to use None (the default) will use all regionalizations
+    """
+    gsims = {}
+    point = Point(lon, lat)
+    for reg_obj in get_regionalizations(reg_names):
+        reg_name = reg_obj.name
+        feat_collection = reg_obj.read_from_filepath()
+        for feat in feat_collection['features']:
+            geometry, reg_models = feat['geometry'], feat['properties']['models']
+            reg_models = [r for r in reg_models if reg_name not in gsims.get(r, [])]
+            # if we already have all models, skip check:
+            if not reg_models:
+                continue
+            if shape(geometry).contains(point):
+                for model in reg_models:
+                    gsims.setdefault(model, []).append(reg_name)
+    return gsims
+
+
+def get_regionalizations(names=None) -> QuerySet[models.Regionalization]:
+    """Custom regionalization clean. Not called bu Django but from clean_gsim
+
+    :param names: sequence of strings or None, indicating the names of the
+        regionalizations to use. None (the default) willl use all regionalizations
+    """
+    reg_objs = models.Regionalization.queryset('name', 'filepath')
+    names = GsimForm.to_list(names)
+    if names:
+        reg_objs = reg_objs.filter(name__in=names)
+        invalid_names = set(names) - set(x.name for x in reg_objs)
+        if invalid_names:
+            raise ValueError(", ".join(invalid_names))
+    return reg_objs
 
 
 class GsimImtForm(GsimForm):
@@ -371,28 +388,31 @@ class GsimInfoForm(GsimForm, APIForm):
 
     _field2params: dict[str, list[str]] = {'gsim': ('name', 'model')}
 
-    def clean_gsim(self) -> dict[str, GMPE]:
-        """Custom gsim clean. Relaxes model matching to allow partially typed,
+    def clean_gsim(self) -> list[str]:
+        """Pre-process the gsim given as input before calling super.clean,
+        by relaxing model matching to allow partially typed,
         case-insensitive names, eventually calling the super method.
         The return value will replace self.cleaned_data['gsim']
         """
         key = 'gsim'
-        gmms = self.to_list(self.cleaned_data.get(key))
-        if gmms:
-            registered_gmms = {m.lower(): m for m in models.Gsim.names()}
-            new_gmms = []
-            for gmm in gmms:
-                gmm_l = gmm.lower()
-                if gmm_l in registered_gmms:
-                    new_gmms.append(registered_gmms[gmm_l])
+        value = self.cleaned_data[key]
+        if not value:
+            # as None usually indicated missing values, return the value as it is so
+            # further validation can rely on this:
+            return value
+        new_gmms = []
+        registered_gmms = {m.lower(): m for m in models.Gsim.names()}
+        for gmm in self.to_list(self.cleaned_data[key]):
+            gmm_l = gmm.lower()
+            if gmm_l in registered_gmms:
+                new_gmms.append(registered_gmms[gmm_l])
+            else:
+                matches = [v for k, v in registered_gmms.items() if gmm.lower() in k]
+                if matches:
+                    new_gmms.extend(matches)
                 else:
-                    matches = [v for k, v in registered_gmms.items() if gmm.lower() in k]
-                    if matches:
-                        new_gmms.extend(matches)
-                    else:
-                        new_gmms.append(gmm)
-            self.cleaned_data[key] = new_gmms
-        return super().clean_gsim()
+                    new_gmms.append(gmm)
+        return new_gmms
 
     def output(self) -> dict:
         """Compute and return the output from the input data (`self.cleaned_data`).
@@ -400,17 +420,17 @@ class GsimInfoForm(GsimForm, APIForm):
 
         :return: any Python object (e.g., a JSON-serializable dict)
         """
-        hazard_source_models = self.get_region_selected_model_names()
+        hazard_source_models = self.cleaned_data['regionalization']
         ret = {}
-        for gmm in self.cleaned_data['gsim']:
-            doc, imts, gmp, sa_limits = gsim_info(gmm)
+        for gmm_name, gmm in self.cleaned_data['gsim'].items():
+            doc, imts, gm_props, sa_limits = gsim_info(gmm)
             # ground motion properties:
-            gmp = {p: FlatfileMetadata.get_help(p) for p in gmp}
+            gm_props = {p: FlatfileMetadata.get_help(p) for p in gm_props}
             # remove unnecessary flatfile-related info (everything after 1st paragraph)
             # and also jsonify the string (replace " with ''):
-            gmp = {
+            gm_props = {
                 k: split_pars(v)[0].strip().removesuffix(".").replace('"', "''")
-                for k, v in gmp.items()
+                for k, v in gm_props.items()
             }
             # pretty print doc (removing all newlines, double quotes, etc.):
             doc = " ".join(
@@ -421,12 +441,12 @@ class GsimInfoForm(GsimForm, APIForm):
             # pretty print imts and add sa_)limits to it:
             imts = ['SA(PERIOD_IN_S)' if i == 'SA' else i for i in imts]
 
-            ret[gmm] = {
+            ret[gmm_name] = {
                 'description': doc,
                 'defined_for': imts,
-                'requires': gmp,
+                'requires': gm_props,
                 'sa_period_limits': sa_limits,
-                'hazard_source_models': hazard_source_models.get(gmm)
+                'hazard_source_models': hazard_source_models.get(gmm_name)
             }
         return ret
 
