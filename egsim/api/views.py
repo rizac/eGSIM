@@ -236,6 +236,8 @@ class APIFormView(EgsimView):
     # The APIForm of this view, to be set in subclasses:
     formclass: Type[APIForm] = None
 
+    default_format: str = 'json'
+
     def response(self,
                  request: HttpRequest,
                  data: dict,
@@ -245,7 +247,7 @@ class APIFormView(EgsimView):
         (`self.formclass(...).output()`) serialized into the appropriate bytes sequence
         according to the 'format' parameter in 'data'.
         """
-        rformat = data.pop('format', 'json')
+        rformat = data.pop('format', self.default_format)
         try:
             response_function = self.supported_formats()[rformat]
         except KeyError:
@@ -287,6 +289,8 @@ class GsimInfoView(APIFormView):
 class SmtkView(APIFormView):
     """APIFormView for smtk (strong motion toolkit) output (e.g. Predictions or
     Residuals, set in the `formclass` class attribute"""
+
+    default_format: str = 'hdf'
 
     def response(self,
                  request: HttpRequest,

@@ -223,15 +223,13 @@ class GsimForm(EgsimBaseForm):
                                      "to configure which regionalizations will be used"
                            )
     regionalization = Field(required=False,
-                            help_text='The regionalization(s) to be used for searching '
-                                      'the models applicable on the given geographic '
+                            help_text='The regionalization(s) (mappings from region to '
+                                      'model) to be used for searching the models '
+                                      'applicable on the given geographic '
                                       'location (parameters latitude and longitude). '
-                                      'Each regionalization is a mapping of regions and '
-                                      'models applicable on that region. '
                                       'If no geographic location is provided, this '
-                                      'parameter is ignored. With geographic location '
-                                      'provided, it defaults to all implemented '
-                                      'regionalizations if missing')
+                                      'parameter is ignored. If missing, all '
+                                      'implemented regionalizations will be used')
     # Note above: do not use ModelChoiceField (overkill), validate in self.validate_gsim
 
     def clean(self) -> dict:

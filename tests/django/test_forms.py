@@ -383,12 +383,12 @@ def test_field2params_in_forms():
 
 def test_trellis_rupture_site_fields():
 
-    form_rupture_fields = set(PredictionsForm().rupture_fields)
+    form_rupture_fields = set(PredictionsForm.rupture_fieldnames)
     rup_fields = RuptureProperties.__annotations__
     missing = set(rup_fields) - form_rupture_fields
     assert sorted(missing) == ['tectonic_region']
 
-    form_site_fields = set(PredictionsForm().site_fields)
+    form_site_fields = set(PredictionsForm.site_fieldnames)
     site_fields = SiteProperties.__annotations__
     missing = set(site_fields) - form_site_fields
     assert sorted(missing) == ['distance_type', 'origin_point', 'xvf']

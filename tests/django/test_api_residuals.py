@@ -244,7 +244,8 @@ class Test:
             'model': 'BindiEtAl2017Rhypo',
             'imt': 'PGA',
             'flatfile': csv,
-            'multi_header': True
+            'multi_header': True,
+            'format': 'json'
         }
         resp2 = client.post(self.url, data=inputdic2)
         assert resp2.status_code == 200
@@ -259,7 +260,8 @@ class Test:
             'model': ['BindiEtAl2014Rjb', 'BooreEtAl2014'],
             'imt': ['PGA', 'SA(1.0)'],
             'flatfile': csv,
-            'multi_header': True
+            'multi_header': True,
+            'format': 'json'
         }
         resp2 = client.post(self.url, data=inputdic2)
         assert resp2.status_code == 200
@@ -284,7 +286,7 @@ class Test:
         # test conflicting values:
         resp1 = client.get(self.querystring({
             **inputdic,
-            'selection-expression': '(vs30 > 800) & (vs30 < 1200)',
+            'flatfile-query': '(vs30 > 800) & (vs30 < 1200)',
             'data-query': '(vs30 > 1000) & (vs30 < 1010)'
         }))
         assert resp1.status_code == 400
@@ -310,6 +312,7 @@ class Test:
         with open(self.request_filepath) as _:
             inputdic = yaml.safe_load(_)
         inputdic['data-query'] = '(vs30 >= 1000) & (mag>=7)'
+        inputdic['format'] = 'json'
 
         resp2 = client.post(self.url, data=inputdic,
                             content_type='application/json')
@@ -446,14 +449,15 @@ class Test:
             inputdic = yaml.safe_load(_)
         inputdic['data-query'] = '(vs30 >= 1000) & (mag>=7)'
         inputdic['ranking'] = True
+        inputdic['format'] = 'json'
 
         resp2 = client.post(self.url, data=inputdic,
                             content_type='application/json')
         resp1 = client.get(self.querystring(inputdic))
         assert resp1.status_code == 200
         assert resp1.json() == resp2.json()
+        resp_json = resp1.json()
 
-        resp_json = None
         for format in [None, 'csv', 'hdf']:
             if format is None:
                 inputdic.pop('format', None)
@@ -465,9 +469,6 @@ class Test:
             resp2 = client.post(
                 self.url, data=inputdic, content_type='application/json')
             assert resp2.status_code == 200
-            if format is None:
-                resp_json = resp2.json()
-                continue
 
             content = resp2.getvalue()
             # if prev_content is None:

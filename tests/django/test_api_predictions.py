@@ -53,8 +53,8 @@ class Test:
             inputdic = dict(yaml.safe_load(_))
 
         # and from now on,
-        resp1 = client.get(self.querystring(inputdic))
-        resp2 = client.post(self.url, data=inputdic,
+        resp1 = client.get(self.querystring(inputdic | {'format': 'json'}))
+        resp2 = client.post(self.url, data=inputdic | {'format': 'json'},
                             content_type=MimeType.json)
         assert resp1.status_code == resp2.status_code == 200
         result = resp1.json()
@@ -108,7 +108,7 @@ class Test:
         inputdic['format'] = 'hdf'
 
         # test the hdf response:
-        resp = client.post(self.url, data=dict(inputdic, format="hdf"),
+        resp = client.post(self.url, data=inputdic,
                            content_type=MimeType.json)
         assert resp.status_code == 200
         result_hdf = read_df_from_hdf_stream(BytesIO(b''.join(resp.streaming_content)))

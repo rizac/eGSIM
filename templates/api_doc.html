@@ -50,21 +50,24 @@
 	{% for title, service in api_doc.items %}
 		<h3 class='mt-3'>{{ title }}</h3>
 
-		<p>Response format(s): {{ service.response_format }}</p>
+		<p>Response data format(s): {{ service.response_format }}</p>
 		<p>Request URL: <a href='{{ service.url_path }}' target='_blank'>{{ service.url_path }}</a></p>
 		<p>Request type: {{ service.type }}</p>
 		<p>Request parameters:</p>
 
 		<table class='table border'>
 			<tr>
-				<th class='bg-success-subtle'>Name(s)</th><th class='bg-success-subtle'>Description</th>
-				{% for name, val in service.params.items %}
-					<tr>
-						<th>{{ val.names|join:", " }}</th>
-						<td>{{ val.help | safe }}</td>
-					</tr>
-				{% endfor %}
-			</td>
+				<th class='bg-success-subtle'>Name(s)</th>
+				<th class='bg-success-subtle'>Default value</th>
+				<th class='bg-success-subtle'>Description</th>
+			</tr>
+			{% for name, val in service.params.items %}
+				<tr>
+					<td>{{ val.names|join:", " }}</td>
+					<td class='text-nowrap'>{{ val.default_value }}</td>
+					<td>{{ val.help | safe }}</td>
+				</tr>
+			{% endfor %}
 		</table>
 	{% endfor %}
 

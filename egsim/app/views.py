@@ -7,7 +7,6 @@ from os.path import splitext
 from typing import Optional, Union, Type
 import re
 
-from django.forms import IntegerField, BooleanField, CharField, FloatField
 from shapely.geometry import shape
 
 from django.http import FileResponse, HttpResponseBase, HttpRequest, JsonResponse
@@ -19,7 +18,7 @@ from ..api.forms.flatfile import (FlatfileMetadataInfoForm,
                                   FlatfileValidationForm)
 from ..api.forms import APIForm, EgsimBaseForm, GsimForm, GsimInfoForm
 from ..api.forms.residuals import ResidualsForm
-from ..api.forms.scenarios import PredictionsForm, ArrayField
+from ..api.forms.scenarios import PredictionsForm
 from ..api.urls import MODEL_INFO_URL_PATH, RESIDUALS_URL_PATH, PREDICTIONS_URL_PATH
 from ..api.views import MimeType, EgsimView, GsimInfoView, PredictionsView, ResidualsView
 from .forms import PredictionsVisualizeForm, FlatfileVisualizeForm
@@ -86,6 +85,7 @@ def main(request, page=''):
     flatfiles = list(models.Flatfile.queryset())
     init_data = get_init_data_json(regionalizations, flatfiles, settings.DEBUG)
     init_data['currentPage'] = page or URLS.WEBPAGE_HOME
+    mf = init_data['gsims']
     return render(
         request,
         template_name='egsim.html',
@@ -96,7 +96,9 @@ def main(request, page=''):
             'oq_gmm_refs_page': oq_gmm_refs_page,
             'references': get_references(regionalizations, flatfiles),
             'api_doc': get_api_doc_data(
-                regionalizations, flatfiles, f'{request.scheme}://{request.get_host()}'
+                regionalizations, flatfiles, f'{request.scheme}://{request.get_host()}',
+                len(init_data['gsims']),
+                sorted(set(i for imts in init_data['imt_groups'] for i in imts))
             )
         }
     )
@@ -395,7 +397,9 @@ def get_references(
 def get_api_doc_data(
         db_regionalizations: list[models.Regionalization],
         db_flatfiles: list[models.Flatfile],
-        url_host
+        url_host,
+        models:int,
+        imts: set[str]
 ):
     model_info_params = form2help(GsimInfoForm, compact=False)
     model_to_model_params = form2help(PredictionsForm, compact=False)
@@ -403,14 +407,35 @@ def get_api_doc_data(
 
     # API ModelInfo: customize help text of parameter "model":
     model_info_params['gsim']['help'] = (
-        'The input model(s). Input a string of text to be used to return the matching '
-        'models (the search is case-insensitive). The OpenQuake model names generally '
-        'follow the format [AuthorYearAdditionalInformation]'
+        'The input model(s). For any inpout value, any model whose name contains '
+        '(case-insensitive search) the value is used. The model names are usually '
+        'formatted as [AuthorYearAdditionalInformation]'
     )
+
+    model_to_model_params['z1pt0']['default_value'] = '(inferred)'
+    model_to_model_params['z2pt5']['default_value'] = '(inferred)'
+    model_to_model_params['magnitude']['help'] += \
+        f'. See also {", ".join(PredictionsForm.rupture_fieldnames)} ' \
+        f'(Rupture configuration parameters, applied to all created Ruptures)'
+    model_to_model_params['distance']['help'] += \
+        f'. See also {", ".join(PredictionsForm.site_fieldnames)} ' \
+        f'(Site configuration parameters, applied to all created Site)'
+
+    gsim_suffix = f'. ({models} models available)'
+    model_to_model_params['gsim']['help'] += gsim_suffix
+    model_to_data_params['gsim']['help'] += gsim_suffix
+
+    imts_suffix = f'. Values can be chosen from {", ".join(imts)} ' \
+                  f'(SA must be typed with its period, in seconds, ' \
+                  f'e.g. SA(0.1))'
+    model_to_model_params['imt']['help'] += imts_suffix
+    model_to_data_params['imt']['help'] += imts_suffix
+
+    all_params = (model_info_params, model_to_model_params, model_to_data_params)
 
     # All APIs: replace https://... with anchor tags:
     # DO THIS NOW before manipulating other refs and links (see below)
-    for form_params in (model_info_params, model_to_model_params, model_to_data_params):
+    for form_params in all_params:
         for key in form_params:
             form_params[key]['help'] = re.sub(
                 r"(https?\:\/\/.*?)\)",
@@ -439,51 +464,44 @@ def get_api_doc_data(
         refs = f'. References: {refs}'
 
     regionalizations_help = (
-        'Values can be one or more string of texts to be '
+        '. Values can be '
         f'chosen from {", ".join(_.name for _ in db_regionalizations)}{refs}'
     )
-    model_info_params['regionalization']['help'] += regionalizations_help
-    model_to_model_params['regionalization']['help'] += regionalizations_help
-    model_to_data_params['regionalization']['help'] += regionalizations_help
+    for params in all_params:
+        params['regionalization']['help'] += regionalizations_help
+        params['regionalization']['default_value'] = '(use all)'
 
     # add format param:
-    model_info_formats = list(GsimInfoView.supported_formats())
-    if len(model_info_formats) > 1:
-        model_info_params['format'] = {
+    for params, view in zip(all_params, [GsimInfoView, PredictionsView, ResidualsView]):
+        help_ = 'The response data format'
+        formats = list(view.supported_formats())
+        if len(formats) > 1:
+            # reorder:
+            formats = [view.default_format] + \
+                      [f for f in formats if f != view.default_format]
+            help_ += f'A value to be chosen from: {", ".join(formats)}'
+        params['format'] = {
             'names': ['format'],
-            'help': (f'The response format. A value to be chosen from: '
-                     f'{", ".join(model_info_formats)}')
-        }
-    model_to_model_formats = list(PredictionsView.supported_formats())
-    if len(model_to_model_formats) > 1:
-        model_to_model_params['format'] = {
-            'names': ['format'],
-            'help': (f'The response format. A value to be chosen from: '
-                     f'{", ".join(model_to_model_formats)}')
-        }
-    model_to_data_formats = list(ResidualsView.supported_formats())
-    if len(model_to_data_formats) > 1:
-        model_to_data_params['format'] = {
-            'names': ['format'],
-            'help': (f'The response format. A value to be chosen from: '
-                     f'{", ".join(model_to_data_formats)}')
+            'default_value': formats[0],
+            'help': help_,
+            'values_str': ", ".join(formats).upper()
         }
 
     return {
         'Model info': {
-            'response_format': ", ".join(_.upper() for _ in model_info_formats),
+            'response_format': model_info_params['format'].pop('values_str'),
             'url_path': f'{url_host}/{MODEL_INFO_URL_PATH}',
             'type': 'GET or POST',
             'params': model_info_params
         },
         'Model-to-Model': {
-            'response_format': ", ".join(_.upper() for _ in model_to_model_formats),
+            'response_format': model_to_model_params['format'].pop('values_str'),
             'url_path': f'{url_host}/{PREDICTIONS_URL_PATH}',
             'type': 'GET or POST',
             'params': model_to_model_params
         },
         'Model-to-Data': {
-            'response_format': ", ".join(_.upper() for _ in model_to_data_formats),
+            'response_format': model_to_data_params['format'].pop('values_str'),
             'url_path': f'{url_host}/{RESIDUALS_URL_PATH}',
             'type': 'POST (GET with pre-defined flatfiles only)',
             'params': model_to_data_params
@@ -563,53 +581,17 @@ def form2help(form: Union[EgsimBaseForm, Type[EgsimBaseForm]], compact=True) -> 
         return help_texts
     ret = {}
     for n, f in form.declared_fields.items():
-        choices = [_[1] for _ in getattr(f, 'choices', [])]
-        extra_help = ''
-        if choices:
-            extra_help = 'The value must to be chosen from ' + ", ".join(choices)
-        else:
-            plural = isinstance(f, ArrayField)
-            num_fields = 0
-            if plural:
-                num_fields = len(f.base_fields)
-                f = f.base_fields[0]
-
-            if isinstance(f, FloatField):
-                if plural:
-                    extra_help = f'The values must be numeric'
-                else:
-                    extra_help = f'The value must be numeric'
-            elif isinstance(f, IntegerField):  # after FloatField
-                if plural:
-                    extra_help = f'The values must be numeric integers'
-                else:
-                    extra_help = f'The value must be a numeric integer'
-            elif isinstance(f, BooleanField):
-                if plural:
-                    extra_help = f'The values must be either true or false'
-                else:
-                    extra_help = f'The value must be true or false'
-            elif isinstance(f, CharField):
-                if plural:
-                    extra_help = f'The values must be strings of text'
-                else:
-                    extra_help = f'The value must be a string of text'
-
-            if extra_help and num_fields > 1:
-                extra_help.replace('The values ', f'The {num_fields} values')
-            elif not extra_help and plural:
-                if num_fields == 1:
-                    extra_help = f'The values can be provided multiple times'
-                else:
-                    extra_help = f'The value must be provided {num_fields} times'
-
         help_text = help_texts[n]
-        if help_text and extra_help:
-            help_text += f'. {extra_help}'
-        elif extra_help:
-            help_text = extra_help
+        choices = [_[1] for _ in getattr(f, 'choices', [])]
+        if choices:
+            help_text += f'. The value must to be chosen from {", ".join(choices)}'
+        # default value (making boolean lower case):
+        def_val = '' if f.initial is None else str(f.initial)
+        if f.initial in (True, False):
+            def_val = def_val.lower()
         ret[n] = {
             'names': form.param_names_of(n),
+            'default_value': def_val,
             'help': help_text
         }
     return ret

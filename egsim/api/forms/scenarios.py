@@ -81,8 +81,12 @@ class PredictionsForm(GsimImtForm, APIForm):
     }
 
     # RUPTURE PARAMS:
-    magnitude = ArrayField(FloatField(), help_text='Magnitudes', required=True)
-    distance = ArrayField(FloatField(), help_text='Distances (km)', required=True)
+    magnitude = ArrayField(FloatField(),
+                           help_text='Magnitude(s). Each magnitude defines a Rupture '
+                                     'of the user-defined scenario', required=True)
+    distance = ArrayField(FloatField(),
+                          help_text='Distances (km). Each distance defines a Site of '
+                                    'the user-defined Scenario', required=True)
     aspect = FloatField(
         help_text='Rupture Length / Width in [0, 1]', min_value=0., initial=1.0
     )
@@ -159,17 +163,11 @@ class PredictionsForm(GsimImtForm, APIForm):
                                           '(imt, type, model). Otherwise (the default), '
                                           'return a table with a single column header '
                                           'imt+" "+type+" "+model',
-                                required=False)
+                                required=False, initial=False)
 
-    @property
-    def site_fields(self) -> dict[str, Field]:
-        fields = set(SiteProperties.__annotations__) & set(self.base_fields)
-        return {f: self.fields[f] for f in sorted(fields)}
+    site_fieldnames: tuple[str]  # populated after class init (see below)
 
-    @property
-    def rupture_fields(self) -> dict[str, Field]:
-        fields = set(RuptureProperties.__annotations__) & set(self.base_fields)
-        return {f: self.fields[f] for f in sorted(fields)}
+    rupture_fieldnames: tuple[str]  # populated after class init (see below)
 
     # All clean_<field> methods below are called in `self.full_clean` after each field
     # is validated individually in order to perform additional validation or casting:
@@ -209,12 +207,12 @@ class PredictionsForm(GsimImtForm, APIForm):
         """
         cleaned_data = self.cleaned_data
         rup = RuptureProperties(**{p: cleaned_data[p]
-                                   for p in self.rupture_fields
+                                   for p in self.rupture_fieldnames
                                    if p in cleaned_data})
         site = SiteProperties(**{p: cleaned_data[p] for p in
-                                 self.site_fields
+                                 self.site_fieldnames
                                  if p in cleaned_data})
-        header_sep = Clabel.sep if not cleaned_data.get('multi_header') else None
+        header_sep = None if cleaned_data.get('multi_header') else Clabel.sep
         return get_scenarios_predictions(cleaned_data['gsim'],
                                          cleaned_data['imt'],
                                          cleaned_data['magnitude'],
@@ -222,3 +220,15 @@ class PredictionsForm(GsimImtForm, APIForm):
                                          rupture_properties=rup,
                                          site_properties=site,
                                          header_sep=header_sep)
+
+
+PredictionsForm.rupture_fieldnames = tuple(sorted(
+    set(RuptureProperties.__annotations__) & set(PredictionsForm.base_fields)
+))
+
+PredictionsForm.site_fieldnames = tuple(sorted(
+    set(SiteProperties.__annotations__) & set(PredictionsForm.base_fields)
+))
+
+
+# PredictionsForm.magnitude.help_text += '. See also {}  (all parameters are applied to each created Rupture)'

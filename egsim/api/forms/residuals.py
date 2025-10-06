@@ -37,7 +37,7 @@ class ResidualsForm(GsimImtForm, FlatfileForm, APIForm):
                                           '(imt, type, model). Otherwise (the default), '
                                           'return a table with a single column header '
                                           'imt+" "+type+" "+model',
-                                required=False)
+                                required=False, initial=False)
 
     # Custom API param names (see doc of `EgsimBaseForm._field2params` for details):
     _field2params = {}
@@ -53,7 +53,7 @@ class ResidualsForm(GsimImtForm, FlatfileForm, APIForm):
         cleaned_data = self.cleaned_data
         gsims, imts = cleaned_data["gsim"], cleaned_data["imt"]
         is_ranking = cleaned_data['ranking']
-        header_sep = Clabel.sep if not cleaned_data.get('multi_header') else None
+        header_sep = None if cleaned_data.get('multi_header') else Clabel.sep
         residuals = get_residuals(
             cleaned_data["gsim"],
             cleaned_data["imt"],
