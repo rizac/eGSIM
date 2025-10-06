@@ -407,7 +407,7 @@ def get_api_doc_data(
 
     # API ModelInfo: customize help text of parameter "model":
     model_info_params['gsim']['help'] = (
-        'The input model(s). For any inpout value, any model whose name contains '
+        'The input model(s). For any input value, any model whose name contains '
         '(case-insensitive search) the value is used. The model names are usually '
         'formatted as [AuthorYearAdditionalInformation]'
     )
@@ -419,9 +419,9 @@ def get_api_doc_data(
         f'(Rupture configuration parameters, applied to all created Ruptures)'
     model_to_model_params['distance']['help'] += \
         f'. See also {", ".join(PredictionsForm.site_fieldnames)} ' \
-        f'(Site configuration parameters, applied to all created Site)'
+        f'(Site configuration parameters, applied to all created Sites)'
 
-    gsim_suffix = f'. ({models} models available)'
+    gsim_suffix = f'. Values can be chosen from {models} available models'
     model_to_model_params['gsim']['help'] += gsim_suffix
     model_to_data_params['gsim']['help'] += gsim_suffix
 
@@ -448,7 +448,6 @@ def get_api_doc_data(
     refs = get_hyperlink_text(db_flatfiles)
     if refs:
         refs = f'. References: {refs}'
-
     flatfile_help = (
         'When user-defined, it must be uploaded with the request. When pre-defined, '
         f'the value must be chosen from: {", ".join(_.name for _ in db_flatfiles)}. '
@@ -462,7 +461,6 @@ def get_api_doc_data(
     refs = get_hyperlink_text(db_regionalizations)
     if refs:
         refs = f'. References: {refs}'
-
     regionalizations_help = (
         '. Values can be '
         f'chosen from {", ".join(_.name for _ in db_regionalizations)}{refs}'
