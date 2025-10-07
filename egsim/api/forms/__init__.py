@@ -230,6 +230,7 @@ class GsimForm(EgsimBaseForm):
                                       'If no geographic location is provided, this '
                                       'parameter is ignored. If missing, all '
                                       'implemented regionalizations will be used')
+
     # Note above: do not use ModelChoiceField (overkill), validate in self.validate_gsim
 
     def clean(self) -> dict:
@@ -403,6 +404,14 @@ class GsimInfoForm(GsimForm, APIForm):
     containing the supported imt(s), the required ground motion parameters,
     and the OpenQuake docstring
     """
+    # override the superclass gsim field help_text (cumbersome, but necessary):
+    gsim = GsimForm.base_fields['gsim'].__class__(
+        required=False,
+        help_text=f"{GsimForm.base_fields['gsim'].help_text}. For any input value, "
+                  f"any model whose name contains (case-insensitive search) the value "
+                  f"is used. The model names are usually formatted as "
+                  f"[AuthorYearAdditionalInformation]"
+    )
 
     _field2params: dict[str, list[str]] = {'gsim': ('name', 'model')}
 

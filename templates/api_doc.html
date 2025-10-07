@@ -3,57 +3,43 @@
 	<h2>eGSIM API documentation</h2>
 	<div style='text-align: justify'>
 	<p>
-	A web Application Programming Interface (API) is a simple interface that allows
-	a client to talk to the web service by sending a request (the client message
-	asking the service to perform an action or provide information) and receiving a
-	response (the answer from the service containing the requested data, e.g.,
-	a web page, an image).
+	A Web Application Programming Interface (API) is an interface that allows
+	communication between systems over the web using defined URLs and data formats.
+	The communication is performed by a client (human or software code)
+	that sends a Request to the API, i.e. the message specifying what action or data is
+	desired, and receives a Response, i.e., the message sent back by the web service,
+	usually containing the the requested data (e.g., a web page, an image, or any kind
+	of bytes sequence).
 	</p>
 	<p>
-	As in many web services, the eGSIM API can be accessed through the web browser
-	via keyboard and mouse interactions, or more programmatically and flexibly via software
-	code. In the latter case, we recommend the usage of the eGSIM API through Python code
+	What we just described is exactly what happens whenever you hit the keyboard or the
+	mouse on this web site, as what you see here is actually another form of interface
+	communicating with the web service, a Graphical user interface (GUI).
+	Whereas a GUI is simpler and might suit many user needs, an API overcomes several GUI
+	limitations by allowing communicating more programmatically and flexibly via
+	software code.
+
+	<p>In general, we recommend the usage of the eGSIM API through Python code
 	and consult our
 	<a href="https://github.com/rizac/egsim-client" target="_blank">online  examples</a>
 	in Jupyter Notebook: therein,
 	you can see how we access the API via a single main function that
 	can also be used seamlessly in any Python module or, with slight modifications,
 	in any programming language.
-	</p>
-	<p>
-	For a more low-level approach, e.g., using command line tools like
+	However, for a more low-level approach, e.g., using command line tools like
 	<span style='font-family:monospace'>curl</span>, or for Python users who want more
 	configuration options in their code, here below a
 	short documentation of the eGSIM API.
 	</p>
 	</div>
-	<!--<ul>
-		<li>GET requests, where the input parameters are
-			encoded as text at the end of the request URL. GET requests are easy to use and
-			suited for simple requests and responses (e.g. simple request parameters and
-			plain or JSON text responses)</li>
 
-		<li>POST requests, where the data is send to the given URL separately. These
-			requests are slightly more complex but more flexible, e.g., they allow
-			to input files to be uploaded to the server</li>
-	</ul>
-
-	You do not need specialized software to get started: any browser, the command-line
-	tool <code>curl</code>, or short code snippets in common languages
-	(such as <code>Python</code>) will work to interact with the API.
-
-	This documentation aims to help you quickly understand how to integrate eGSIM into
-	your workflow, whether you are exploring data manually or incorporating it into
-	automated analysis pipelines.
-
-	</p>-->
 	{% for title, service in api_doc.items %}
 		<h3 class='mt-3'>{{ title }}</h3>
 
-		<p>Response data format(s): {{ service.response_format }}</p>
-		<p>Request URL: <a href='{{ service.url_path }}' target='_blank'>{{ service.url_path }}</a></p>
-		<p>Request type: {{ service.type }}</p>
-		<p>Request parameters:</p>
+		<div class='text-nowrap'>Response data format(s): <b>{{ service.response_format }}</b></div>
+		<div class='text-nowrap'>Request URL: <b><a href='{{ service.url_path }}' target='_blank'>{{ service.url_path }}</a></b></div>
+		<div class='text-nowrap'>Request type: <b>{{ service.type }}</b></div>
+		<div class='text-nowrap'>Request parameters:</div>
 
 		<table class='table border'>
 			<tr>
@@ -75,44 +61,5 @@
 		in GET requests either providing the parameters more than once, or
 		concatenating the values with commas (,)
 	</span>
-	<!-- <h3>Models info</h3>
-	<p>URL: site/{{ api_doc.model_info_url }}</p>
-	<p>Type: GET or POST</p>
-	<p>Parameters:</p>
-	<table class='table border'>
-		<tr>
-			<td>Name(s)</td><td>Type</td><td>Description</td>
-			{% for name, val in api_doc.model_info_params.items %}
-				<tr>
-					<td>{{ val.names|join:", " }}</td>
-					<td>{% if val.choices %}
-							A value to be chosen from:
-							{{ val.choices|join:", " }}
-						{% else %}
-							{{ val.type }}
-						{% endif %}
-					</td>
-					<td>{{ val.help }}</td>
-				</tr>
-			{% endfor %}
-		</td>
-	</table>
-
-
-	<h3>Model-to-model</h3>
-	<p>URL: site/{{ api.predictions_url }}</p>
-	<p>Type: GET or POST</p>
-	<p>Parameters:
-	<br>
-	{{ api_doc.model_to_model_params_table | safe }}
-	</p>
-
-	<h3>Model-to-data</h3>
-	<p>URL: site/{{ api.residuals_url }}</p>
-	<p>Type: GET or POST</p>
-	<p>Parameters:
-	<br>
-	{{ api_doc.model_to_data_params_table | safe }}
-	</p> -->
 
 </div>

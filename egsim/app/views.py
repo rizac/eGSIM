@@ -16,11 +16,12 @@ from django.conf import settings
 from ..api import models
 from ..api.forms.flatfile import (FlatfileMetadataInfoForm,
                                   FlatfileValidationForm)
-from ..api.forms import APIForm, EgsimBaseForm, GsimForm, GsimInfoForm
+from ..api.forms import APIForm, EgsimBaseForm, GsimForm
 from ..api.forms.residuals import ResidualsForm
 from ..api.forms.scenarios import PredictionsForm
 from ..api.urls import MODEL_INFO_URL_PATH, RESIDUALS_URL_PATH, PREDICTIONS_URL_PATH
-from ..api.views import MimeType, EgsimView, GsimInfoView, PredictionsView, ResidualsView
+from ..api.views import MimeType, EgsimView, GsimInfoView, PredictionsView, \
+    ResidualsView, APIFormView
 from .forms import PredictionsVisualizeForm, FlatfileVisualizeForm
 from ..smtk.registry import Clabel
 
@@ -98,7 +99,7 @@ def main(request, page=''):
             'api_doc': get_api_doc_data(
                 regionalizations, flatfiles, f'{request.scheme}://{request.get_host()}',
                 len(init_data['gsims']),
-                sorted(set(i for imts in init_data['imt_groups'] for i in imts))
+                set(i for imts in init_data['imt_groups'] for i in imts)
             )
         }
     )
@@ -397,21 +398,57 @@ def get_references(
 def get_api_doc_data(
         db_regionalizations: list[models.Regionalization],
         db_flatfiles: list[models.Flatfile],
-        url_host,
-        models:int,
+        url_host: str,
+        models_count:int,
         imts: set[str]
 ):
-    model_info_params = form2help(GsimInfoForm, compact=False)
-    model_to_model_params = form2help(PredictionsForm, compact=False)
-    model_to_data_params = form2help(ResidualsForm, compact=False)
+    model_info_params = apiview2help(GsimInfoView)
+    model_to_model_params = apiview2help(PredictionsView)
+    model_to_data_params = apiview2help(ResidualsView)
 
-    # API ModelInfo: customize help text of parameter "model":
-    model_info_params['gsim']['help'] = (
-        'The input model(s). For any input value, any model whose name contains '
-        '(case-insensitive search) the value is used. The model names are usually '
-        'formatted as [AuthorYearAdditionalInformation]'
-    )
+    model_info_formats = ", ".join(model_info_params['format']['choices'])
+    model_to_model_formats = ", ".join(model_to_model_params['format']['choices'])
+    model_to_data_formats = ", ".join(model_to_data_params['format']['choices'])
 
+    all_params = (model_info_params, model_to_model_params, model_to_data_params)
+    select_from = 'The value must be chosen from'
+    multiselect_from = 'Values can be chosen from'
+
+    # Post process:
+
+    # Fix docstrings common to all APIs params:
+    regionalizations_help_suffix = \
+        f'. {multiselect_from} {", ".join(_.name for _ in db_regionalizations)}'
+    refs = get_hyperlink_text(db_regionalizations)
+    if refs:
+        regionalizations_help_suffix += f'. References: {refs}'
+    for params in all_params:
+        for key in params:
+            field_params = params[key]
+            # Replace https://... with anchor tags (do it as 1st operation)
+            field_params['help'] = re.sub(
+                r"(https?\:\/\/.*?)\)",
+                r"<a target='_blank' href='\1'>\1</a>)",
+                field_params['help']
+            )
+            # Add choices (single value params) in help string:
+            choices = field_params.pop('choices', [])
+            if len(choices) > 1:
+                field_params['help'] += f'. {select_from} {", ".join(choices)}'
+        # add regionalization choices in regionalization help string:
+        params['regionalization']['help'] += regionalizations_help_suffix
+        params['regionalization']['default_value'] = '(use all)'
+
+    # Fix docstrings common to Model2Model and Model2Data params:
+    gsim_help_suffix = f'. {multiselect_from} {models_count} available models'
+    imts_help_suffix = (f'. {multiselect_from} {", ".join(imts)} '
+                        f'(SA must be typed with its period, in seconds, '
+                        f'e.g. SA(0.1))')
+    for params in (model_to_model_params, model_to_data_params):
+        params['gsim']['help'] += gsim_help_suffix
+        params['imt']['help'] += imts_help_suffix
+
+    # Fix docstrings of Model2Model params
     model_to_model_params['z1pt0']['default_value'] = '(inferred)'
     model_to_model_params['z2pt5']['default_value'] = '(inferred)'
     model_to_model_params['magnitude']['help'] += \
@@ -421,85 +458,32 @@ def get_api_doc_data(
         f'. See also {", ".join(PredictionsForm.site_fieldnames)} ' \
         f'(Site configuration parameters, applied to all created Sites)'
 
-    gsim_suffix = f'. Values can be chosen from {models} available models'
-    model_to_model_params['gsim']['help'] += gsim_suffix
-    model_to_data_params['gsim']['help'] += gsim_suffix
-
-    imts_suffix = f'. Values can be chosen from {", ".join(imts)} ' \
-                  f'(SA must be typed with its period, in seconds, ' \
-                  f'e.g. SA(0.1))'
-    model_to_model_params['imt']['help'] += imts_suffix
-    model_to_data_params['imt']['help'] += imts_suffix
-
-    all_params = (model_info_params, model_to_model_params, model_to_data_params)
-
-    # All APIs: replace https://... with anchor tags:
-    # DO THIS NOW before manipulating other refs and links (see below)
-    for form_params in all_params:
-        for key in form_params:
-            form_params[key]['help'] = re.sub(
-                r"(https?\:\/\/.*?)\)",
-                r"<a target='_blank' href='\1'>\1</a>)",
-                form_params[key]['help']
-            )
-
-    # API ModelToData: customize help text of parameter "model":
-
+    # Fix docstrings of Model2Data params:
+    flatfile_help_suffix = (
+        'When user-defined, it must be uploaded with the request. When pre-defined, '
+        f'{select_from.lower()} {", ".join(_.name for _ in db_flatfiles)}. '
+        f'For a correct usage, please consult the Python notebook examples or the GUI'
+    )
     refs = get_hyperlink_text(db_flatfiles)
     if refs:
-        refs = f'. References: {refs}'
-    flatfile_help = (
-        'When user-defined, it must be uploaded with the request. When pre-defined, '
-        f'the value must be chosen from: {", ".join(_.name for _ in db_flatfiles)}. '
-        f'For a correct usage, please consult the Python notebook examples or the GUI'
-        f'{refs}'
-    )
-    model_to_data_params['flatfile']['help'] += f". {flatfile_help}"
-
-    # All APIs: customize help text of parameter "regionalization":
-
-    refs = get_hyperlink_text(db_regionalizations)
-    if refs:
-        refs = f'. References: {refs}'
-    regionalizations_help = (
-        '. Values can be '
-        f'chosen from {", ".join(_.name for _ in db_regionalizations)}{refs}'
-    )
-    for params in all_params:
-        params['regionalization']['help'] += regionalizations_help
-        params['regionalization']['default_value'] = '(use all)'
-
-    # add format param:
-    for params, view in zip(all_params, [GsimInfoView, PredictionsView, ResidualsView]):
-        help_ = 'The response data format'
-        formats = list(view.supported_formats())
-        if len(formats) > 1:
-            # reorder:
-            formats = [view.default_format] + \
-                      [f for f in formats if f != view.default_format]
-            help_ += f'A value to be chosen from: {", ".join(formats)}'
-        params['format'] = {
-            'names': ['format'],
-            'default_value': formats[0],
-            'help': help_,
-            'values_str': ", ".join(formats).upper()
-        }
+        flatfile_help_suffix += f'. References: {refs}'
+    model_to_data_params['flatfile']['help'] += f". {flatfile_help_suffix}"
 
     return {
         'Model info': {
-            'response_format': model_info_params['format'].pop('values_str'),
+            'response_format': model_info_formats.upper(),
             'url_path': f'{url_host}/{MODEL_INFO_URL_PATH}',
             'type': 'GET or POST',
             'params': model_info_params
         },
         'Model-to-Model': {
-            'response_format': model_to_model_params['format'].pop('values_str'),
+            'response_format': model_to_model_formats.upper(),
             'url_path': f'{url_host}/{PREDICTIONS_URL_PATH}',
             'type': 'GET or POST',
             'params': model_to_model_params
         },
         'Model-to-Data': {
-            'response_format': model_to_data_params['format'].pop('values_str'),
+            'response_format': model_to_data_formats.upper(),
             'url_path': f'{url_host}/{RESIDUALS_URL_PATH}',
             'type': 'POST (GET with pre-defined flatfiles only)',
             'params': model_to_data_params
@@ -565,14 +549,37 @@ def get_bbox(reg: models.Regionalization) -> list[float]:
     return bounds
 
 
+def apiview2help(view: Union[APIFormView, Type[APIFormView]]) -> dict:
+    """Return the same output as `form2help` from the given APIFormView. This method
+    First get the help from the view form class, and then adds the view `format`
+    parameter as dict entry, before returning the dict
+    """
+    params = form2help(view.formclass, compact=False)
+    help_ = 'The response data format'
+    choices = list(view.supported_formats())
+    default_format = view.default_format
+    if len(choices) > 1:
+        # reorder:
+        choices = [default_format] + [f for f in choices if f != default_format]
+    params['format'] = {
+        'names': ['format'],
+        'default_value': default_format,
+        'help': help_,
+        'choices': choices
+    }
+    return params
+
+
 def form2help(form: Union[EgsimBaseForm, Type[EgsimBaseForm]], compact=True) -> dict:
     """
     Return the given form in a dict with all field names mapped to their help text
 
     If compact is False (default: True) each dict value is not a string but a dict
-    with two keys: names (mapped to all parameter names, 1st is the default) and
-    help (a more verbose, human-readable form of the field help text, including also
-    other information such as data types and possible choices)
+    with keys:
+    - names (mapped to all parameter names, 1st is the default),
+    - help (a more verbose, human-readable form of the field help text
+    - choices: list of possible values (in their str representation) or empty list
+    - default_value: the default value when missing
     """
     help_texts = {n: str(f.help_text) or '' for n, f in form.declared_fields.items()}
     if compact:
@@ -581,8 +588,6 @@ def form2help(form: Union[EgsimBaseForm, Type[EgsimBaseForm]], compact=True) -> 
     for n, f in form.declared_fields.items():
         help_text = help_texts[n]
         choices = [_[1] for _ in getattr(f, 'choices', [])]
-        if choices:
-            help_text += f'. The value must to be chosen from {", ".join(choices)}'
         # default value (making boolean lower case):
         def_val = '' if f.initial is None else str(f.initial)
         if f.initial in (True, False):
@@ -590,7 +595,8 @@ def form2help(form: Union[EgsimBaseForm, Type[EgsimBaseForm]], compact=True) -> 
         ret[n] = {
             'names': form.param_names_of(n),
             'default_value': def_val,
-            'help': help_text
+            'help': help_text,
+            'choices': choices
         }
     return ret
 
