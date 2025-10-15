@@ -88,21 +88,23 @@ class PredictionsForm(GsimImtForm, APIForm):
                           help_text='Distances (km). Each distance defines a Site of '
                                     'the user-defined Scenario', required=True)
     aspect = FloatField(
-        help_text='Rupture Length / Width in [0, 1]', min_value=0., initial=1.0
+        help_text='Rupture Length / Width ≥ 0 and ≤ 1', min_value=0., initial=1.0
     )
     dip = FloatField(
         min_value=0., max_value=90., initial=90,
-        help_text="Dip of rupture (deg) in [0, 90]"
+        help_text="Dip of rupture (deg) ≥ 0 and ≤ 90"
     )
     rake = FloatField(
         min_value=-180., max_value=180., initial=0.,
-        help_text="Rake of rupture (deg) in [-180, 180]"
+        help_text="Rake of rupture (deg) ≥ -180 and ≤ 180"
     )
     strike = FloatField(
         min_value=0., max_value=360., initial=0.,
-        help_text="Strike of rupture (deg) in [0, 360]"
+        help_text="Strike of rupture (deg) ≥ 0 and ≤ 360"
     )
-    ztor = FloatField(help_text='Top of Rupture Depth (km)', min_value=0., initial=0.)
+    ztor = FloatField(
+        help_text='Top of Rupture Depth (km) ≥ 0', min_value=0., initial=0.
+    )
     # WARNING IF RENAMING FIELD BELOW: RENAME+MODIFY also `clean_msr`
     msr = ChoiceField(
         help_text='Magnitude-Area Scaling Relationship',
@@ -113,13 +115,14 @@ class PredictionsForm(GsimImtForm, APIForm):
     initial_point = ArrayField(
         FloatField(initial=0, min_value=-180, max_value=180),
         FloatField(initial=0, min_value=-90, max_value=90),
-        help_text="Location on Earth (Longitude in [-180, 180], Latitude in [-90, 90])"
+        help_text="Location on Earth "
+                  "(Longitude  ≥ -180 and ≤ 180, Latitude ≥ -90 and ≤ 90)"
     )
     hypocenter_location = ArrayField(
         FloatField(initial=0.5, min_value=0, max_value=1),
         FloatField(initial=0.5, min_value=0, max_value=1),
-        help_text="Location of Hypocenter (Along-strike fraction in [0, 1], "
-                  "Down-dip fraction in [0, 1])")
+        help_text="Location of Hypocenter (Along-strike fraction ≥ 0 and ≤ 1, "
+                  "Down-dip fraction ≥ 0 and ≤ 1)")
     vs30 = FloatField(help_text="vs30 (m/s)", initial=760.0)
 
     # SITE PARAMS:
@@ -142,7 +145,7 @@ class PredictionsForm(GsimImtForm, APIForm):
         help_text='Whether vs30 is measured (otherwise is inferred)'
     )
     line_azimuth = FloatField(
-        help_text='Azimuth of Comparison Line in [0, 360]',
+        help_text='Azimuth of Comparison Line ≥ 0 and ≤ 360',
         min_value=0., max_value=360., initial=0.
     )
     z1pt0 = FloatField(
