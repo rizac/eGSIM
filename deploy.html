@@ -591,6 +591,13 @@ MEDIA_ROOT = '$EGSIM_DATA_DIR/media/'
 # MEDIA_URL = '/media/'
 
 CSRF_TRUSTED_ORIGINS = ["https://$DOMAIN"]  # required in Django 4+. Https or http depends on your SSL certificate
+
+# Custom variable
+EGSIM_SOURCE_DATA_PATH = "$EGSIM_SRCDATA_DIR"
+
+# trust a specific header (usually X-Forwarded-Proto) from your proxy (Nginx) to determine if the original request was HTTPS.
+# Apparently, with this 'request.scheme' correctly displays 'https' in production
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 </code></pre>
 
 
