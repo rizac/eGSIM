@@ -704,7 +704,7 @@ EGSIM.component('gsim-map', {
 							<td>
 								<div v-for="reg in modelRegs[name]" class='text-nowrap'>
 									<template v-if="regUrl[reg]" >
-										<a target="_blank" href="regUrl[reg]"
+										<a target="_blank" :href="regUrl[reg]"
 											:title="reg + ' (click for ref. in new browser tab)'">
 											 {{ reg }} <i class="fa fa-external-link"></i>
 										</a>
