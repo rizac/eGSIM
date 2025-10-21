@@ -161,6 +161,7 @@ EGSIM.component('gsim-select', {
 			inputElementText: "",
 			displayRegex: /[A-Z]+[^A-Z0-9]+|[0-9_]+|.+/g,  //NOTE safari does not support lookbehind/aheads!
 			modelInfoText: "",
+			defaultModelInfoText: "<i class='fa fa-info-circle'></i> Select models with double-click or Enter; get info with space-bar",
 			highlightedModels: []
 		}
 	},
@@ -304,17 +305,12 @@ EGSIM.component('gsim-select', {
 					{{ m.name.match(displayRegex).join(" ") }}
 				</option>
 			</select>
-			<div ref='keystrokes'
-				:class='highlightedModels.length ? "d-flex" : "d-none"'
-				class='align-items-baseline bg-body shadow gap-1 p-1 position-absolute start-0 end-0 text-nowrap border border-top-0'
-				style='z-index:10001; overflow: auto;'>
-				<i class='fa fa-info-circle'></i> Select models with double-click or Enter; get info with spacebar
-			</div>
-			<div ref='info' v-show="(!!modelInfoText) && (!!inputElementText)" v-html="modelInfoText"
+			<div ref='info' v-show="(!!inputElementText) && (!!highlightedModels.length)"
+				v-html='modelInfoText || defaultModelInfoText'
 				class='form-control position-absolute bg-white rounded-0 end-100'
 				style='max-width:33vw; top: 0; bottom: 10vh; left: calc(100% + 1em); overflow:auto; height: min-content;'>
 			</div>
-			<div ref='infoArrow' v-show="(!!modelInfoText) && (!!inputElementText)"
+			<div ref='infoArrow' v-show="(!!inputElementText) && (!!highlightedModels.length)"
 				class='position-absolute border border-end-0 border-top-0 bg-white'
 				style='width: .75rem;height: .75rem;left: calc(100% + 1em - 0.75em/2 + .5px);top:.75em;transform: rotate(45deg);transform-origin: center;'>
 			</div>
@@ -398,7 +394,6 @@ EGSIM.component('gsim-select', {
 			var h = 100*(document.documentElement.clientHeight - rect.bottom)/document.documentElement.clientHeight;
 			this.$refs.list.style.maxHeight = `calc(${h}vh - 3rem)`;  // (.90 * (document.documentElement.clientHeight - rect.bottom)) + 'px';
 			this.$refs.info.style.maxHeight = `calc(${h}vh - 3rem)`;
-			this.$refs.keystrokes.style.top = `calc(${h}vh - 3rem)`;
 		}
 	}
 });
