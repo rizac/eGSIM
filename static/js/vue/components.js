@@ -409,6 +409,7 @@ EGSIM.component('imt-select', {
 	props: {
 		modelValue: { type: Array },  // [Vue model] Array of IMT names, with or without arguments
 		imts: { type: Array },  // input IMTs (without arguments, so 'SA', not 'SA(1.0)')
+		imtsHelp: {type: Object, default: {}},  // imt in imts mapped to its help string
 		saWithoutPeriod: {type: Boolean, default: false}  // whether SA must be typed with periods or not (=> use only <select>)
 	},
 	emits: ['update:modelValue'],
@@ -448,7 +449,7 @@ EGSIM.component('imt-select', {
 			multiple
 			class='form-control'
 			style="flex: 1 1 auto;">
-			<option	v-for='imt in imts' :value="imt">
+			<option	v-for='imt in imts' :value="imt" :title="imtsHelp[imt]">
 				{{ imt }}
 			</option>
 		</select>

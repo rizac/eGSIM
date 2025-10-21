@@ -22,9 +22,8 @@
 
 		<imt-select
 			style='flex: 0 1 auto; min-height: 9rem'
-			v-model="forms.predictions.imt" :imts='imts'>
+			v-model="forms.predictions.imt" :imts='imts' :imts-help='imtsHelp'>
 		</imt-select>
-
 		<div class='d-flex flex-column form-control gap-2'>
 			<div class='d-flex align-items-baseline'>
 				<span style='flex: 1 1 auto'>Rupture(s)</span>

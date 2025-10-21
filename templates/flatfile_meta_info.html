@@ -130,12 +130,10 @@
 							 style="flex: 0 1 auto; min-height:0px">
 				</gsim-select>
 
-<!--				<imt-select v-model="forms.flatfile_meta_info.imt" :imts='imts' sa-without-period></imt-select>-->
-
 				<button class='btn btn-primary' type='button'
 						:disabled="forms.flatfile_meta_info.gsim.length == 0"
 						@click='post(urls.flatfile_meta_info, forms.flatfile_meta_info).then(r => r.json()).then(data => { responses.flatfile_meta_info = data; });'>
-					Get flatfile format (required fields)
+					Get flatfile required fields
 				</button>
 			</form>
 		</div>

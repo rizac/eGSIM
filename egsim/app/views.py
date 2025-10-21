@@ -23,6 +23,7 @@ from ..api.urls import MODEL_INFO_URL_PATH, RESIDUALS_URL_PATH, PREDICTIONS_URL_
 from ..api.views import MimeType, EgsimView, GsimInfoView, PredictionsView, \
     ResidualsView, APIFormView
 from .forms import PredictionsVisualizeForm, FlatfileVisualizeForm
+from ..smtk import registered_imts
 from ..smtk.registry import Clabel
 
 img_ext = ('png', 'pdf', 'svg')
@@ -371,6 +372,10 @@ def get_init_data_json(
             'flatfile_visualize': [],
         },
         'gsims': gsims,
+        'imtsHelp': {
+            i: re.sub("\\s+", " ", registered_imts[i].__doc__.strip())
+            for imts in imt_groups for i in imts
+        },
         # return the list of imts (imt_groups keys) in the right order:
         'imt_groups': sorted(imt_groups, key=imt_groups.get),
         # return the list of warnings (warning_groups keys) in the right order:
