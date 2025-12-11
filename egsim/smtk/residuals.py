@@ -280,11 +280,13 @@ def get_residuals_from_expected_and_observed_motions(
         if return_mean:
             residuals[(imtx, Clabel.mean, gsim)] = mean
         # compute total residuals:
-        total_stddev = expected.get((imtx, Clabel.total_std, gsim))
-        if total_stddev is None:
-            continue
-        residuals[(imtx, Clabel.total_res, gsim)] = \
-            (obs - mean) / total_stddev
+        res_values = obs - mean
+        if normalise:
+            total_stddev = expected.get((imtx, Clabel.total_std, gsim))
+            if total_stddev is None:
+                continue
+            res_values /= total_stddev
+        residuals[(imtx, Clabel.total_res, gsim)] = res_values
         # compute inter- and intra-event residuals:
         inter_ev = expected.get((imtx, Clabel.inter_ev_std, gsim))
         intra_ev = expected.get((imtx, Clabel.intra_ev_std, gsim))
