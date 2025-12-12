@@ -1,0 +1,26 @@
+{% if service == 'model-to-model' %}
+
+Model-to-model analysis allows users to rapidly configure a scenario (select ground
+motion models - GMMs - and intensity measures for a given rupture and site
+configuration) and then compute the median ground motions and the standard
+deviations of the GMMs.
+
+{% elif service == 'model-to-data' %}
+
+Model-to-data analysis allows users to compare observed (or simulated) and predicted
+ground motions via residuals computation. For a given model and intensity measure,
+the (non-normalized) total residual is defined by:
+<span class='text-nowrap' style='font-style: italic;'>residual = ln(observed) - ln(predicted)</span>,
+whereas inter- (between-) and intra- (within-) event residuals are computed via eq. 10 of
+<a href='https://doi.org/10.1785/BSSA0820010505' target='_blank'>Abrahamson & Youngs (1992)</a>.
+
+{% elif service == 'model-info' %}
+
+Model-info returns the necessary model information from custom search
+parameters (e.g., a GMM publication year or author name) or geographic location.
+The JSON returned data can be nicely displayed in many text editors or
+directly in the browser window (tested with Firefox and Chrome).
+
+{% else %}
+CACANAUTO!
+{% endif %}
