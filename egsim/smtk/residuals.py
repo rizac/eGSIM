@@ -52,9 +52,8 @@ def get_residuals(
         and returned
     :param mean: boolean telling if also the models mean (used to compute residuals)
         should be returned
-    :param normalise: boolean (default True) normalize the random effects residuals
-        (calculated using the inter-event residual formula described in
-         Abrahamson & Youngs (1992) Eq. 10)
+    :param normalise: boolean (default True) normalize the residuals by
+        the model standard deviations
     :param header_sep: str or None (default: " "): the separator used to concatenate
         each column header into one string (e.g. "PGA median BindiEtAl2014Rjb"). Set
         to "" or None to return a multi-level column header composed of the first 3

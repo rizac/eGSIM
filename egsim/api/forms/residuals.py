@@ -1,7 +1,5 @@
 """
 Django Forms for eGSIM model-to-data comparison (residuals computation)
-
-@author: riccardo
 """
 import pandas as pd
 from django.forms import BooleanField
@@ -22,8 +20,9 @@ class ResidualsForm(GsimImtForm, FlatfileForm, APIForm):
                                         '(Scherbaum et al. 2004. '
                                         'https://doi.org/10.1785/0120030147)')
     normalize = BooleanField(initial=True, required=False,
-                             help_text=('normalize the random effects residuals '
-                                        '(Abrahamson & Youngs (1992), Eq. 10)'))
+                             help_text=('normalize residuals by the model '
+                                        'standard deviation(s) total, inter event, '
+                                        'intra event respectively'))
     ranking = BooleanField(initial=False, required=False,
                            help_text='Model ranking: easily assess how predictions '
                                      'fit the data by returning aggregate '

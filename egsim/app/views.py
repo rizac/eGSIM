@@ -475,7 +475,7 @@ def get_api_doc_data(
     model_to_data_params['flatfile']['help'] += f". {flatfile_help_suffix}"
 
     return {
-        'Model info': {
+        'Model-info': {
             'response_format': model_info_formats.upper(),
             'url_path': f'{url_host}/{MODEL_INFO_URL_PATH}',
             'type': 'GET or POST',
@@ -679,7 +679,7 @@ def get_html_tutorial_context(
         )
 
     return {
-        'key': key,
+        'service': 'model-to-data' if key == 'residuals' else 'model-to-model',
         'dataframe_html': dataframe_html,
         'dataframe_info': dataframe_info,
         'py_select_snippets': py_select_snippets

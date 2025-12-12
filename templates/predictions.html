@@ -170,12 +170,23 @@
 
 
 		<div class='d-flex flex-column form-control gap-3 '>
+
 			<div class="d-flex flex-row align-items-baseline gap-2">
-				<span class='text-start' style='flex: 1 1 auto'>Predictions</span>
+
+				<span>Predictions</span>
+
+				<button type='button' class='btn btn-outline-primary btn-sm border-0'
+						@click='forms.misc.predictions.tutorial_page_visible=true'>
+					<i class='fa fa-question-circle-o'></i>
+				</button>
+
+				<span style='flex: 1 1 auto'></span>
+
 			</div>
+
 			<div class='d-flex flex-column gap-2'>
 				<div class='d-flex flex-row align-items-center'>
-					<div title='Download predictions (log(predicted values))'>
+					<div title='Download predictions'>
 						Download
 					</div>
 
@@ -191,12 +202,6 @@
 						class='btn btn-primary border-start-0 rounded-start-0'
 						style='flex: 0 0 3.5rem'>
 							<i class='fa fa-download'></i>
-					</button>
-
-					<button type='button' class='btn btn-outline-primary btn-sm border-0 ms-1'
-							title='how to open the downloaded table in your code (short tutorial)'
-							@click='forms.misc.predictions.tutorial_page_visible=true'>
-						<i class='fa fa-question-circle-o'></i>
 					</button>
 
 					<!-- anchor to jupyter: use a button for appearance consistency -->

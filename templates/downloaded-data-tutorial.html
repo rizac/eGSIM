@@ -18,7 +18,9 @@
 {% block body %}
 <div class='d-flex flex-column gap-4 lh-lg'>
 
-	<div>eGSIM computed {{ key }} are arranged in a tabular structure like this one:</div>
+	<div>{% include "api-service-intro.html" %}</div>
+
+	<div>When downloaded (or fetched via the API), eGSIM computed data are arranged in a tabular structure like this one:</div>
 
 	<div style='overflow:auto'>{{ dataframe_html | safe }}</div>
 

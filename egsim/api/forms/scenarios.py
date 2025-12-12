@@ -1,5 +1,5 @@
 """
-Django Forms for eGSIM model-to-model comparison (Trellis plots)
+Django Forms for eGSIM model-to-model comparison
 """
 from itertools import cycle
 

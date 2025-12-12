@@ -27,7 +27,9 @@
 
 	{% for title, service in api_doc.items %}
 		<h3 class='mt-3'>{{ title }}</h3>
-
+		<p>
+		{% include "api-service-intro.html" with service=title|lower %}
+		</p>
 		<div class='text-nowrap'>Response data format(s): {{ service.response_format }}</div>
 		<div class='text-nowrap'>Request URL: <a href='{{ service.url_path }}' target='_blank'>{{ service.url_path }}</a></div>
 		<div class='text-nowrap'>Request type: {{ service.type }}</div>

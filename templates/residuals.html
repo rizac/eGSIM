@@ -44,7 +44,14 @@
 
 			<div class="d-flex align-items-baseline gap-2">
 
-				<span style='flex: 1 1 auto'>Residuals</span>
+				<span>Residuals</span>
+
+				<button type='button' class='btn btn-outline-primary btn-sm border-0'
+						@click='forms.misc.residuals.tutorial_page_visible=true'>
+					<i class='fa fa-question-circle-o'></i>
+				</button>
+
+				<span style='flex:1 1 auto'></span>
 
 				<label class='text-nowrap' :title="forms.misc.residuals.help.normalize" v-show="!forms.residuals.ranking">
 					<input type='checkbox' v-model="forms.residuals.normalize" class="me-1" />normalize
@@ -68,7 +75,7 @@
 
 				<div class='d-flex align-items-baseline'>
 
-					<div style='flex: 0 0 4.5rem' title='Download residuals (log(observed)- log(predicted))'>
+					<div style='flex: 0 0 4.5rem' title='Download residuals'>
 						Download
 					</div>
 
@@ -85,12 +92,6 @@
 							<i class='fa fa-download'></i>
 					</button>
 
-					<button type='button' class='btn btn-outline-primary btn-sm border-0 ms-1'
-							title='how to open the downloaded table in your code (short tutorial)'
-							@click='forms.misc.residuals.tutorial_page_visible=true'>
-						<i class='fa fa-question-circle-o'></i>
-					</button>
-
 					<!-- anchor to jupyter: use a button for appearance consistency -->
 					<button type='button' class='btn btn-outline-primary btn-sm border-0 ms-1'
 							onclick="window.open('https://github.com/rizac/egsim-client/blob/main/notebook/Model-to-Data.ipynb', '_blank')"
@@ -101,7 +102,7 @@
 				</div>
 
 				<div :class="forms.residuals.ranking ? 'd-none' : 'd-flex'" class='align-items-baseline'>
-					<span style='flex: 0 0 4.5rem' title='Visualize residuals (log(observed)- log(predicted)) in interactive plots'>
+					<span style='flex: 0 0 4.5rem' title='Visualize residuals in interactive plots'>
 						Visualize
 					</span>
 

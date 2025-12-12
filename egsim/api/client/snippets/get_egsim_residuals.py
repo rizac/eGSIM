@@ -37,8 +37,8 @@ def get_egsim_residuals(
     - query_string: selection query to apply to the data (e.g. "mag>6")
     - likelihood: bool (default False): compute the residuals likelihood
       according to [Scherbaum et al. (2004)](https://doi.org/10.1785/0120030147)
-    - normalize: bool (default True): normalize the random effects residuals 
-      (Abrahamson & Youngs (1992), Eq. 10)
+    - normalize: bool (default True): normalize the residuals by the model
+      total standard deviations
     - ranking: bool (default False). Return aggregate measures from the computed 
       residuals (e.g., median, loglikelihood, EDR). Useful in model ranking to easily 
       assess how predictions fit the data. When True, the parameters likelihood and 
