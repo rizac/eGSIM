@@ -21,7 +21,7 @@ _base_singleton_renderer = BaseRenderer()  # singleton no-op renderer, see below
 
 
 def get_base_singleton_renderer(*a, **kw) -> BaseRenderer:  # noqa
-    """Default renderer instance (see "FORM_RENDERER" in the settings file and
+    """Default renderer instance (see "FORM_RENDERER" in the settings_debug.py and
     `django.forms.forms.Form` or `django.forms.utils.ErrorDict` for usage).
 
     :return: a singleton, no-op dummy Renderer implemented for performance reasons
