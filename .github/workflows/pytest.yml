@@ -2,37 +2,33 @@
 # For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
 
 
-name: Python >= 3.11
+name: python=3.11
 
 on:
   push:
     branches: [ main, master, dev ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ main, master, dev ]
 
 jobs:
   django:
     runs-on: ubuntu-latest
 
-    # Run the workflow for multiple Python versions
-    strategy:
-      matrix:
-        python-version: ["3.11", "3.12"]
-
     # Job-level environment variables
     env:
       OPENQUAKE_VERSION: "3.15.0"
+      DJANGO_SETTINGS_MODULE: egsim.settings_debug
 
     steps:
       # Checkout the repository
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Set up the requested Python version
+      # Set up Python 3.11
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.11"
 
       # Create and initialize a virtual environment
       - name: Create virtualenv
@@ -48,8 +44,8 @@ jobs:
           mkdir -p /tmp/openquake
           cd /tmp/openquake
           pip download openquake.engine==${OPENQUAKE_VERSION}
-          tar -xvf openquake.engine-${OPENQUAKE_VERSION}.tar.gz
-          cd openquake.engine-${OPENQUAKE_VERSION}
+          tar -xvf openquake.engine-${OPENQUAKE_VERSION}.tar.gz || tar -xvf openquake_engine-${OPENQUAKE_VERSION}.tar.gz
+          cd openquake.engine-${OPENQUAKE_VERSION} || cd openquake_engine-${OPENQUAKE_VERSION}
           pip install -e .
 
       # Install project dependencies, if requirements.txt exists
@@ -58,103 +54,9 @@ jobs:
           source venv/bin/activate
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-      # Run Django migrations and pytest using the debug settings
+      # Run Django migrations and pytest
       - name: Run migrations and pytest
-        env:
-          DJANGO_SETTINGS_MODULE: egsim.settings_debug
         run: |
           source venv/bin/activate
           python manage.py migrate
           pytest --ignore=./tests/tmp/ -xvvv ./tests/
-
-
-
-#on:
-#  push:
-#    branches: [ "dev" ]
-#  pull_request:
-#    branches: [ "main" ]
-#
-#jobs:
-#  build:
-#
-#    runs-on: ubuntu-latest
-#    strategy:
-#      max-parallel: 4
-#      matrix:
-#        python-version: ["3.11", "3.12"]
-#
-#    steps:
-#    - name: update and fix missing packages
-#      run: sudo apt-get update --fix-missing
-#    - name: Install xmllint
-#      run: sudo apt-get install python3-dev libhdf5-dev
-#    - uses: actions/checkout@v3
-#    - name: Set up Python ${{ matrix.python-version }}
-#      uses: actions/setup-python@v3
-#      with:
-#        python-version: ${{ matrix.python-version }}
-#    - name: Install Dependencies
-#      run: |
-#        python -m pip install --upgrade pip setuptools
-#        pip install -r requirements.txt
-#    - name: Run Tests
-#      run: |
-#        # python manage.py test
-#        export DJANGO_SETTINGS_MODULE=egsim.settings_debug; python manage.py migrate && pytest --ignore=./tests/tmp/ -xvvv ./tests/
-#
-#
-## pip install --no-binary=h5py h5py
-## python manage.py egsim_init --noinput
-#
-## # name: Python >= 3.9
-#
-## on:
-##   push:
-##     branches: [ master ]
-##     paths-ignore:
-##       - "**/README.md"
-##       - "**/LICENSE"
-##       - "**/COPYING"
-##       - "**/tmp"
-#
-##   pull_request:
-##     branches: [ master ]
-##     paths-ignore:
-##       - "**/README.md"
-##       - "**/LICENSE"
-##       - "**/COPYING"
-##       - "**/tmp"
-#
-## jobs:
-##   build:
-#
-##     runs-on: ubuntu-latest
-##     strategy:
-##       fail-fast: false
-##       matrix:
-##         python-version: ["3.10", "3.11"]
-#
-##     steps:
-##     - uses: actions/checkout@v3
-##     - name: Set up Python ${{ matrix.python-version }}
-##       uses: actions/setup-python@v4
-##       with:
-##         python-version: ${{ matrix.python-version }}
-##     - name: Install dependencies
-##       run: |
-##         pip install --upgrade pip setuptools wheel
-##         pip install -r requirements.dev.txt
-##         pip install -e git+https://github.com/rizac/gmpe-smtk.git#egg=smtk
-##     # - name: Cleanup
-##     #   run: |
-##     #     find . \( -name '__pycache__' -or -name '*.pyc' \) -delete
-##     #- name: Lint with flake8
-##     #  run: |
-##     #    # stop the build if there are Python syntax errors or undefined names
-##     #    flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-##     #    # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-##     #    flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-##     - name: Test with pytest-django
-##       run: |
-##         export DJANGO_SETTINGS_MODULE=egsim.settings_debug; python manage.py egsim_init && pytest --ignore=./tests/tmp/ -xvvv ./tests/
