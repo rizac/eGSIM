@@ -52,7 +52,7 @@ jobs:
           # Extract the tar.gz (sdist)
           tar -xvf openquake.engine-${OPENQUAKE_VERSION}.tar.gz
           cd openquake.engine-${OPENQUAKE_VERSION}
-          pip install -e .
+          pip install --prefer-binary -e .
 
       # Install project dependencies
       - name: Install project dependencies
