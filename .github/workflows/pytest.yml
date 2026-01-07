@@ -10,6 +10,10 @@ jobs:
   run-tests:
     runs-on: ubuntu-latest
 
+    strategy:
+      matrix:
+        python-version: [ "3.11" ]  # add more if needed
+
     env:
       OPENQUAKE_VERSION: "3.15.0"
       SETTINGS_MODULE: egsim.settings_debug
@@ -19,11 +23,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Set up Python 3.11
-      - name: Set up Python
+      - name: Install system packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential gfortran libopenblas-dev liblapack-dev pkg-config cmake
+
+      # Set up Python
+      - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: ${{ matrix.python-version }}
 
       # Create and activate virtual environment
       - name: Create virtualenv
