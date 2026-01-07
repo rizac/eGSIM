@@ -16,7 +16,7 @@ jobs:
 
     env:
       OPENQUAKE_VERSION: "3.15.0"
-      SETTINGS_MODULE: egsim.settings_debug
+      SETTINGS_MODULE: "egsim.settings_debug"
 
     steps:
       # Checkout repository
@@ -61,7 +61,7 @@ jobs:
           # Extract the tar.gz (sdist)
           tar -xvf openquake.engine-${OPENQUAKE_VERSION}.tar.gz
           cd openquake.engine-${OPENQUAKE_VERSION}
-          pip install .
+          pip install -e .
 
       # Install project dependencies
       - name: Install project dependencies
