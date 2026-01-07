@@ -4,7 +4,7 @@ on:
   push:
     branches: [ main, master, dev ]
   pull_request:
-    branches: [ main, master, dev ]
+    branches: [ main, master ]
 
 jobs:
   run-tests:
@@ -26,7 +26,11 @@ jobs:
       - name: Install system packages
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential gfortran libopenblas-dev liblapack-dev pkg-config cmake
+          sudo apt-get install -y build-essential gfortran libopenblas-dev liblapack-dev pkg-config cmake \
+            proj-bin \
+            proj-data \
+            libproj-dev \
+            pkg-config
 
       # Set up Python
       - name: Set up Python ${{ matrix.python-version }}
@@ -52,7 +56,7 @@ jobs:
           # Extract the tar.gz (sdist)
           tar -xvf openquake.engine-${OPENQUAKE_VERSION}.tar.gz
           cd openquake.engine-${OPENQUAKE_VERSION}
-          pip install --prefer-binary -e .
+          pip install -e .
 
       # Install project dependencies
       - name: Install project dependencies
