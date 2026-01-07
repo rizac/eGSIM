@@ -30,10 +30,18 @@
 		<p>
 		{% include "api-service-intro.html" with service=title|lower %}
 		</p>
-		<div class='text-nowrap'>Response data format(s): {{ service.response_format }}</div>
+
+		<table>
+		<tr><td class='text-nowrap pe-2' style='width:1%'>Response data format(s): </td><td> {{ service.response_format }}</td></tr>
+		<tr><td class='text-nowrap pe-2' style='width:1%'>Request URL: </td><td> <a href='{{ service.url_path }}' target='_blank'>{{ service.url_path }}</a></td></tr>
+		<tr><td class='text-nowrap pe-2' style='width:1%'>Request method: </td><td> {{ service.type }}</td></tr>
+		<tr><td colspan="2">Request parameters:</td></tr>
+		</table>
+
+		<!-- <div class='text-nowrap'>Response data format(s): {{ service.response_format }}</div>
 		<div class='text-nowrap'>Request URL: <a href='{{ service.url_path }}' target='_blank'>{{ service.url_path }}</a></div>
 		<div class='text-nowrap'>Request type: {{ service.type }}</div>
-		<div class='text-nowrap'>Request parameters:</div>
+		<div class='text-nowrap'>Request parameters:</div> -->
 
 		<table class='table border'>
 			<tr>
