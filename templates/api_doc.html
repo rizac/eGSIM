@@ -2,28 +2,28 @@
 	 style='padding: 3rem calc(0.5*(100vw - 45rem)); flex:1 1 auto; overflow:auto'>
 	<h2>eGSIM API documentation</h2>
 	<div style='text-align: justify'>
+
 	<p>
-	A Web Application Programming Interface (API) is an interface that allows
-	communication between systems over the web using defined URLs and data formats.
-	While this website already represents a more intuitive form of interface for
-	communicating with the web service &mdash; a Graphical User Interface (GUI)
-	&mdash; an API overcomes several GUI limitations by allowing communication more
-	programmatically and flexibly via software code.
+	Communication with a web service requires an interface. A common example is a
+	Graphical User Interface (GUI), where you interact with the service using your
+	mouse or keyboard on visual components. This website is, in fact, an eGSIM GUI.
 	</p>
 
-	<p>In general, we recommend the usage of the eGSIM API through Python code
-	and consult our
-	<a href="https://github.com/rizac/egsim-client" target="_blank">online  examples</a>
-	in Jupyter Notebook: therein,
-	you can see how we access the API via a single main function that
-	can also be used seamlessly in any Python module or, with slight modifications,
-	in any programming language.
-	However, for a more low-level approach, e.g., using command line tools like
-	<span style='font-family:monospace'>curl</span>, or for Python users who want more
-	configuration options in their code, here below a
-	short documentation of the eGSIM API.
+	<p>
+	A Web Application Programming Interface (API), on the other hand, lets you
+	interact with the service through code using predefined URLs. Instead of clicking
+	in a browser, you write code. For anything beyond simple data visualization, APIs
+	are much more flexible and powerful than GUIs.
 	</p>
-	</div>
+
+	<p>
+	We recommend using the eGSIM API via Python and exploring
+	<a href="https://github.com/rizac/egsim-client" target="_blank">our Jupyter Notebook examples</a>,
+	which show how to access the API through a single main function.
+	For non-Python developers, users of external tools such as <span style='font-family:monospace'>curl</span>,
+	or anyone needing more advanced configuration options, a brief eGSIM API overview is provided below.
+	</p>
+</div>
 
 	{% for title, service in api_doc.items %}
 		<h3 class='mt-3'>{{ title }}</h3>
