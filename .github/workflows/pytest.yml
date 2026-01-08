@@ -43,6 +43,28 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      # Cache pip downloads and built wheels to avoid rebuilding heavy packages
+      # like numpy, scipy, h5py, pyproj, and openquake.engine on every CI run
+      - name: Cache pip wheels
+        uses: actions/cache@v3
+        with:
+          # Default pip cache directory on Linux runners
+          path: ~/.cache/pip
+
+          # Cache key changes when:
+          # - OS changes
+          # - Python version changes
+          # - dependencies change
+          key: >
+            ${{ runner.os }}-pip-
+            ${{ matrix.python-version }}-
+            ${{ hashFiles('requirements.txt') }}
+
+          # Fallback cache if exact key is not found
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ matrix.python-version }}-
+            ${{ runner.os }}-pip-
+
       # Create and activate virtual environment
       - name: Create virtualenv
         run: |
@@ -80,4 +102,4 @@ jobs:
         run: |
           source venv/bin/activate
           python manage.py migrate
-          DJANGO_SETTINGS_MODULE=${SETTINGS_MODULE}; pytest --ignore=./tests/tmp/ -xvvv ./tests/django
+          export DJANGO_SETTINGS_MODULE=${SETTINGS_MODULE}; pytest --ignore=./tests/tmp/ -xvvv ./tests/django
