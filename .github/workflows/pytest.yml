@@ -51,14 +51,8 @@ jobs:
           # Default pip cache directory on Linux runners
           path: ~/.cache/pip
 
-          # Cache key changes when:
-          # - OS changes
-          # - Python version changes
-          # - dependencies change
-          key: >
-            ${{ runner.os }}-pip-
-            ${{ matrix.python-version }}-
-            ${{ hashFiles('requirements.txt') }}
+          # Cache key, depends on OS, Python version, dependencies change
+          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('requirements.txt') }}
 
           # Fallback cache if exact key is not found
           restore-keys: |
