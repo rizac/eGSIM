@@ -101,5 +101,6 @@ jobs:
       - name: Test web app
         run: |
           source venv/bin/activate
+          export DJANGO_SETTINGS_MODULE=${SETTINGS_MODULE}
           python manage.py migrate
-          export DJANGO_SETTINGS_MODULE=${SETTINGS_MODULE}; pytest --ignore=./tests/tmp/ -xvvv ./tests/django
+          pytest --ignore=./tests/tmp/ -xvvv ./tests/django
