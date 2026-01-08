@@ -86,4 +86,5 @@ jobs:
           source venv/bin/activate
           export DJANGO_SETTINGS_MODULE=${SETTINGS_MODULE}
           python manage.py migrate
+          python manage.py egsim-init
           pytest --ignore=./tests/tmp/ -xvvv ./tests/django
