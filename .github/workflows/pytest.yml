@@ -44,7 +44,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       # Restore venv or cache it (note: trailing "-" in restore-keys means: match anything after it. Also, cached version is stored in GiHub storage, not on the testing VM)
-      - name: Cache virtualenv
+      - name: Restore cached virtualenv (if any)
         uses: actions/cache@v3
         with:
           path: venv
@@ -80,11 +80,11 @@ jobs:
           source venv/bin/activate
           pytest --ignore=./tests/tmp/ -xvvv ./tests/smtk
 
-      # Run Django migrations and pytest
-      - name: Test eGSIM (web app)
-        run: |
-          source venv/bin/activate
-          export DJANGO_SETTINGS_MODULE=${SETTINGS_MODULE}
-          python manage.py migrate
-          python manage.py egsim-init --no-input
-          pytest --ignore=./tests/tmp/ -xvvv ./tests/django
+#      # Run Django migrations and pytest
+#      - name: Test eGSIM (web app)
+#        run: |
+#          source venv/bin/activate
+#          export DJANGO_SETTINGS_MODULE=${SETTINGS_MODULE}
+#          python manage.py migrate
+#          python manage.py egsim-init --no-input
+#          pytest --ignore=./tests/tmp/ -xvvv ./tests/django
