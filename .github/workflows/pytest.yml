@@ -43,28 +43,17 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      # Cache pip downloads and built wheels to avoid rebuilding heavy packages
-      # like numpy, scipy, h5py, pyproj, and openquake.engine on every CI run
-      - name: Cache pip wheels
+      # Restore venv or cache it (note: trailing "-" in restore-keys means: match anything after it. Also, cached version is stored in GiHub storage, not on the testing VM)
+      - name: Cache virtualenv
         uses: actions/cache@v3
         with:
-          # Default pip cache directory on Linux runners
-          path: ~/.cache/pip
-
-          # Cache key, depends on OS, Python version, dependencies change
-          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('requirements.txt') }}
-
-          # Fallback cache if exact key is not found
-          restore-keys: |
-            ${{ runner.os }}-pip-${{ matrix.python-version }}-
-            ${{ runner.os }}-pip-
+          path: venv
+          key: ${{ runner.os }}-venv-${{ matrix.python-version }}-${{ env.OPENQUAKE_VERSION }}
+          restore-keys: ${{ runner.os }}-venv-${{ matrix.python-version }}-
 
       # Create and activate virtual environment
-      - name: Create virtualenv
-        run: |
-          python -m venv venv
-          source venv/bin/activate
-          python -m pip install --upgrade pip setuptools wheel
+      - name: Create virtualenv if needed
+        run: if [ -d venv ]; then echo "Using cached venv"; else python -m venv venv; source venv/bin/activate; python -m pip install --upgrade pip setuptools wheel; fi
 
       # Download openquake.engine source distribution and install editable
       - name: Install openquake.engine (editable)
