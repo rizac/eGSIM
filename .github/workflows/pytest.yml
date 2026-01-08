@@ -64,10 +64,11 @@ jobs:
           pip install -e .
 
       # Install project dependencies
-      - name: Install project dependencies
+      - name: Install project
         run: |
           source venv/bin/activate
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install -e .
 
       - name: Test lib (smtk)
         run: |
