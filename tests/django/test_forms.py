@@ -317,24 +317,110 @@ class Test:
         assert not is_valid
 
     def test_get_gsim_from_region(self):
-        form = GsimForm({'lat': 50, 'lon': 7})
-        assert form.is_valid()
-        models = form.cleaned_data['regionalization']
-        assert len(models) == 12
 
-        for reg in ['share', ['share']]:  # test string == single string item list
-            form = GsimForm({'lat': 50, 'lon': 7, 'regionalization': reg})
-            assert form.is_valid()
-            models = form.cleaned_data['regionalization']
-            assert len(models) == 5
-
-        form = GsimForm({'lat': 51, 'lon': 10, 'regionalization': ['.\n..???.u6asd']})
+        # test misspelled regionalization:
+        form = GsimForm({'lat': 48.5, 'lon': 6, 'regionalization': ['.\n..???.u6asd']})
         assert not form.is_valid()
 
-        form = GsimForm({'lat': 51, 'lon': 10, 'regionalization': ['germany']})
-        assert form.is_valid()
-        models = form.cleaned_data['regionalization']
-        assert len(models) == 5
+        regs = ['share', 'eshm20', ['share', 'eshm20'], None]
+        # run several tsts (note: we use str and 1itemlist to test they both work
+        share_models = [
+            "AkkarBommer2010",
+            "CauzziFaccioli2008",
+            "ChiouYoungs2008",
+            "ESHM20Craton",
+            "ZhaoEtAl2006Asc"
+        ]
+        eshm20_models = [
+            "ESHM20Craton",
+            "KothaEtAl2020ESHM20"
+        ]
+        lat, lon = 30, 30
+        expected_models = []
+        for reg in regs:
+            input = {'lat': lat, 'lon': lon}
+            if reg is not None:
+                input['regionalization'] = reg
+            form = GsimForm(input)
+            assert form.is_valid()
+            models = form.cleaned_data['regionalization']
+            assert sorted(models) == expected_models
+
+            # test that supplying a str is the same as 1-item list with that string:
+            if isinstance(reg, str):
+                input['regionalization'] = [input['regionalization']]
+                form2 = GsimForm(input)
+                assert form2.is_valid()
+                models2 = form2.cleaned_data['regionalization']
+                assert models == models2
+
+        # only share models coordinates:
+        lat, lon = 48.5, 20
+        for reg in regs:
+            input = {'lat': lat, 'lon': lon}
+            if reg is not None:
+                input['regionalization'] = reg
+            form = GsimForm(input)
+            assert form.is_valid()
+            models = form.cleaned_data['regionalization']
+            if reg == 'eshm20':
+                assert sorted(models) == []
+            else:
+                assert sorted(models) == share_models
+
+            # test that supplying a str is the same as 1-item list with that string:
+            if isinstance(reg, str):
+                input['regionalization'] = [input['regionalization']]
+                form2 = GsimForm(input)
+                assert form2.is_valid()
+                models2 = form2.cleaned_data['regionalization']
+                assert models == models2
+
+        # only eshm20 models coordinates:
+        lat, lon = 48.5, 2
+        for reg in regs:
+            input = {'lat': lat, 'lon': lon}
+            if reg is not None:
+                input['regionalization'] = reg
+            form = GsimForm(input)
+            assert form.is_valid()
+            models = form.cleaned_data['regionalization']
+            if reg == 'share':
+                assert sorted(models) == []
+            else:
+                assert sorted(models) == eshm20_models
+
+            # test that supplying a str is the same as 1-item list with that string:
+            if isinstance(reg, str):
+                input['regionalization'] = [input['regionalization']]
+                form2 = GsimForm(input)
+                assert form2.is_valid()
+                models2 = form2.cleaned_data['regionalization']
+                assert models == models2
+
+        # share + eshm20 models coordinates:
+        lat, lon = 48.5, 10
+        for reg in regs:
+            input = {'lat': lat, 'lon': lon}
+            if reg is not None:
+                input['regionalization'] = reg
+            form = GsimForm(input)
+            assert form.is_valid()
+            models = form.cleaned_data['regionalization']
+            if reg == 'share':
+                assert sorted(models) == share_models
+            elif reg == 'eshm20':
+                assert sorted(models) == eshm20_models
+            else:
+                assert sorted(models) == sorted(set(eshm20_models) | set(share_models))
+
+            # test that supplying a str is the same as 1-item list with that string:
+            if isinstance(reg, str):
+                input['regionalization'] = [input['regionalization']]
+                form2 = GsimForm(input)
+                assert form2.is_valid()
+                models2 = form2.cleaned_data['regionalization']
+                assert models == models2
 
 
 def test_field2params_in_forms():

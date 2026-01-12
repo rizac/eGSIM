@@ -409,7 +409,10 @@ class ResidualsVisualizeForm(ResidualsForm):
                 step = 0.5
             else:
                 step = 0.1
-            bins = np.arange(x.min(), x.max() + step, step)
+            if len(x) == 1:  # rounding errors, avoid np.arange if x has 1 element
+                bins = np.array(x)
+            else:
+                bins = np.arange(x.min(), x.max() + step, step)
             y = np.histogram(x, bins, density=True)[0]
             data = [bar_trace(
                 color=color_transparent,

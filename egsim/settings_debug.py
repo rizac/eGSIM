@@ -185,7 +185,3 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 0  # for ref, 2621440 (2Mb) is the default in Djan
 # The maximum size in bytes (EXCLUDING THE FILE UPLOAD SIZE) that a request body may be
 # before a SuspiciousOperation (RequestDataTooBig) is raised:
 DATA_UPLOAD_MAX_MEMORY_SIZE: 5242880  # 5Mb (2621440 = 2Mb is the default in Django 5.1)
-
-
-# Custom variable
-EGSIM_SOURCE_DATA_PATH = "~/Nextcloud/egsim-data"

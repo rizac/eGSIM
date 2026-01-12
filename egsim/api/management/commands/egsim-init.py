@@ -2,33 +2,30 @@
 eGSIM management command. See `Command.help` for details
 """
 import warnings
-from os.path import join, expanduser
+from os.path import join, expanduser, abspath, isfile, dirname, basename
 
+import yaml
 from django.core.management import BaseCommand, CommandError
 from egsim.smtk import (registered_gsims, gsim, intensity_measures_defined_for,
                         ground_motion_properties_required_by, get_sa_limits)
 from egsim.smtk.flatfile import FlatfileMetadata
 from ... import models
-from ...initialization.egsim_init import copy_regionalizations, parse_flatfiles
-
-
-# check JSON1 extension (it should be enabled in all newest OSs and Python versions):
 from django.conf import settings
 
 
-if any(_['ENGINE'] == 'django.db.backends.sqlite3'
-       for _ in settings.DATABASES.values()):
-    # sqlite is used, check JSON1 extension. Note that Django does also this
-    # (JSONField) but for safety we perform the test again
+if any(_['ENGINE'] == 'django.db.backends.sqlite3' for _ in settings.DATABASES.values()):
+    # check JSON1 extension (it should be enabled in all newest OSs and Python versions):
+    # Note that Django does also this (JSONField) but for safety we do it here again
     try:
         import sqlite3
         conn = sqlite3.connect(':memory:')
         cursor = conn.cursor()
         cursor.execute('SELECT JSON(\'{"a": "b"}\')')
     except Exception:
-        raise ValueError('JSON not supported in this SQLite version. To fix '
-                         'it, visit: '
-                         'https://code.djangoproject.com/wiki/JSON1Extension')
+        raise ValueError(
+            'JSON not supported in this SQLite version. To fix it, '
+            'visit: https://code.djangoproject.com/wiki/JSON1Extension'
+        )
 
 
 class Command(BaseCommand):
@@ -54,7 +51,6 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         """Execute the command"""
-
         self.stdout.write('')
         self.stdout.write('Empty and populating the eGSIM database')
         self.stdout.write('Remember that you can always inspect the database on '
@@ -64,21 +60,11 @@ class Command(BaseCommand):
         if options.pop('interactive', False) and \
                 input('Do you want to continue (y/n)?') != 'y':
             return
-        self.stdout.write('')
-
-        # We cannot call `call_command` with the simple command name (str) because
-        # they might be hidden (starting with underscore), we have to pass the command
-        # class, which can be retrieved via `load_command_class`:
-
         self.handle_openquake(*args, **options)
-        self.stdout.write('')
-        self.handle_regionalizations(*args, **options)
-        self.stdout.write('')
-        self.handle_flatfiles(*args, **options)
-        self.stdout.write('')
+        self.handle_media_files(*args, **options)
 
     def handle_openquake(self, *args, **options):
-        """Executes the command to initialize the DB with OpenQuake data
+        """Register openquake data to DB
 
         :param args: positional arguments (?). Unclear what should be given
             here. Django doc and Google did not provide much help, source code
@@ -109,6 +95,7 @@ class Command(BaseCommand):
                                              f'discarded: {discarded}'))
 
     def write_model(self, name, cls):
+        """Write a GMM entry to DB"""
         prefix = 'Discarding'
         try:
             _ = gsim(name)  # check we can initialize the model
@@ -141,8 +128,8 @@ class Command(BaseCommand):
             return False
         return True
 
-    def handle_regionalizations(self, *args, **options):
-        """Executes the command copying regionalizations files
+    def handle_media_files(self, *args, **options):
+        """Register media files data to DB
 
         :param args: positional arguments (?). Unclear what should be given
             here. Django doc and Google did not provide much help, source code
@@ -151,39 +138,37 @@ class Command(BaseCommand):
             as options[<paramname>]. For info see:
             https://docs.djangoproject.com/en/2.2/howto/custom-management-commands/
         """
-        db_model = models.Regionalization
-        empty_table(db_model)
-        src_dirname = "regionalizations"
-        srcdir = join(expanduser(settings.EGSIM_SOURCE_DATA_PATH), src_dirname)
-        destdir = join(expanduser(settings.MEDIA_ROOT), src_dirname)
-        regs = 0
-        for regs, reg_ref in enumerate(copy_regionalizations(
-                srcdir=srcdir, destdir=destdir, stdout=self.stdout),
-                start=1):
-            # save object metadata to db:
-            kwargs = set(reg_ref) & get_fieldnames(db_model)
-            db_model.objects.create(**{k: reg_ref[k] for k in kwargs})
+        empty_table(models.Flatfile)
+        empty_table(models.Regionalization)
+        dir2model = {
+            'flatfiles': models.Flatfile,
+            'regionalizations': models.Regionalization
+        }
+        count = {
+            'flatfiles': 0,
+            'regionalizations': 0
+        }
+        for abs_path, data in read_media_files().items():
+            dir_basename = basename(dirname(abs_path))
+            db_model = dir2model.get(dir_basename)
+            if db_model is None:
+                continue
+            self.write_media_file(db_model, abs_path, data)
+            count[dir_basename] += 1
 
-        self.stdout.write(self.style.SUCCESS(f'{regs} regionalization(s) '
-                                             f'saved to {destdir}'))
+        self.stdout.write(self.style.SUCCESS(
+            f'{count["flatfiles"]} flatfile(s) registered to DB'
+        ))
+        self.stdout.write('')
+        self.stdout.write(self.style.SUCCESS(
+            f'{count["regionalizations"]} regionalization(s) registered to DB'
+        ))
 
-    def handle_flatfiles(self, *args, **options):
-        """Parse each pre-defined flatfile"""
-        db_model = models.Flatfile
-        empty_table(db_model)
-        numfiles = 0
-        src_dirname = "flatfiles"
-        srcdir = join(expanduser(settings.EGSIM_SOURCE_DATA_PATH), src_dirname)
-        destdir = join(expanduser(settings.MEDIA_ROOT), src_dirname)
-        for numfiles, ff_refs in enumerate(parse_flatfiles(
-            srcdir=srcdir, destdir=destdir, stdout=self.stdout
-        ), start=1):
-            # store object refs, if any:
-            kwargs = set(ff_refs) & get_fieldnames(db_model)
-            db_model.objects.create(**{k: ff_refs[k] for k in kwargs})
-
-        self.stdout.write(self.style.SUCCESS(f'{numfiles} flatfile(s) '
-                                             f'saved to {destdir}'))
+    def write_media_file(self, db_model, path, data):
+        """Write a media file entry to DB"""
+        data['filepath'] = abspath(path)
+        db_field_names = get_fieldnames(db_model)
+        db_model.objects.create(**{k: data[k] for k in data if k in db_field_names})
 
 
 def empty_table(db_model):
@@ -195,3 +180,14 @@ def empty_table(db_model):
 
 def get_fieldnames(db_model) -> set[str]:
     return set(f.name for f in db_model._meta.get_fields())  # noqa
+
+
+def read_media_files() -> dict[str, dict[str, str]]:
+    media_root = abspath(expanduser(settings.MEDIA_ROOT))
+    with open(join(media_root, "media_files.yml")) as _:
+        data = yaml.safe_load(_)
+    for k in list(data):
+        file = abspath(join(media_root, k))
+        assert isfile(file)
+        data[file] = data.pop(k)
+    return data

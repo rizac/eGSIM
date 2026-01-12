@@ -469,14 +469,13 @@ class FlatfileQueryError(FlatfileError):
 # registered columns:
 
 class FlatfileMetadata:
-    """Container class to access flatfile metadata defined
-    in the associated YAML file
+    """Container class to access flatfile metadata defined in the associated YAML file
     """
 
     @staticmethod
     def has(column: str) -> bool:
         """Return whether the given argument is a registered flatfile column name
-        (including aliases)
+        (including aliases. 'SA(<period>)' is valid and will default to 'SA')
         """
         return bool(FlatfileMetadata._props_of(column))
 
@@ -485,26 +484,30 @@ class FlatfileMetadata:
         """Return a set of strings with all column names (including aliases)
         denoting a rupture parameter
         """
-        return {c_name for c_name, c_props in _load_flatfile_metadata().items()
-                if c_props.get('type', None) == ColumnType.rupture}
+        return {
+            c_name for c_name, c_props in _load_flatfile_metadata().items()
+            if c_props.get('type', None) == ColumnType.rupture
+        }
 
     @staticmethod
     def get_intensity_measures() -> set[str]:
         """Return a set of strings with all column names denoting an intensity
-        measure name, with no arguments, e.g., "PGA", "SA" (not "SA(...)").
+        measure name, with no arguments, e.g., "PGA", "SA" (note: not "SA(...)").
         """
         return {c_name for c_name, c_props in _load_flatfile_metadata().items()
                 if c_props.get('type', None) == ColumnType.intensity}
 
     @staticmethod
     def get_type(column: str) -> Union[ColumnType, None]:
-        """Return the `ColumnType` enum item of the given column, or None"""
+        """Return the `ColumnType` enum item of the given column, or None.
+        if `column` is 'SA(<period>)', it will default to 'SA'
+        """
         return FlatfileMetadata._props_of(column).get('type', None)
 
     @staticmethod
     def get_default(column: str) -> Union[None, Any]:
-        """Return the default of the given column name (used to fill missing data),
-        or None if no default is set
+        """Return the default of the given column name (used to fill missing data), or
+        None if no default is set. if `column` is 'SA(<period>)', it will default to 'SA'
         """
         return FlatfileMetadata._props_of(column).get('default', None)
 
@@ -513,21 +516,24 @@ class FlatfileMetadata:
         """Return all possible names of the given column, as tuple set of strings
         where the first element is assured to be the flatfile default column name
         (primary name) and all remaining the secondary names. The tuple will be composed
-        of `column` alone if `column` does not have registered aliases
+        of `column` alone if `column` does not have registered aliases.
+        if `column` is 'SA(<period>)', it will default to 'SA'
         """
         return FlatfileMetadata._props_of(column).get('alias', (column,))
 
     @staticmethod
     def get_help(column: str) -> str:
-        """Return the help (description) of the given column name, or ''"""
+        """Return the help (description) of the given column name, or ''.
+        If `column` is 'SA(<period>)', it will default to 'SA'
+        """
         return FlatfileMetadata._props_of(column).get('help', "")
 
     @staticmethod
     def get_dtype(column: str) -> Union[ColumnDtype, None]:
         """Return the data type of the given column name, as `ColumnDtype` Enum item,
         or None if the column has no known data type. If the return value is
-        `ColumnDtype.category`, more info can be obtained via
-        `get_categorical_dtype(column)`
+        `ColumnDtype.category`, get more info via `get_categorical_dtype(column)`.
+        If `column` is 'SA(<period>)', it will default to 'SA'
         """
         dtype = FlatfileMetadata._get_dtype(column)
         if isinstance(dtype, pd.CategoricalDtype):
@@ -538,7 +544,8 @@ class FlatfileMetadata:
     def get_categorical_dtype(column: str) -> Union[pd.CategoricalDtype, None]:
         """Return the pandas CategoricalDtype, a data type for categorical data, for
         the given column. To get the possible categories, use the `.categories` attribute
-        of the returned object. Return None if the column data type is not categorical
+        of the returned object. Return None if the column data type is not categorical.
+        If `column` is 'SA(<period>)', it will default to 'SA'
         """
         dtype = FlatfileMetadata._get_dtype(column)
         if isinstance(dtype, pd.CategoricalDtype):
@@ -740,3 +747,34 @@ def valid_expr_sequence(tok_num1: int, tok_val1: str, tok_num2: int, tok_val2: s
         return tok_val1 in {'==', '!=', '<', '<=', '>', '>=', '('}
     else:
         return False
+
+
+def get_flatfile_info(flatfile: pd.DataFrame) -> str:
+    """Get flatfile info as str. The argument should have been read with
+    `read_flatfile` (i.e., no well formation is checked here)"""
+    cols = {}
+    sa_periods = [np.inf, -np.inf]
+    unknowns = set()
+    for c in flatfile.columns:
+        f_type = FlatfileMetadata.get_type()
+        if f_type is None:
+            unknowns.add(c)
+            continue
+        if f_type == ColumnType.intensity and c.startswith('SA'):
+            p = sa_period(c)
+            sa_periods = [min(sa_periods[0], p), max(sa_periods[1], p)]
+            c = 'SA'
+        cols.setdefault(f_type.value, set()).add(c)
+
+    ret = ['=== Flatfile columns ===']
+    if unknowns:
+        ret.append([f'User-defined ({len(unknowns)}): {sorted(unknowns)}'])
+    for c, v in sorted(cols):
+        v = sorted(cols[c])
+        if len(c) > 10:
+            v = v[:9] + ['...']
+        ret.append([f'{c.value.title()} ({len(v)}): {", ".join(v)}'])
+    if sa_periods != [np.inf, -np.inf]:
+        ret.append([f'Sa periods (min, max): {sa_periods}'])
+
+    return "\n\n".join(ret)

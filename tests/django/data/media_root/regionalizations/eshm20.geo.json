@@ -1,0 +1,24 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [0, 45],
+            [11, 45],
+            [11, 49],
+            [0, 49],
+            [0, 45]
+          ]
+        ]
+      },
+      "properties": {
+        "region": "ESHM20 Shallow Default",
+        "models": ["KothaEtAl2020ESHM20", "ESHM20Craton"]
+      }
+    }
+  ]
+}

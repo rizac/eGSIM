@@ -1,0 +1,73 @@
+# eGSIM media files (regionalizations or flatfiles). Any file present here (path relative
+# to this file parent dir) will be added in eGSIM during DB initialization. For relative
+# properties see examples below ('name' is the only mandatory property and must be an
+# alphanumeric string representing the DB unique key and input value in API requests)
+
+flatfiles/esm2018.hdf:
+  name: esm2018
+  citation: >-
+    Lanzano G., Luzi L., Russo E., Felicetta C., D'Amico M. C., Sgobba 
+    S., Pacor F. (2018). Engineering Strong Motion Database (ESM) flatfile [Data 
+    set]. Istituto Nazionale di Geofisica e Vulcanologia (INGV).
+    https://doi.org/10.13127/esm/flatfile.1.0
+  display_name: Engineering strong-motion flat-file 2018
+  doi: 10.13127/esm/flatfile.1.0
+  license: >-
+    Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC
+    4.0) [https://creativecommons.org/licenses/by-nc/4.0/]
+  url: https://esm-db.eu/#/products/flat_file
+
+#flatfiles/kik2024_SA.hdf:
+#  name: kiknet2024
+#  citation: >-
+#    Loviknes, Karina; von Specht, Sebastian; Lilienkamp, Henning; Händel,
+#    Annabel; Cotton, Fabrice (2025): KiK-NET and K-NET flatfile with automatically
+#    processed ground motions. GFZ Data Services.
+#    https://doi.org/10.5880/GFZ.LKUT.2025.001
+#  display_name: KiK-NET flatfile
+#  doi: https://doi.org/10.5880/GFZ.LKUT.2025.001
+#  license: >-
+#    Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC
+#    4.0) [https://creativecommons.org/licenses/by-nc/4.0/]
+#  url: https://dataservices.gfz-potsdam.de/panmetaworks/showshort.php?id=95019de4-f443-11ef-914a-f12b0080820d
+#
+#flatfiles/knet2024_SA.hdf:
+#  name: knet2024
+#  citation: >-
+#    Loviknes, Karina; von Specht, Sebastian; Lilienkamp, Henning; Händel,
+#    Annabel; Cotton, Fabrice (2025): KiK-NET and K-NET flatfile with automatically
+#    processed ground motions. GFZ Data Services.
+#    https://doi.org/10.5880/GFZ.LKUT.2025.001
+#  display_name: K-NET flatfile
+#  doi: https://doi.org/10.5880/GFZ.LKUT.2025.001
+#  license: Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC
+#    4.0) [https://creativecommons.org/licenses/by-nc/4.0/]
+#  url: https://dataservices.gfz-potsdam.de/panmetaworks/showshort.php?id=95019de4-f443-11ef-914a-f12b0080820d
+
+regionalizations/eshm20.geo.json:
+  name: eshm20
+  display_name: The 2020 European Seismic Hazard Model
+  url: http://www.hazard.efehr.org/en/Documentation/specific-hazard-models/europe/eshm2020-overview/
+
+#regionalizations/germany.geo.json:
+#  name: germany
+#
+#regionalizations/global_stable.geo.json:
+#  name: global_stable
+#
+#regionalizations/global_volcanic.geo.json:
+#  name: global_volcanic
+
+regionalizations/share.geo.json:
+  name: share
+  citation: >-
+    D. Giardini, J. Woessner, L. Danciu, H. Crowley, F. Cotton, G. Grünthal, 
+    R. Pinho, G. Valensise, S. Akkar, R. Arvidsson, R. Basili, T. Cameelbeeck, 
+    A. Campos-Costa, J. Douglas, M. B. Demircioglu, M. Erdik, J. Fonseca, B. Glavatovic, 
+    C. Lindholm, K. Makropoulos, C. Meletti, R. Musson, K. Pitilakis, K. Sesetyan, 
+    D. Stromeyer,  M. Stucchi, A. Rovida, Seismic Hazard Harmonization in Europe 
+    (SHARE): Online Data Resource, doi: 10.12686/SED-00000001-SHARE, 2013
+  display_name: Seismic Hazard Harmonization in Europe (SHARE)
+  doi: 10.12686/SED-00000001-SHARE
+  license: CC BY-SA 3.0 (unported) [http://creativecommons.org/licenses/by-sa/3.0/]
+  url: http://hazard.efehr.org/en/Documentation/specific-hazard-models/europe/overview/seismogenic-sources/

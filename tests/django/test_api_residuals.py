@@ -431,7 +431,9 @@ class Test:
         # assert 13 < inter_ev_values.median() < 14
         # now it should be:
         q1, m, q9 = inter_ev_values.quantile([.1, .5, .9])
-        assert -1.5 < m < -1
+        assert -1 < m < 0
+        # legacy comparison (when using whole ESM db, not a test subset) was:
+        # assert -1.5 < m < -1
 
         # now with no norm:
         resp1 = client.get(self.url, data=inputdict | {'normalize': False},
@@ -440,7 +442,9 @@ class Test:
         dfr = read_df_from_hdf_stream(BytesIO(resp1.getvalue()))
         inter_ev_values = dfr[('SA(0.1)', 'inter_event_residual', 'BooreEtAl2014')]
         q1_nonorm, m_nonomr, q9_nonorm = inter_ev_values.quantile([.1, .5, .9])
-        assert -1 < m_nonomr < -.5
+        assert -1 < m_nonomr < 0
+        # legacy comparison (when using whole ESM db, not a test subset) was:
+        # assert -1 < m_nonomr < -.5
 
     def test_residuals_ranking(self,
                                # pytest fixtures:
@@ -582,18 +586,18 @@ class Test:
 
         assert resp2.status_code == 400
         err_msg = resp2.content
-        assert err_msg.startswith(b'NGAEastUSGSSammons1: Magnitude 3.90 outside '
+        assert err_msg.startswith(b'NGAEastUSGSSammons1: Magnitude 3.45 outside '
                                   b'of supported range (4.00 to 8.20) (OpenQuake '
                                   b'ValueError @')
 
-        # set  a flatfile mag range compatiblw with the model which just raised:
+        # set  a flatfile mag range compatible with the model which just raised:
         resp2 = client.post(self.url,
                             data={
                                 'model': models,
                                 'imt': imts,
                                 'flatfile': 'esm2018',
                                 # just toi speed up test
-                                'flatfile-query': '(mag > 4.5) & (mag < 4.6)',
+                                'flatfile-query': '(mag >= 4.0) & (mag <= 8.20)',
                                 'format': 'hdf'
                             },
                             content_type=MimeType.hdf)

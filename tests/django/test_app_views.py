@@ -310,13 +310,14 @@ class Test:
             'model': ['CauzziEtAl2014', 'BindiEtAl2014Rjb'],
             'imt': ['PGA'],
             'flatfile': 'esm2018',
-            'flatfile-query': 'mag > 7.5'
+            'flatfile-query': 'mag > 7.399'
         }
         response = client.post(f"/{URLS.SUBMIT_RESIDUALS_VISUALIZATION}",
                                json.dumps(data),
                                content_type="application/json")
         assert response.status_code == 200
         resp = response.json()
+        # with only one point, no bins to display, so zero pts:
         for plot in resp['plots']:
             for trace in plot['data']:
                 assert len(trace['y']) == len(trace['x']) == 0
@@ -574,11 +575,14 @@ class Test:
 
         response = client.post(
             f"/{url}",
-            json.dumps({'lat': 35, 'lon': -79}),
+            json.dumps({'lat': 50, 'lon': 20}),
             content_type="application/json"
         )
         assert response.status_code == 200
-        assert response.json()['models'] == {'ESHM20Craton': ['global_stable']}
+        resp_data = response.json()['models']
+        for mod in ["AkkarBommer2010","CauzziFaccioli2008","ChiouYoungs2008","ZhaoEtAl2006Asc","ESHM20Craton"]:
+            assert resp_data.pop(mod) == ['share']
+        assert not resp_data
 
         # this view does not raise even when errors are provided:
         response = client.post(
