@@ -60,3 +60,31 @@ def test_egsimdb(mocked_input, capsys):
     # assert 'Aborted by user' not in capsys.readouterr().out
     # call_command('egsim-db')
     assert 'Command terminated' in out_err.out
+
+
+@pytest.mark.django_db
+def test_collectstatic(settings, tmp_path):
+    import shutil
+
+    # Override STATIC_ROOT for this test
+    settings.STATIC_ROOT = tmp_path
+
+    # Ensure STATIC_ROOT is empty
+    if tmp_path.exists():
+        shutil.rmtree(tmp_path)
+    tmp_path.mkdir()
+
+    # Run collectstatic non-interactively
+    call_command("collectstatic", interactive=False, clear=True)
+
+    expected = [
+        'admin', 'css', 'img', 'js'
+    ]
+    assert sorted(os.listdir(tmp_path)) == expected
+
+    assert all(os.path.isdir(os.path.join(tmp_path, _)) for _ in expected)
+
+    assert all(
+        len(os.listdir(os.path.join(tmp_path, _)))
+        for _ in expected
+    )

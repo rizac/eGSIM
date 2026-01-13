@@ -1,26 +1,22 @@
 """
 Base Django settings for eGSIM project.
 
-This file is supposed to be **overwritten** in production settings, so take care to
+This file is supposed to be **overwritten** in dev / test / production, so take care to
 overwrite relevant variable in the latter (replace SECRET_KEY, DEBUG=False and so on)
 
 Info here:
 https://docs.djangoproject.com/en/stable/ref/settings
 """
+from pathlib import Path
 
-import os
-
-# Build paths inside the project like this: os.path.join(BASE_DIR, ...)
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = ')d#k&x(n_t_*3sgpe^e%ftw%2+xb8l3f%i^j77=ga-!9f)n$5m'
+SECRET_KEY: str
+
+ALLOWED_HOSTS: list[str]
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-ALLOWED_HOSTS = []  # ['localhost', '127.0.0.1', 'egsim.org']
-
+DEBUG: bool  # default to False if not given
 
 # Application definition
 
@@ -33,6 +29,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     # https://docs.djangoproject.com/en/stable/topics/db/models/#using-models
     'egsim.api',
+    'egsim.app',
 ]
 
 MIDDLEWARE = [
@@ -50,10 +47,10 @@ ROOT_URLCONF = 'egsim.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR, "templates")],
+        'DIRS': [Path(__file__).resolve().parent.parent / "templates"],
         'APP_DIRS': True,
         'OPTIONS': {
-            'debug': True,
+            'debug': False,
             'context_processors': [
                 'django.template.context_processors.debug',
                 'django.template.context_processors.request',
@@ -78,7 +75,7 @@ WSGI_APPLICATION = 'egsim.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3')
+        'NAME': ''  # you will need to populate this in subclassed settings
     }
 }
 
@@ -131,7 +128,7 @@ STATIC_URL = '/static/'
 # So you set STATIC_ROOT = '/some/folder/' and tell Nginx to look for static
 # files in /some/folder/. Then you run manage.py collectstatic and Django
 # will copy static files from all the apps you have to /some/folder/.
-STATIC_ROOT = ''
+# STATIC_ROOT = ''
 
 # STATICFILES_DIRS is used to include additional directories for collectstatic
 # to look for, and in development (debug=True) to search for static files
@@ -141,15 +138,15 @@ STATIC_ROOT = ''
 # thus we adopt a very common approach: store static files under
 # 'djangoproject/static' folder, which has the only drawback that we have to
 # add the path to STATICFILES_DIRS
-STATICFILES_DIRS = (
-     os.path.join(BASE_DIR, 'static'),
-)
+# STATICFILES_DIRS = (
+#      os.path.join(BASE_DIR, 'static'),
+# )
 
 # static files url:
 MEDIA_URL = '/media/'
 
 # media dir:
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+# MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # If we have logins better to set this to True (in the meantime, set to False):
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
