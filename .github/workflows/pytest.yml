@@ -72,7 +72,7 @@ jobs:
         run: |
           source venv/bin/activate
           if [ -f requirements.lib.txt ]; then pip install -r requirements.lib.txt; fi
-          pip install -e .
+          pip install .
 
       - name: Test eGSIM (smtk lib)
         run: |
@@ -84,7 +84,7 @@ jobs:
         run: |
           source venv/bin/activate
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          pip install -e .
+          pip install -e ".[web]"
 
       # Run Django migrations and pytest
       - name: Test eGSIM (web app)
