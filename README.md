@@ -129,14 +129,14 @@ pytest -vvv ./tests/smtk
 Move in the `egsim directory` and type:
 
 ```bash
-export DJANGO_SETTINGS_MODULE=egsim.settings_debug; pytest -xvvv ./tests/
+export DJANGO_SETTINGS_MODULE=egsim.settings.test; pytest -xvvv ./tests/
 ```
 (x=stop at first error, v*=increase verbosity). 
 
 with coverage report:
 
 ```bash
-export DJANGO_SETTINGS_MODULE=egsim.settings_debug; pytest --cov=egsim --cov-report=html -xvvv ./tests/
+export DJANGO_SETTINGS_MODULE=egsim.settings.test; pytest --cov=egsim --cov-report=html -xvvv ./tests/
 ```
 
 <details>
@@ -145,12 +145,13 @@ For **PyCharm users**, you need to configure the environment variable
 for all tests. Go to:
 
 - Run
-  - Edit Configurations
+  - Edit Configurations Templates ...
     - Python tests
+      - pytest
     
 And then under **Environment variables:** add:
 
-`DJANGO_SETTINGS_MODULE=egsim.settings_debug`
+`DJANGO_SETTINGS_MODULE=egsim.settings.test`
 
 (type several env vars separated by ;)
 
@@ -171,7 +172,7 @@ If you want to access the admin panel, see [the admin panel](#admin-panel).
 **To run the program in your local browser**, type:
 
 ```bash
-export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py runserver 
+export DJANGO_SETTINGS_MODULE="egsim.settings.dev";python manage.py runserver 
 ```
 
 <details>
@@ -191,7 +192,7 @@ then under **Run**:
    and in the next text field put `manage.py`
  - script parameters: `runserver`
  - And then under **Environment variables:** add:
-   `DJANGO_SETTINGS_MODULE=egsim.settings_debug`
+   `DJANGO_SETTINGS_MODULE=egsim.settings.dev`
    (type several env vars separated by ;)
 
 You should see in the `Services` tab appearing the script name, so you can
@@ -239,7 +240,7 @@ pip freeze > ./requirements.txt
 
 Run tests:
 ```console
-export DJANGO_SETTINGS_MODULE=egsim.settings_debug; pytest -xvvv ./tests/
+export DJANGO_SETTINGS_MODULE=egsim.settings.test; pytest -xvvv ./tests/
 ```
 
 Change `setup.py` and set the current OpenQuake version in 
@@ -304,7 +305,7 @@ Typing `python` on the terminal does not work as one needs to
 initialize Django settings. The Django `shell` command does this:
 
 ```bash
-export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py shell 
+export DJANGO_SETTINGS_MODULE="egsim.settings.dev";python manage.py shell 
 ```
 
 ## Get Django uploaded files directory
@@ -332,7 +333,7 @@ see "Complete Db Reset")**
    - `egsim/db.sqlite3`
 - Execute: 
   ```bash
-  export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py migrate && python manage.py egsim-init
+  export DJANGO_SETTINGS_MODULE="egsim.settings.dev";python manage.py migrate && python manage.py egsim-init
   ```
 - [**Optional**] most likely (not tested, please check) you need to re-add 
   the Django admin superuser(s) as explained in the [admin panel](#admin-panel)
@@ -363,12 +364,12 @@ In any case (**just for reference**), the steps to create and run migrations
 in eGSIM are the following:
 
 ```bash
-export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py makemigrations egsim --name <migration_name>
-export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py migrate egsim
+export DJANGO_SETTINGS_MODULE="egsim.settings.dev";python manage.py makemigrations egsim --name <migration_name>
+export DJANGO_SETTINGS_MODULE="egsim.settings.dev";python manage.py migrate egsim
 ```
 And then repopulate the db:
 ```bash
-export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py egsim-init
+export DJANGO_SETTINGS_MODULE="egsim.settings.dev";python manage.py egsim-init
 ```
 
 Notes: 
@@ -396,7 +397,7 @@ To perform a complete db reset:
      are others, delete all of them)
  - Execute:
    ```bash
-   export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py makemigrations && python manage.py migrate && python manage.py egsim-init
+   export DJANGO_SETTINGS_MODULE="egsim.settings.dev";python manage.py makemigrations && python manage.py migrate && python manage.py egsim-init
    ```
  - `git add` the newly created migration file (in dev mode it's 
    `egsim/api/migrations/0001_initial.py`)
@@ -421,109 +422,5 @@ modifications are possible but do it at your own risk)
 
 Execute the interactive command:
    ```bash
-   export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py egsim-db
+   export DJANGO_SETTINGS_MODULE="egsim.settings.dev";python manage.py egsim-db
    ```
-
-<!-- 
-## Admin panel
-
-> Note: the value of `DJANGO_SETTINGS_MODULE` in the examples below 
-> must be changed in production
-
-This command allows the user to check database data from the 
-web browser. For further details, check the 
-[Django doc](https://docs.djangoproject.com/en/stable/ref/django-admin/)
-
-The database must have been created and populated (see [Usage](#usage)). 
-
-Create a superuser (to be done **once only** ):
-```bash
-export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py createsuperuser
-```
-and follow the instructions.
-
-Start the program (see [Usage](#Usage)) and then navigate in the browser to 
-`[SITE_URL]/admin` (in development mode, `http://127.0.0.1:8000/admin/`)
-
-*Note: Theoretically, you can modify db data from the browser, e.g., hide some 
-model, regionalization or predefined flatfile. Persistent changes should be
-implemented in Python code and then run a [Complete DB reset](#Complete-DB-reset)*
--->
-
-<!-- 
-## Create a custom management command
-
-See `egsim/api/management/commands/README.md`.
-
-The next two sections will describe how to store
-new data (regionalizations and flatfiles) that will be
-made available in eGSIM with the `egsim-init` command
-(see [Complete DB reset](#Complete-DB-reset) for details)
-
-
-
-## Add new predefined flatfiles
-
-- Add the file (CSV or zipped CSV) in
-  `managements/commands/data/flatfiles`. 
-  If the file is too big try to zip it. 
-  **If it is more than few tens of Mb, then do not commit it** (explain in 
-  the section `details` - see below - how to get the source file). 
-  When zipping in macOS you will probably need to
-  [exclude or remove (after zipping) the MACOSX folder](https://stackoverflow.com/q/10924236)~~
-- 
-- Implement a new `FlatfileParser` class in 
-  `management/commands/flatfile_parsers`. Take another parser, copy it 
-  and follow instructions.
-  The parser goal is to read the file and convert it into a harmonized HDF 
-  table
-
-- Add binding file -> parser in the Python `dict`:
-  `management.commands._egsim_flatfiles.Command.PARSER`
-
-- (Optional) Add the file refs 
-  in `management/commands/data/references.yaml`, e.g. reference, url, the 
-  file name that will be used in the API (if missing, defaults to the file 
-  name without extension)
-
-- Repopulate all eGSIM tables (command `egsim-init`)
-
-Implemented flatfiles sources (click on the items below to expand)
-
-<details>
-<summary>ESM 2018 flatfile</summary>
-
-- Go to https://esm.mi.ingv.it//flatfile-2018/flatfile.php
-(with username and password, you must be registered 
-  beforehand it's relatively fast and simple)
-
-- Download `ESM_flatfile_2018.zip`, uncompress and extract
-  `ESM_flatfile_SA.csv` from there 
-  
-- `ESM_flatfile_SA.csv` is our raw flatfile, compress it 
-  again (it's big) into this directory as 
-  `ESM_flatfile_2018_SA.zip`
- 
-- If on macOS, type the command above to remove the
-  macOS folder from the zip
-</details>
-
-
-## Add new regionalization
-
-- Add two files *with the same basename* and extensions in 
-  `managements/commands/data/regionalization_files`:
-
-  - <name>.geojson (regionalization, aka regions collection) and
-  - <name>.json (region -> gsim mapping)
-  
-  See already implemented files for an example
-
-- (Optional) Add the file refs 
-  in `management/commands/data/references.yaml`, e.g. reference, url, the 
-  file name that will be used in the API (if missing, defaults to the file 
-  name without extension)
-
-- Repopulate all eGSIM tables (command `egsim-init`)
-
--->
