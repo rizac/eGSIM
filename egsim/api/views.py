@@ -39,30 +39,29 @@ class MimeType:  # noqa
 
 
 class EgsimView(View):
-    """Base View class for serving eGSIM HttpResponse. All views should inherits from this 
-    class. Instance of this class handle GET and POST requests by parsing 
-    request data and calling the abstract-like method `response`. Any exception raised 
-    during the process will be caught and returned as 500 HttpResponse with the exception 
-    string in the response body / content.
+    """Base View class for serving eGSIM HttpResponse. All views should inherits from 
+    this class, implementing the abstract-like method `response`
     
-    Usage
-    =====
+    Example
+    =======
     
-    Simply implement the abstract-like method `response`:
+    1. Implementation (note: any exception will be caught and returned as 500 
+        HttpResponse, see `handle_exception`)
     ```
     class MyEgsimView(EgsimView):
     
         def response(self, request: HttpRequest, data: dict, files: Optional[dict] = None) -> HttpResponseBase:
             content = ... # bytes or string sequence (serialized from a Python object)
             return HttpResponse(content, content_type=MimeType.csv, ...)
-            # or, if cotent is a JSON dict:
+            # or, if content is a JSON dict:
             return JsonResponse(content)
     ```
-    And then bind as usual this class view to an endpoint in `urls.py`, .e.g.:
+    
+    2. URL mapping: given an endpoint (URL string or regex pattern), in `urls.py`:
     ```
     urlpatterns = [
         ...
-        re_path(...endpoint..., MyEgsimView.as_view()),
+        re_path(<endpoint>, MyEgsimView.as_view()),
         ...
     ]
     ```
@@ -108,7 +107,7 @@ class EgsimView(View):
         need to be returned in try except clauses, as usual:
         ```
         try:
-            ...
+            ... return response, e.g. JsonResponse, HttpResponse
         except ValueError as exc:
             return self.error_response(exc, status=400)
         ```
@@ -184,17 +183,18 @@ class NotFound(EgsimView):
 
 
 class APIFormView(EgsimView):
-    """:class:`EgsimView` subclass serving :class:`ApiForm` outputs. This class is an 
-    EgsimView that additonally handles Form validation errors, returning a 400 
-    HttpResponse with the error message in the response body / content.
-
+    """:class:`EgsimView` subclass serving :class:`ApiForm.output()` objects and 
+    expecting a 'format' request parameter (default if missing: 'json', see `MimeType`
+    class attributes) dictating the response type. Form validation errors will be 
+    returned as 400 HttpResponse with the form error string as reponse message.
+    
     Usage
     =====
     
     Given an `APiForm` subclass named `MyApiForm`:
     
-    Simple case: `MyApiForm.output()` method returns a JSON dict and your view is 
-    supposed to return MimeType.json ("application/json") content only. You only need to
+    1. If this view is supposed to return JSON data only, then `MyApiForm.output()` 
+    must also return a JSON serializable dict. After that, you only need to
     implement a new endpoint in `urls.py`:
     
     ```
@@ -205,25 +205,23 @@ class APIFormView(EgsimView):
     ]
     ```
 
-    Advanced case: create a new :class:`APIFormView` which, during the processing of a 
-    request, reads the request's body 'format' parameter (default if missing 'json') 
-    redirecting to the relative `response` method, and returning a 400 HttpResponse 
-    error if no method is implemented). Implementation example:
+    2. If this view is suppoosed to return several data formats, then 
+    `MyApiForm.output()` can be any Python object, but you must serialize it here
+    depending on the requested format. For instance, if you want to support users 
+    request format to be 'hdf', this class expets the relative method `response_hdf`:
+    
     ```
     class MyApiFormView(APIFormView):
 
         formclass = MyApiForm  # bind this view to the given ApiForm **class**
         
-        # for any desired format (see :class:`MimeType`) implement the relative 
-        # `response_[format]` method returning the relative HttpResponse (see also
-        # `self.response_json`, already implemented for all subclasses). Example (hdf):
-
         def response_hdf(self, form_output: Any, form: APIForm, **kwargs) -> HttpResponse:
             # Form is valid. First serialize `form_output`, e.g. as bytes:
             s_output = ... 
             # and then implement the HttpResponse from the given form output:
             return HttpResponse(s_output, content_type=MimeType.hdf, ...)
     ```
+
     Finally, bind as usual this class view to an endpoint in `urls.py`, .e.g.:
     ```
     urlpatterns = [
@@ -287,8 +285,10 @@ class GsimInfoView(APIFormView):
 
 
 class SmtkView(APIFormView):
-    """APIFormView for smtk (strong motion toolkit) output (e.g. Predictions or
-    Residuals, set in the `formclass` class attribute"""
+    """APIFormView for strong motion toolkit (smtk) output, e.g., Predictions, Residuals.
+    This view supported response formats are 'json', 'csv', 'hdf' (the default).
+    Subclasses should in principle only implement the class attribute `formclass`
+    """
 
     default_format: str = 'hdf'
 

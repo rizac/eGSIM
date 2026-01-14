@@ -19,56 +19,25 @@ The web portal (and API documentation) is available at:
 
 ## Citation
 
+### Software
+
 > Zaccarelli, Riccardo; Weatherill, Graeme (2020): eGSIM - a Python library and web application to select and test Ground Motion models. GFZ Data Services. https://doi.org/10.5880/GFZ.2.6.2023.007
 
-# Table of contents
+### Research paper (in print)
 
-   * [Installation](#installation)
-   * [Usage](#usage)
-   * [Packages upgrade](#packages-upgrade)
-   * [Django](#django)
-     * [Starting a Python terminal shell](#starting-a-python-terminal-shell)
-     * [Complete DB reset](#Complete-DB-reset)
-     * [Repopulating the DB](#Re-populating-the-DB)
-     * [Admin panel](#admin-panel)
-     * [Create a custom management command](#Create-a-custom-management-command)  
-     <!-- * [Add new predefined flatfiles](#Add-new-predefined-flatfiles)
-     * [Add new regionalization](#Add-new-regionalization) -->
-     
-
-DISCLAIMER: **This document does not cover the server installation of 
-the web app**, which is publicly available at the URL above. 
-**Here you can find instructions on**:
-
- - How to install  eGSIM as local Python library 
-   (`import egsim.smtk` in your code)
- - (For developers and contributors) How to install the Django app locally for testing,
-   features addition, maintenance
-
-**External data [IMPORTANT]**: As of 2025, the egsim data (predefined flatfiles, 
-regionalizations) has been moved in a separate Nextcloud directory (egsim-data)
-and the documentation in a README file therein, please consult the maintainer 
-for info.
-
-# Installation
+> Zaccarelli, R.; G. Weatherill, D. Bindi, F. Cotton (2025): Ground-Motion Models at 
+  Your Fingertips: Easy, Rapid and Flexible Analysis with eGSIM, 
+  (accepted for publication in *Seismol. Res. Lett*), DOI:10.1785/0220250228
 
 
-## Requirements
+## Installation
 
-```bash
-sudo apt-get update # pre-requisite
-sudo apt-get install gcc  # optional
-sudo apt-get install git python3-venv python3-pip python3-dev
-```
+**DISCLAIMER** Because the web application is already installed and managed on a 
+server, this README focuses **exclusively on the Python library 
+(`smtk`)**.
 
-(The command above are Ubuntu specific, in macOS install brew and type
-`brew install` instead of `apt-get install`. *Remove python3-dev as it does not
-exist on macOS*).
-
-This web service uses a *specific* version of Python (Open `setup.py` and 
-check `python_requires=`. As of January 2022, it's `>=3.11`) *which you must 
-install* in addition to the Python version required by your system, and use
-it. Any command `python3` hereafter will refer to the required Python version.
+If you need access to, or information about, the web application 
+installation, please contact the project authors.
 
 
 ## Clone repository
@@ -92,25 +61,17 @@ source .env/<ENVNAME>/bin/activate  # activate venv
 **NOTE: From now on, all following operations must have the virtualenv 
 activated FIRST**
 
-## Install
-
-Assuming you are in the egsim directory with a virtualenv <VENVNAME>:
-
-```console
-source .env/<ENVNAME>/bin/activate
-pip install -r ./requirements.txt
-```
-
-### eGSIM as local library
-
-If you want to use eGSIM locally using the 
-strong motion toolkit package only (`from egsim.smtk import ...`
-in your code):
 
 ```console
 source .env/<ENVNAME>/bin/activate
 pip install -r ./requirements.lib.txt
+pip install .
 ```
+
+From now on, you can use eGSIM 
+strong motion toolkit package (`from egsim.smtk import ...`)
+in your code
+
 
 #### Run tests 
 
@@ -118,309 +79,3 @@ pip install -r ./requirements.lib.txt
 ```bash
 pytest -vvv ./tests/smtk
 ```
-
-## Run Test
-
-(web app tests. For testing the library only, see above)
-
-> Note: the value of `DJANGO_SETTINGS_MODULE` in the examples below 
-> must be changed in production
-
-Move in the `egsim directory` and type:
-
-```bash
-export DJANGO_SETTINGS_MODULE=egsim.settings.test; pytest -xvvv ./tests/
-```
-(x=stop at first error, v*=increase verbosity). 
-
-with coverage report:
-
-```bash
-export DJANGO_SETTINGS_MODULE=egsim.settings.test; pytest --cov=egsim --cov-report=html -xvvv ./tests/
-```
-
-<details>
-<summary>Configure PyCharm</summary>
-For **PyCharm users**, you need to configure the environment variable
-for all tests. Go to:
-
-- Run
-  - Edit Configurations Templates ...
-    - Python tests
-      - pytest
-    
-And then under **Environment variables:** add:
-
-`DJANGO_SETTINGS_MODULE=egsim.settings.test`
-
-(type several env vars separated by ;)
-
-</details>
-
-
-# Usage
-
-> Note: the value of `DJANGO_SETTINGS_MODULE` in the examples below 
-> must be changed in production
-
-If you didn't do already, perform 
-a [Complete DB reset](#Complete-DB-reset)
-(**one-time only operation**)
-
-If you want to access the admin panel, see [the admin panel](#admin-panel).
-
-**To run the program in your local browser**, type:
-
-```bash
-export DJANGO_SETTINGS_MODULE="egsim.settings.dev";python manage.py runserver 
-```
-
-<details>
-<summary>Configure PyCharm</summary>
-For **PyCharm users**, you can implement a service, which can be run as any
-PyCharm configuration in debug mode, allowing to open the browser 
-and stop at specific point in the code (the PyCharm window will popup 
-automatically in case). 
-To implement a service, go to:
-
-- Run
-  - Edit Configurations
-    - Add new configuration
-
-then under **Run**:
- - between `script` and `module` (should be a combo box) choose `script`,
-   and in the next text field put `manage.py`
- - script parameters: `runserver`
- - And then under **Environment variables:** add:
-   `DJANGO_SETTINGS_MODULE=egsim.settings.dev`
-   (type several env vars separated by ;)
-
-You should see in the `Services` tab appearing the script name, so you can
-run / debug it normally
-
-</details>
-
-
-## Packages upgrade
-
-
-```console
-source .env/<ENVNAME>/bin/activate
-pip install --upgrade pip setuptools
-```
-
-Upgrade OpenQuake (**optional**). The operation below should be performed in
-very specific cases only (important bugfixes or features) because
-**being OpenQuake often backward incompatible** it might require additional 
-code fixes and feedbacks from scientific experts or OpenQuake developers.
-First, **open `setup.py` and comment the line of `install_requires` where OpenQuake
-is installed** (should be starting with `openquake.engine`). Then 
-(note that `pip install openquake` works but is not the recommended way):
-```console
-pip install -r "https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py311-macos_x86_64.txt"
-# pip install -r "https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py311-linux64.txt"
-```
-
-
-Install eGSIM Python library, upgrading its dependencies:
-```console
-pip install -U . && pip freeze >./requirements.lib.txt && pip install pytest
-```
-
-Run tests:
-```console
-pytest -vvv ./tests/smtk
-```
-
-Install eGSIM web app, upgrading its dependencies:
-```console
-pip install -U --upgrade-strategy eager ".[web]"
-pip freeze > ./requirements.txt
-```
-
-Run tests:
-```console
-export DJANGO_SETTINGS_MODULE=egsim.settings.test; pytest -xvvv ./tests/
-```
-
-Change `setup.py` and set the current OpenQuake version in 
-`install_requires` (uncomment it if commented). Optionally,
-remove egsim from requirements.txt (it might interfere with Django web?*).
-
-Eventually, **commit and push**
-
-
-# Django
-
-Remember to **activate the Python virtualenv** in all examples below
-
-<details>
-<summary>
-Brief Introduction to some important concepts and key terms (click to show)
-</summary>
-
- - [Settings file](https://docs.djangoproject.com/en/stable/topics/settings/): 
-   A Django settings file contains all the configuration of your Django 
-   installation. The settings file referred in this document, 
-   included in this git repo, is for debug and local deployment only.
-   On production, a separate settings file is used, located on the server 
-   outside the git repo and **not shared for security reasons**.
-
-   
- - [manage.py](https://docs.djangoproject.com/en/stable/ref/django-admin/) or
-   `django-admin` is Django’s command-line utility for administrative tasks.
-   It is invoked from the terminal within your Python virtualenv (see examples
-   in this document) by providing the settings file via:
-   ```bash
-   export DJANGO_SETTINGS_MODULE=<settings_file_path> python manage.py <command>
-   ```
-   Django allows also the implementation of custom management commands.
-   eGSIM implements `egsim-init` in order to populate the db (more details 
-   below)
-
-
- - [app](https://docs.djangoproject.com/en/stable/intro/reusable-apps/) a 
-   Django app is a Python package that is specifically intended for use in 
-   a Django project. An application may use common Django conventions, such as 
-   having models, tests, urls, and views submodules. In our case, the Django
-   project is the egsim root directory (created with the command
-   `django-admin startproject egsim`), and the *Django apps* inside it are 
-   "api" (the core web API) and "app" (the *web app*, i.e. the part of eGSIM
-   delivered over the Internet through a browser interface), that relies on 
-   the "api" code.
-   Inside the settings file (variable `INSTALLED_APPS`) is configured the list 
-   of all applications that are enabled in the eGSIM project. This includes not 
-   only our "api" app, that tells Django to create the eGISM tables when
-   initializing the database, but also several builtin Django apps, e.g. the 
-   Django `admin` app, visible through the [Admin panel](#admin-panel).
-
-</details>
-
-## Starting a Python terminal shell
-
-> Note: the value of `DJANGO_SETTINGS_MODULE` in the examples below 
-> must be changed in production
-
-Typing `python` on the terminal does not work as one needs to
-initialize Django settings. The Django `shell` command does this:
-
-```bash
-export DJANGO_SETTINGS_MODULE="egsim.settings.dev";python manage.py shell 
-```
-
-## Get Django uploaded files directory
-
-If you did not set it explicitly in `settings.FILE_UPLOAD_TEMP_DIR` 
-(by default is missing), then Django will put uploaded files 
-in the standard temporary directory which you can get easily by 
-typing:
-
-```bash
-python -c "import tempfile;print(tempfile.gettempdir())"
-```
-
-## Re-populating the DB
-
-> Note: the value of `DJANGO_SETTINGS_MODULE` in the examples below 
-> must be changed in production
-
-**When to execute: the database needs to be emptied and repopulated**  
-(e.g., OpenQuake is upgraded, or new regionalization or 
-flatfile was added). **the database schema has not changed (otherwise
-see "Complete Db Reset")**
-
-- delete or rename the database of the settings file used:
-   - `egsim/db.sqlite3`
-- Execute: 
-  ```bash
-  export DJANGO_SETTINGS_MODULE="egsim.settings.dev";python manage.py migrate && python manage.py egsim-init
-  ```
-- [**Optional**] most likely (not tested, please check) you need to re-add 
-  the Django admin superuser(s) as explained in the [admin panel](#admin-panel)
-
-
-## Complete DB reset
-
-> Note: the value of `DJANGO_SETTINGS_MODULE` in the examples below 
-> must be changed in production
-
-**When to execute: the database schema (columns, tables, constraints) 
-has changed** (see `egsim.api.models.py`)
-
-<details>
-<summary>(if you wonder why we do not use DB migrations, click here)</summary>
-
-The usual way to change a DB in a web app is to create and run
-migrations 
-([full details here](https://docs.djangoproject.com/en/stable/topics/migrations/)),
-which allow to keep track of all changes (moving back and forth if necessary) 
-whilst preserving the data stored in the DB. 
-However, none of those features is required in eGSIM: DB data is predefined
-and would be regenerated from scratch in any case after any new migration.
-Consequently, **upon changes in the DB, a complete DB reset is an easier 
-procedure**.
-
-In any case (**just for reference**), the steps to create and run migrations 
-in eGSIM are the following:
-
-```bash
-export DJANGO_SETTINGS_MODULE="egsim.settings.dev";python manage.py makemigrations egsim --name <migration_name>
-export DJANGO_SETTINGS_MODULE="egsim.settings.dev";python manage.py migrate egsim
-```
-And then repopulate the db:
-```bash
-export DJANGO_SETTINGS_MODULE="egsim.settings.dev";python manage.py egsim-init
-```
-
-Notes: 
-  - The `make_migration` command just generates a migration file, it doesn't 
-    change the db. The `migrate` command does that, by means of the migration 
-    files generated. For details on Django migrations, see:
-    - https://realpython.com/django-migrations-a-primer/#changing-models
-    - https://docs.djangoproject.com/en/stable/topics/migrations/#workflow 
-  - <migration_name> will be a suffix appended to the migration file, use it
-    like you would use a commit message in `git`).
-  - When running `migrate`, if the migration 
-    will introduce new non-nullable fields, maybe better to run 
-    `manage.py flush` first to empty all tables, to avoid conflicts
-    "egsim" above is the app name. If you omit the app, all apps will be 
-    migrated. The command `migrate` does nothing if it detects that there is 
-    nothing to migrate
-</details>
-
-To perform a complete db reset:
-
- - delete or rename the database of the settings file used and *all* migration 
-   files. In dev mode they are:
-   - `egsim/db.sqlite3`
-   - `egsim/api/migrations/0001_initial.py` (there should be only one. If there 
-     are others, delete all of them)
- - Execute:
-   ```bash
-   export DJANGO_SETTINGS_MODULE="egsim.settings.dev";python manage.py makemigrations && python manage.py migrate && python manage.py egsim-init
-   ```
- - `git add` the newly created migration file (in dev mode it's 
-   `egsim/api/migrations/0001_initial.py`)
- - [**Optional**] re-add the Django admin superuser(s) as explained in the
-   [admin panel](#admin-panel)
-
-Notes:
- - Commands explanation:
-   - `makemigrations` creates the necessary migration file(s) from Python 
-     code and existing migration file(s)
-   - `migrate` re-create the DB via the generated migration file(s)
-   - `egsim-init` repopulates the db with eGSIM data
-
-## Modify eGSIM data from the command line
-
-> Note: the value of `DJANGO_SETTINGS_MODULE` in the examples below 
-> must be changed in production
-
-**When to execute: mostly when you want to hide a flatfile, model or 
-regionalization from the program usually temporarily** (more complex 
-modifications are possible but do it at your own risk)
-
-Execute the interactive command:
-   ```bash
-   export DJANGO_SETTINGS_MODULE="egsim.settings.dev";python manage.py egsim-db
-   ```
