@@ -11,6 +11,11 @@ setup(
     description=_README,
     url='https://github.com/rizac/eGSIM',
     packages=find_packages(exclude=['tests', 'tests.*']),
+    package_data={
+        "egsim.smtk": ["*.yaml"],
+    },
+    zip_safe=False,
+    # include_package_data=True,
     python_requires='>=3.11',
     # Minimal requirements for the library (egsim.smtk package).
     # FOR DEV/TESTS, add: `pip install pytest`
@@ -58,9 +63,5 @@ setup(
         "flatfile"
     ],
     license="AGPL3",
-    platforms=["any"],
-    # package_data={"smtk": [
-    #    "README.md", "LICENSE"]},
-    # include_package_data=True,
-    zip_safe=False,
+    platforms=["any"]
 )
