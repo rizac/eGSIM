@@ -16,9 +16,9 @@ import numpy as np
 from openquake.hazardlib import imt
 from egsim.smtk import gsim, registered_imts, registered_gsims
 from egsim.smtk.flatfile import (ColumnType, ColumnDtype,
-                                 _flatfile_metadata_path, cast_to_dtype,
-                                 FlatfileMetadata,
-                                 _load_flatfile_metadata, get_dtype_of,
+                                 _flatfile_columns_path, cast_to_dtype,
+                                 column_type, column_aliases,
+                                 _load_flatfile_columns_properties, get_dtype_of,
                                  validate_flatfile_dataframe,
                                  ColumnDataError)
 
@@ -29,7 +29,7 @@ def test_flatfile_extract_from_yaml():
     # read directly from columns registry and asure aliases are well formed.
     # Do not use _load_column_registry because it is assumed to rely on the following
     # test passing (no duplicates, no single alias euqal to column name, and so on):
-    with open(_flatfile_metadata_path) as _:
+    with open(_flatfile_columns_path) as _:
         dic = yaml.safe_load(_)
         all_names = set(dic)
         all_aliases = set()
@@ -55,7 +55,7 @@ def test_flatfile_extract_from_yaml():
                 raise ValueError(f"alias(es) {dupes} already defined as name")
 
     # Check column properties within itself (no info on other columns required):
-    for c, props in _load_flatfile_metadata(False).items():
+    for c, props in _load_flatfile_columns_properties(False).items():
         check_column_metadata(name=c, props=dict(props))
 
     # Check that the columns we defined as rupture param, sites param,  distance
@@ -66,8 +66,8 @@ def test_flatfile_extract_from_yaml():
     # dicts (column name as dict key, column aliases as dict values):
     rup, site, dist, imtz = {}, {}, {}, set()
     for n in dic:
-        c_type = FlatfileMetadata.get_type(n)
-        aliases = FlatfileMetadata.get_aliases(n)
+        c_type = column_type(n)
+        aliases = column_aliases(n)
         if c_type == ColumnType.rupture:
             rup[n] = set(aliases)
         elif c_type == ColumnType.site:

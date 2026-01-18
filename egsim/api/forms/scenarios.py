@@ -10,7 +10,7 @@ from django.core.exceptions import ValidationError
 from django.forms.fields import BooleanField, FloatField, ChoiceField, Field
 
 from egsim.api.forms import APIForm, GsimImtForm
-from egsim.smtk import get_scenarios_predictions
+from egsim.smtk import get_ground_motion_from_scenarios
 from egsim.smtk.scenarios import RuptureProperties, SiteProperties, Clabel
 
 
@@ -216,13 +216,13 @@ class PredictionsForm(GsimImtForm, APIForm):
                                  self.site_fieldnames
                                  if p in cleaned_data})
         header_sep = None if cleaned_data.get('multi_header') else Clabel.sep
-        return get_scenarios_predictions(cleaned_data['gsim'],
-                                         cleaned_data['imt'],
-                                         cleaned_data['magnitude'],
-                                         cleaned_data['distance'],
-                                         rupture_properties=rup,
-                                         site_properties=site,
-                                         header_sep=header_sep)
+        return get_ground_motion_from_scenarios(cleaned_data['gsim'],
+                                                cleaned_data['imt'],
+                                                cleaned_data['magnitude'],
+                                                cleaned_data['distance'],
+                                                rupture_properties=rup,
+                                                site_properties=site,
+                                                header_sep=header_sep)
 
 
 PredictionsForm.rupture_fieldnames = tuple(sorted(

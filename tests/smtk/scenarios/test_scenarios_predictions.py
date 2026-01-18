@@ -14,9 +14,8 @@ from openquake.hazardlib.gsim.bindi_2017 import BindiEtAl2017Rjb
 from scipy.interpolate import interp1d
 
 from egsim.smtk.registry import Clabel
-from egsim.smtk.flatfile import ColumnType, FlatfileMetadata
+from egsim.smtk.flatfile import ColumnType, column_type
 from egsim.smtk import scenarios
-from egsim.smtk.validation import ModelError
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), "data")
 
@@ -67,13 +66,13 @@ def get_scenarios_predictions(gsims, imts, magnitudes, distances, rup_props, sit
     assuring that the two dataframes are equal. Return the multi-header dataframe
     because tests here rely on that
     """
-    df_single_header = scenarios.get_scenarios_predictions(gsims, imts, magnitudes,
-                                                           distances, rup_props,
-                                                           site_props)
-    df_multi_header = scenarios.get_scenarios_predictions(gsims, imts, magnitudes,
-                                                           distances, rup_props,
-                                                           site_props,
-                                                           header_sep=None)
+    df_single_header = scenarios.get_ground_motion_from_scenarios(gsims, imts, magnitudes,
+                                                                  distances, rup_props,
+                                                                  site_props)
+    df_multi_header = scenarios.get_ground_motion_from_scenarios(gsims, imts, magnitudes,
+                                                                 distances, rup_props,
+                                                                 site_props,
+                                                                 header_sep=None)
     df_multi_header2 = df_single_header.rename(
         columns={c: tuple(c.split(Clabel.sep)) for c in df_single_header.columns})
     df_multi_header2.columns = pd.MultiIndex.from_tuples(df_multi_header2.columns)
@@ -309,7 +308,7 @@ def open_ref_hdf(file_name) -> pd.DataFrame:
             try:
                 c_mapping[c] = (
                     Clabel.input,
-                    str(FlatfileMetadata.get_type(c[0]).value),
+                    str(column_type(c[0]).value),
                     c[0])
             except Exception as exc:
                 raise ValueError(f'`ref` dataframe: unmapped column {c}. {exc}')

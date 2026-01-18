@@ -10,7 +10,7 @@ save them again
 
 from os.path import dirname, abspath, join, isdir, isfile
 import pandas as pd
-from egsim.smtk import get_scenarios_predictions, get_residuals, read_flatfile
+from egsim.smtk import get_ground_motion_from_scenarios, get_residuals, read_flatfile
 from egsim.smtk.flatfile import ColumnType
 from egsim.smtk.registry import Clabel
 
@@ -27,7 +27,7 @@ def test_create_predictions_is_consistent_with_preexecuted_output():
     test that executions of predictions is consistent by comparing it with pre-executed
     output of the same test. Useful after an OpenQuake upgrade
     """
-    dfr = get_scenarios_predictions(models, imts, [4, 5], [1, 10, 100])
+    dfr = get_ground_motion_from_scenarios(models, imts, [4, 5], [1, 10, 100])
     file = join(test_data_dir, 'predictions.hdf')
     dfr2: pd.DataFrame = pd.read_hdf(file)  # noqa
     # we have all columns that were present in legacy code:

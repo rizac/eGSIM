@@ -40,24 +40,8 @@ class MimeType:  # noqa
 
 class EgsimView(View):
     """Base View class for serving eGSIM HttpResponse. All views should inherits from 
-    this class, implementing the abstract-like method `response`
-    
-    Example
-    =======
-    
-    1. Implementation (note: any exception will be caught and returned as 500 
-        HttpResponse, see `handle_exception`)
-    ```
-    class MyEgsimView(EgsimView):
-    
-        def response(self, request: HttpRequest, data: dict, files: Optional[dict] = None) -> HttpResponseBase:
-            content = ... # bytes or string sequence (serialized from a Python object)
-            return HttpResponse(content, content_type=MimeType.csv, ...)
-            # or, if content is a JSON dict:
-            return JsonResponse(content)
-    ```
-    
-    2. URL mapping: given an endpoint (URL string or regex pattern), in `urls.py`:
+    this class, implementing the abstract-like method `response` (**see docstring therein 
+    for details**). After that, you can map this view to a given URL as usual (in `urls.py`):
     ```
     urlpatterns = [
         ...
@@ -107,7 +91,10 @@ class EgsimView(View):
         need to be returned in try except clauses, as usual:
         ```
         try:
-            ... return response, e.g. JsonResponse, HttpResponse
+            content = ... # bytes or string sequence (serialized from a Python object)
+            return HttpResponse(content, content_type=MimeType.csv, ...)
+            # or, if content is a JSON dict:
+            return JsonResponse(content)
         except ValueError as exc:
             return self.error_response(exc, status=400)
         ```
@@ -184,9 +171,9 @@ class NotFound(EgsimView):
 
 class APIFormView(EgsimView):
     """:class:`EgsimView` subclass serving :class:`ApiForm.output()` objects and 
-    expecting a 'format' request parameter (default if missing: 'json', see `MimeType`
-    class attributes) dictating the response type. Form validation errors will be 
-    returned as 400 HttpResponse with the form error string as reponse message.
+    expecting a 'format' request parameter (any attribute of :class:`MimeType`)
+    dictating the response type. Form validation errors will be 
+    returned as 400 HttpResponse, any uncaught exception as 500 HttpResponse.
     
     Usage
     =====
@@ -194,7 +181,7 @@ class APIFormView(EgsimView):
     Given an `APiForm` subclass named `MyApiForm`:
     
     1. If this view is supposed to return JSON data only, then `MyApiForm.output()` 
-    must also return a JSON serializable dict. After that, you only need to
+    must also return a JSON serializable dict. If this is the casse, you only need to
     implement a new endpoint in `urls.py`:
     
     ```
@@ -205,10 +192,11 @@ class APIFormView(EgsimView):
     ]
     ```
 
-    2. If this view is suppoosed to return several data formats, then 
+    2. If this view is supposed to return several data formats, then 
     `MyApiForm.output()` can be any Python object, but you must serialize it here
-    depending on the requested format. For instance, if you want to support users 
-    request format to be 'hdf', this class expets the relative method `response_hdf`:
+    depending on the requested format (including overriding the existing reponse_json,
+    if needed). For instance, if you want to serve HDF data, you must implement
+    the method `response_hdf`:
     
     ```
     class MyApiFormView(APIFormView):

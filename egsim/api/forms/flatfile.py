@@ -10,10 +10,12 @@ from django.forms.fields import CharField, FileField
 
 from egsim.smtk import (ground_motion_properties_required_by,
                         intensity_measures_defined_for, get_sa_limits)
-from egsim.smtk.flatfile import (read_flatfile, get_dtype_of, FlatfileMetadata,
+from egsim.smtk.flatfile import (read_flatfile, get_dtype_of, column_exists, column_type,
+                                 column_categorical_dtype, column_aliases,
+                                 column_dtype, column_help,
                                  query as flatfile_query, EVENT_ID_COLUMN_NAME,
                                  FlatfileError, FlatfileQueryError,
-                                 IncompatibleColumnError)
+                                 IncompatibleColumnError, column_names)
 from egsim.api import models
 from egsim.api.forms import EgsimBaseForm, APIForm, GsimForm, split_pars
 
@@ -169,7 +171,7 @@ class FlatfileMetadataInfoForm(GsimForm, APIForm):
 
     def clean(self):
         cleaned_data = super().clean()
-        unique_imts = FlatfileMetadata.get_intensity_measures()
+        unique_imts = column_names(type='intensity')
 
         for m_name, model in cleaned_data['gsim'].items():
             imts = intensity_measures_defined_for(model)
@@ -210,7 +212,7 @@ class FlatfileMetadataInfoForm(GsimForm, APIForm):
 
         required_columns = (ground_motion_properties_required_by(*gsims) |
                             {EVENT_ID_COLUMN_NAME})  # <- event id always required
-        ff_columns = {FlatfileMetadata.get_aliases(c)[0] for c in required_columns}
+        ff_columns = {column_aliases(c)[0] for c in required_columns}
 
         imts = cleaned_data['imt']
 
@@ -244,16 +246,16 @@ def get_hr_flatfile_column_meta(name: str, values: Optional[pd.Series] = None) -
     c_dtype = None
     c_categories = []
 
-    if FlatfileMetadata.has(name):
-        c_dtype = FlatfileMetadata.get_dtype(name)
-        cat_dtype = FlatfileMetadata.get_categorical_dtype(name)
+    if column_exists(name):
+        c_dtype = column_dtype(name)
+        cat_dtype = column_categorical_dtype(name)
         if cat_dtype is not None:
             # c_categories is a pandas CategoricalStype. So:
             c_dtype = get_dtype_of(cat_dtype.categories)
             c_categories = cat_dtype.categories.tolist()
-        c_type = getattr(FlatfileMetadata.get_type(name), 'value', "")
-        c_help = FlatfileMetadata.get_help(name) or ""
-        c_aliases = FlatfileMetadata.get_aliases(name)
+        c_type = getattr(column_type(name), 'value', "")
+        c_help = column_help(name) or ""
+        c_aliases = column_aliases(name)
         if len(c_aliases) > 1:
             c_aliases = [n for n in c_aliases if n != name]
             c_aliases = (f"Alternative valid name{'s' if len(c_aliases) != 1 else ''}: "
