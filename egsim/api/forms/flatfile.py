@@ -1,6 +1,5 @@
-"""
-Base Form for to model-to-data operations i.e. flatfile handling
-"""
+"""Base Form for to model-to-data operations i.e. flatfile handling"""
+
 from typing import Optional
 import pandas as pd
 from django.core.files.uploadedfile import TemporaryUploadedFile
@@ -8,14 +7,26 @@ from django.core.files.uploadedfile import TemporaryUploadedFile
 from django.forms import Form
 from django.forms.fields import CharField, FileField
 
-from egsim.smtk import (ground_motion_properties_required_by,
-                        intensity_measures_defined_for, get_sa_limits)
-from egsim.smtk.flatfile import (read_flatfile, get_dtype_of, column_exists, column_type,
-                                 column_categorical_dtype, column_aliases,
-                                 column_dtype, column_help,
-                                 query as flatfile_query, EVENT_ID_COLUMN_NAME,
-                                 FlatfileError, FlatfileQueryError,
-                                 IncompatibleColumnError, column_names)
+from egsim.smtk import (
+    ground_motion_properties_required_by,
+    intensity_measures_defined_for,
+    get_sa_limits
+)
+from egsim.smtk.flatfile import (
+    read_flatfile,
+    get_dtype_of,
+    column_exists,
+    column_type,
+    column_categorical_dtype, column_aliases,
+    column_dtype,
+    column_help,
+    query as flatfile_query,
+    EVENT_ID_COLUMN_NAME,
+    FlatfileError,
+    FlatfileQueryError,
+    IncompatibleColumnError,
+    column_names
+)
 from egsim.api import models
 from egsim.api.forms import EgsimBaseForm, APIForm, GsimForm, split_pars
 
@@ -61,13 +72,16 @@ class FlatfileForm(EgsimBaseForm):
 
     def clean(self):
         """Call `super.clean()` and handle the flatfile"""
+
         u_form = self._u_ff
 
         # Handle flatfiles conflicts first. Note: with no selection from the web GUI we
         # have data['flatfile'] = None
         if u_form is not None and self.data.get('flatfile', None):
-            self.add_error("flatfile", 'select a flatfile by name or upload one, '
-                                       'not both')
+            self.add_error(
+                "flatfile",
+                'select a flatfile by name or upload one, not both'
+            )
         elif u_form is None and not self.data.get('flatfile', None):
             # note: with no selection from the web GUI we have data['flatfile'] = None
             self.add_error("flatfile",  self.ErrMsg.required)
@@ -88,8 +102,10 @@ class FlatfileForm(EgsimBaseForm):
             # there is just one key:
             ff_keys = list(u_form.files.keys())
             if len(ff_keys) != 1:
-                self.add_error("flatfile", f"only one flatfile should be uploaded "
-                                           f"(found {len(ff_keys)})")
+                self.add_error(
+                    "flatfile",
+                    f"only one flatfile should be uploaded (found {len(ff_keys)})"
+                )
                 return cleaned_data
             # Get our uploaded file (Django UploadedFile object, for ref see
             # https://docs.djangoproject.com/en/5.0/ref/files/uploads/):
@@ -107,8 +123,10 @@ class FlatfileForm(EgsimBaseForm):
             # and in-memory files are used only in some tests
 
         if u_flatfile is None:  # predefined flatfile
-            flatfile_db_obj = models.Flatfile.queryset('name', 'filepath').\
-                filter(name=cleaned_data['flatfile']).first()
+            flatfile_db_obj = models.Flatfile.queryset(
+                'name',
+                'filepath'
+            ).filter(name=cleaned_data['flatfile']).first()
             if flatfile_db_obj is None:
                 self.add_error("flatfile", self.ErrMsg.invalid_choice)
                 return cleaned_data
@@ -143,8 +161,7 @@ class FlatfileForm(EgsimBaseForm):
 
 
 class FlatfileValidationForm(APIForm, FlatfileForm):
-    """Form for flatfile validation, on success
-    return info from a given uploaded flatfile"""
+    """Form for flatfile validation, on success return info from the uploaded flatfile"""
 
     def output(self) -> Optional[dict]:
         """
@@ -166,8 +183,7 @@ class FlatfileValidationForm(APIForm, FlatfileForm):
 
 
 class FlatfileMetadataInfoForm(GsimForm, APIForm):
-    """Form for querying the necessary metadata columns from a given selection
-    of models"""
+    """Form for querying the necessary metadata columns from a given selection of models"""
 
     def clean(self):
         cleaned_data = super().clean()
@@ -202,7 +218,8 @@ class FlatfileMetadataInfoForm(GsimForm, APIForm):
         return cleaned_data
 
     def output(self) -> dict:
-        """Compute and return the output from the input data (`self.cleaned_data`).
+        """
+        Compute and return the output from the input data (`self.cleaned_data`).
         This method must be called after checking that `self.is_valid()` is True
 
         :return: any Python object (e.g., a JSON-serializable dict)
@@ -229,7 +246,8 @@ class FlatfileMetadataInfoForm(GsimForm, APIForm):
 
 
 def get_hr_flatfile_column_meta(name: str, values: Optional[pd.Series] = None) -> dict:
-    """Return human-readable (hr) flatfile column metadata in the following `dict` form:
+    """
+    Return human-readable (hr) flatfile column metadata in the following `dict` form:
     {
         'name': str,
         'help': str,
@@ -293,7 +311,7 @@ def get_hr_flatfile_column_meta(name: str, values: Optional[pd.Series] = None) -
 
 def sa_hr_help(gsims, sa_help: str, sa_p_limits: list[float]) -> str:
     """
-    builds the SA field help, human-readable (hr). The output will be HTML.
+    Build the SA field help, human-readable (hr). The output will be HTML.
     `sa_help` should be text in flatfile_metadata for the field 'SA'
     """
     sa_p_min = sa_p_max = sa_p_limits[0]

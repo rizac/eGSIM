@@ -1,4 +1,5 @@
 """flatfile root module"""
+
 from __future__ import annotations
 
 from io import IOBase, StringIO
@@ -147,6 +148,7 @@ def read_flatfile(
 
 def _infer_csv_sep(filepath_or_buffer: IOBase, **kwargs) -> str:
     """Infer `sep` from kwargs, and or return it"""
+
     sep = kwargs.get('sep')
     if sep is not None:
         return sep
@@ -275,6 +277,7 @@ def optimize_flatfile_dataframe(dfr: pd.DataFrame):
 
 class ColumnType(Enum):
     """Flatfile column type"""
+
     rupture = 'rupture_parameter'
     site = 'site_parameter'
     distance = 'distance_measure'
@@ -283,6 +286,7 @@ class ColumnType(Enum):
 
 class ColumnDtype(Enum):
     """Enum where members are registered dtype names"""
+
     # for ref `numpy.sctypeDict.keys()` lists the possible numpy values
     float = "numeric float"
     int = "numeric integer"
@@ -517,7 +521,8 @@ def column_dtype(column: str) -> Union[ColumnDtype, None]:
 
 
 def column_categorical_dtype(column: str) -> Union[pd.CategoricalDtype, None]:
-    """Return the pandas CategoricalDtype, a data type for categorical data, for
+    """
+    Return the pandas CategoricalDtype, a data type for categorical data, for
     the given column. To get the possible categories, use the `.categories` attribute
     of the returned object. Return None if the column data type is not categorical.
     If `column` is 'SA(<period>)', it will default to 'SA'
@@ -538,7 +543,8 @@ _flatfile_columns_path = join(dirname(__file__), 'flatfile_columns.yaml')
 class ColumnsPropertyDict(dict[str, dict[str, Any]]):
 
     def __missing__(self, column):
-        """handle SA(period) returning values for 'SA'"""
+        """Handle SA(period) returning values for 'SA'"""
+
         if sa_period(column) is not None and 'SA' in self:
             # return the value you want for this "special" key
             return self['SA']
@@ -574,6 +580,7 @@ def _load_flatfile_columns_properties(cache=True) -> ColumnsPropertyDict:
 
 def _harmonize_col_props(name: str, props: dict):
     """Harmonize the values of a column property dict"""
+
     aliases = props.get('alias', [])
     if isinstance(aliases, str):
         aliases = [aliases]
@@ -597,7 +604,8 @@ def _harmonize_col_props(name: str, props: dict):
 # Exceptions:
 
 class FlatfileError(InputError):
-    """Subclass of :class:`smtk.validators.InputError` for describing flatfile
+    """
+    Subclass of :class:`smtk.validators.InputError` for describing flatfile
     errors (specifically, column errors). See subclasses for details. Remember
     that `str(FlatfileError(arg1, arg2, ...)) = str(arg1) + ", " + str(arg2) + ...
     """
@@ -605,7 +613,8 @@ class FlatfileError(InputError):
 
 
 class MissingColumnError(FlatfileError, AttributeError, KeyError):
-    """MissingColumnError. It inherits also from AttributeError and
+    """
+    MissingColumnError. It inherits also from AttributeError and
     KeyError to be compliant with pandas and OpenQuake"""
     pass
 
@@ -620,6 +629,7 @@ class ColumnDataError(FlatfileError, ValueError, TypeError):
 
 class FlatfileQueryError(FlatfileError):
     """Error while filtering flatfile rows via query expressions"""
+
     pass
 
 
@@ -627,7 +637,8 @@ class FlatfileQueryError(FlatfileError):
 
 def query(flatfile: pd.DataFrame, query_expression: str, raise_no_rows=True) \
         -> pd.DataFrame:
-    """Call `flatfile.query` with some utilities:
+    """
+    Call `flatfile.query` with some utilities:
      - ISO-861 strings (e.g. "2006-01-31") will be converted to datetime objects
      - booleans can be also lower case (true or false)
      - Some series methods can be called with the dot notation [col].[method]:
@@ -651,7 +662,8 @@ def query(flatfile: pd.DataFrame, query_expression: str, raise_no_rows=True) \
 
 
 def prepare_expr(expr: str, columns: list[str]) -> dict:
-    """Prepare the given selection expression to add a layer of protection
+    """
+    Prepare the given selection expression to add a layer of protection
     to potentially dangerous untrusted input. Returns a dict to be used as
     `resolvers` argument in `pd.Dataframe.query`
     """
@@ -724,9 +736,15 @@ def prepare_expr(expr: str, columns: list[str]) -> dict:
 
 def valid_expr_sequence(tok_num1: int, tok_val1: str, tok_num2: int, tok_val2: str):
     """Return true if the given sequence of two tokens is valid"""
-    OP, STRING, NAME, NUMBER, NEWLINE, EOM = (tokenize.OP, tokenize.STRING,  # noqa
-                                              tokenize.NAME, tokenize.NUMBER,
-                                              tokenize.NEWLINE, tokenize.ENDMARKER)
+
+    OP, STRING, NAME, NUMBER, NEWLINE, EOM = (
+        tokenize.OP,
+        tokenize.STRING,  # noqa
+        tokenize.NAME,
+        tokenize.NUMBER,
+        tokenize.NEWLINE,
+        tokenize.ENDMARKER
+    )
     if tok_num1 is None:
         if tok_num2 == OP:
             return tok_val2 in '(~'

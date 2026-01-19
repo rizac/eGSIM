@@ -2,7 +2,8 @@ from collections.abc import Callable
 
 
 def get_doc(function: Callable) -> list[str]:  # intro, args, returns sections
-    """Return the docstring of the given function in a list of three
+    """
+    Return the docstring of the given function in a list of three
     strings with the content of 'intro', 'args', and 'returns' sections
     """
     doc:str = function.__doc__.strip()  # noqa

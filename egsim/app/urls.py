@@ -1,4 +1,5 @@
 """eGSIM URL Configuration for the Graphical User Interface (GUI)"""
+
 from django.http import HttpResponse
 from django.urls import re_path, path
 from django.views.decorators.clickjacking import xframe_options_exempt
@@ -13,8 +14,14 @@ from .forms import (
     PredictionsVisualizeForm, ResidualsVisualizeForm, FlatfileVisualizeForm
 )
 from .views import (
-    main, URLS, img_ext, data_ext, PlotsImgDownloader, GsimFromRegion,
-    PredictionsHtmlTutorial, ResidualsHtmlTutorial
+    main,
+    URLS,
+    img_ext,
+    data_ext,
+    PlotsImgDownloader,
+    GsimFromRegion,
+    PredictionsHtmlTutorial,
+    ResidualsHtmlTutorial
 )
 
 
@@ -28,15 +35,16 @@ urlpatterns = [
         RedirectView.as_view(pattern_name='main', url='home', permanent=False)
     ),
     re_path(
-        (r'^(?P<page>' +
-         '|'.join([
-             URLS.WEBPAGE_HOME, URLS.WEBPAGE_PREDICTIONS,
-             URLS.WEBPAGE_RESIDUALS,
-             URLS.WEBPAGE_FLATFILE_INSPECTION_PLOT,
-             URLS.WEBPAGE_FLATFILE_COMPILATION_INFO,
-             URLS.WEBPAGE_API_DOC,
-             URLS.WEBPAGE_IMPRINT, URLS.WEBPAGE_CITATIONS_AND_LICENSE
-         ]) + ')/?$'),
+        (r'^(?P<page>' + '|'.join([
+            URLS.WEBPAGE_HOME,
+            URLS.WEBPAGE_PREDICTIONS,
+            URLS.WEBPAGE_RESIDUALS,
+            URLS.WEBPAGE_FLATFILE_INSPECTION_PLOT,
+            URLS.WEBPAGE_FLATFILE_COMPILATION_INFO,
+            URLS.WEBPAGE_API_DOC,
+            URLS.WEBPAGE_IMPRINT,
+            URLS.WEBPAGE_CITATIONS_AND_LICENSE
+        ]) + ')/?$'),
         main
     ),
 

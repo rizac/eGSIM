@@ -93,6 +93,7 @@ if any(
 
 def main(request, page=''):
     """View for the main page"""
+
     regionalizations = list(models.Regionalization.queryset())
     flatfiles = list(models.Flatfile.queryset())
     init_data = get_init_data_json(regionalizations, flatfiles, settings.DEBUG)
@@ -178,6 +179,7 @@ class PredictionsHtmlTutorial(EgsimView):
             files: Optional[dict] = None
     ) -> HttpResponseBase:
         """Process the response from a given request and the data / files extracted from it"""
+
         from egsim.api.client.snippets.get_egsim_predictions import \
             get_egsim_predictions
         api_form = PredictionsForm({
@@ -204,8 +206,8 @@ class ResidualsHtmlTutorial(EgsimView):
             data: dict,
             files: Optional[dict] = None
     ) -> HttpResponseBase:
-        """Process the response from a given request and the data / files
-        extracted from it"""
+        """Process the response from a given request and the data / files extracted from it"""
+
         from egsim.api.client.snippets.get_egsim_residuals import \
             get_egsim_residuals
         api_form = ResidualsForm({
@@ -411,6 +413,7 @@ def get_references(
         db_flatfiles: list[models.Flatfile]
 ):
     """Return the references of the data used by the program"""
+
     refs = {}
     for item in chain(db_regionalizations, db_flatfiles):
         url = get_url(item)
@@ -555,6 +558,7 @@ def get_display_name(
 
 def get_url(obj: models.Reference) -> str:
     """Return the URL or the DOI url from the given Reference obj"""
+
     if obj.url:
         return obj.url
     return f'https://doi.org/{obj.doi}' if obj.doi else ''
@@ -656,6 +660,7 @@ def get_html_tutorial_context(
         api_client_function
 ) -> dict:
     """Return the context (dict) for the Django rendering of the HTML tutorial page"""
+
     # create dataframe htm:
     s = StringIO()
     if not api_form.is_valid():

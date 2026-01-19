@@ -1,6 +1,5 @@
-"""
-Residuals module
-"""
+"""Residuals module"""
+
 from __future__ import annotations  # https://peps.python.org/pep-0563/
 
 from itertools import product
@@ -210,8 +209,8 @@ class EventContext(RuptureContext):
 
     def __eq__(self, other):
         """Overwrite `BaseContext.__eq__` method"""
-        assert isinstance(other, EventContext) and \
-               self._flatfile.equals(other._flatfile)
+
+        assert isinstance(other, EventContext) and self._flatfile.equals(other._flatfile)
 
     @property
     def sids(self) -> Index:

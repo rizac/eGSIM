@@ -23,6 +23,7 @@ from egsim.smtk.flatfile import get_dtype_of
 @pytest.mark.django_db
 def test_initdb(capsys):
     """Test the command initializing the DB with eGSIM data"""
+
     # NOTE: the decorator `django_db` already executes the command below
     # (django_db uses the fixture django_db_setup, overridden in conftest.py)
     # Here we provide capsys in case we want to test the generated output
@@ -41,12 +42,22 @@ def test_initdb(capsys):
 
 
 @pytest.mark.django_db
-@patch("builtins.input", side_effect=["flatfile", "invalid_column 23", "<",
-                                      "gsim", "", "name ^BindiEtAl2014Rjb$",
-                                      "hidden true",
-                                      "q"])
+@patch(
+    "builtins.input",
+    side_effect=[
+        "flatfile",
+        "invalid_column 23",
+        "<",
+        "gsim",
+        "",
+        "name ^BindiEtAl2014Rjb$",
+        "hidden true",
+        "q"
+    ]
+)
 def test_egsimdb(mocked_input, capsys):
     """Test the command for hiding showing items in the eGSIM db"""
+
     # NOTE: the decorator `django_db` already executes the command below
     # (django_db uses the fixture django_db_setup, overridden in conftest.py)
     # Here we provide capsys in case we want to test the generated output

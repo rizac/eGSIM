@@ -15,34 +15,42 @@ from egsim.api.forms.flatfile import FlatfileForm
 class ResidualsForm(GsimImtForm, FlatfileForm, APIForm):
     """Form for residual analysis"""
 
-    likelihood = BooleanField(initial=False, required=False,
-                              help_text='compute the residuals likelihood '
-                                        '(Scherbaum et al. 2004. '
-                                        'https://doi.org/10.1785/0120030147)')
-    normalize = BooleanField(initial=True, required=False,
-                             help_text=('normalize residuals by the model '
-                                        'standard deviation(s) total, inter event, '
-                                        'intra event respectively'))
-    ranking = BooleanField(initial=False, required=False,
-                           help_text='Model ranking: easily assess how predictions '
-                                     'fit the data by returning aggregate '
-                                     'measures from the computed residuals (e.g., '
-                                     'median, loglikelihood, EDR). With ranking, '
-                                     'the parameters likelihood and normalize are '
-                                     'set to true by default')
+    likelihood = BooleanField(
+        initial=False,
+        required=False,
+        help_text='compute the residuals likelihood (Scherbaum et al. 2004. '
+                  'https://doi.org/10.1785/0120030147)'
+    )
+    normalize = BooleanField(
+        initial=True,
+        required=False,
+        help_text='normalize residuals by the model standard deviation(s) '
+                  'total, inter event, intra event respectively'
+    )
+    ranking = BooleanField(
+        initial=False,
+        required=False,
+        help_text='Model ranking: easily assess how predictions fit the data '
+                  'by returning aggregate measures from the computed residuals (e.g., '
+                  'median, loglikelihood, EDR). With ranking, the parameters '
+                  'likelihood and normalize are set to true by default'
+    )
     # multi_header has no initial value because its default will vary: here is
     # `CLabel.sep` (see `output`), but this will change in subclasses:
-    multi_header = BooleanField(help_text='Return a table with 3-rows column header '
-                                          '(imt, type, model). Otherwise (the default), '
-                                          'return a table with a single column header '
-                                          'imt+" "+type+" "+model',
-                                required=False, initial=False)
+    multi_header = BooleanField(
+        help_text='Return a table with 3-rows column header (imt, type, model). '
+                  'Otherwise (the default), return a table with a single column '
+                  'header imt+" "+type+" "+model',
+        required=False,
+        initial=False
+    )
 
     # Custom API param names (see doc of `EgsimBaseForm._field2params` for details):
     _field2params = {}
 
     def output(self) -> pd.DataFrame:
-        """Compute and return the output from the input data (`self.cleaned_data`).
+        """
+        Compute and return the output from the input data (`self.cleaned_data`).
         This method must be called after checking that `self.is_valid()` is True.
         On Flatfile errors, return None and add register the error
         (see `self.errors_json_data` for details) so that `self.is_valid=False`.

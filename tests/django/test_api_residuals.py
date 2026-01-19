@@ -28,7 +28,7 @@ from egsim.smtk.registry import Clabel
 
 @pytest.mark.django_db
 class Test:
-    """tests the residuals service"""
+    """Test the residuals service"""
 
     url = f"/{RESIDUALS_URL_PATH}"
     
@@ -285,7 +285,8 @@ class Test:
     def test_residuals_service_err(self,
                                    # pytest fixtures:
                                    client):
-        """tests errors in the residuals API service."""
+        """Test errors in the residuals API service"""
+
         with open(self.request_filepath) as _:
             inputdic = yaml.safe_load(_)
 

@@ -23,7 +23,8 @@ _flatfile = read_flatfile(ifile)
 
 
 def get_gsims_imts_flatfile():
-    """input data used in this module"""
+    """Input data used in this module"""
+
     gsims = ["AkkarEtAlRjb2014", "ChiouYoungs2014"]
     imts = ["PGA", "SA(1.0)"]
     flatfile = _flatfile.copy()
@@ -41,7 +42,8 @@ label_mapping_res = {
 
 
 def get_residuals(gsims, imts, flatfile, likelihood=False):
-    """Run get_residuals with both multi- and single- header option, assuring that the
+    """
+    Run get_residuals with both multi- and single- header option, assuring that the
     two dataframes are equal. Return the multi-header dataframe because tests here
     rely on that
     """
@@ -57,7 +59,8 @@ def get_residuals(gsims, imts, flatfile, likelihood=False):
 
 
 def test_residuals_error():
-    """GhofraniAtkinson2014CascadiaUpper requires a backarc attribute not present
+    """
+    GhofraniAtkinson2014CascadiaUpper requires a backarc attribute not present
     in a flatfile. Test that we correctly replace it with boolean false
     (this was not happening in previous eGSIM version due to DataFrame index != Series
     index. For details see https://stackoverflow.com/a/29706954)
@@ -71,7 +74,8 @@ def test_residuals_error():
 
 
 def test_kotha_with_no_region_provided():
-    """KothaEtAl2020ESHM20 requires the 'region' column in a flatfile. Test that
+    """
+    KothaEtAl2020ESHM20 requires the 'region' column in a flatfile. Test that
      residuals can be computed also with a flatfile without the region field (default 0)
     """
     flatfile = read_flatfile(os.path.join(BASE_DATA_PATH,

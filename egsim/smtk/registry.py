@@ -1,4 +1,5 @@
 """Registry with helper functions to access OpenQuake entities and properties"""
+
 from typing import Union, Iterable, Callable
 import re
 import numpy as np
@@ -59,6 +60,7 @@ def imt(arg: Union[float, str, IMT]) -> IMT:
 # OpenQuake lacks a registry of IMTs, so we need to inspect the imt module:
 def _registered_imts() -> Iterable[tuple[str, Callable]]:
     """Return all IMT names registered in OpenQuake"""
+
     for name in dir(imt_module):
         if not ('A' <= name[:1] <= 'Z'):  # only upper-case module elements
             continue
@@ -125,6 +127,7 @@ def get_sa_limits(
         model: Union[str, GMPE]
 ) -> Union[tuple[float, float], None]:
     """Return the SA period limits defined for the given gsim, or None"""
+
     if isinstance(model, str):
         model = gsim(model)
     pers = None
@@ -138,6 +141,7 @@ def get_sa_limits(
 
 def intensity_measures_defined_for(model: Union[str, GMPE]) -> frozenset[str]:
     """Return the intensity measures defined for the given model"""
+
     if isinstance(model, str):
         # try loading the class first from registry (faster), otherwise the instance
         # if the class does not hold the info we need:
@@ -194,6 +198,7 @@ def gsim_info(model: Union[str, GMPE]) -> tuple[str, list, list, Union[list, Non
 
 class Clabel:
     """Custom column labels provided in the output Dataframes"""
+
     input = 'input'
     mean = "mean"
     median = "median"

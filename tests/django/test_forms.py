@@ -112,13 +112,17 @@ class Test:
         assert form.is_valid()
 
         # ok?:
-        csv = SimpleUploadedFile("file.csv", b"PGA,b,c,d\n1.1,,,",
-                                 content_type="text/csv")
+        csv = SimpleUploadedFile(
+            "file.csv",
+            b"PGA,b,c,d\n1.1,,,",
+            content_type="text/csv"
+        )
         form = FlatfileForm({}, {'flatfile': csv})
         assert form.is_valid()
 
     def test_provide_unknown_params(self):
         """Test that unknown and conflicting parameters"""
+
         form = GsimImtForm({
             '_r567_': 5,
             GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
@@ -240,6 +244,7 @@ class Test:
 
     def test_trellisform_invalid(self):
         """Test trellis form invalid"""
+
         data = {GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
                 IMT: ['SA', 'PGA', 'PGV'],
                 'distance': [1, 'x', ''],

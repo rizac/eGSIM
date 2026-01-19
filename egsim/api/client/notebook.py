@@ -228,8 +228,9 @@ def egsim_get_residuals_nb(
 
 
 def _egsim_debug_cell_nb(dataframe_var_name: str) -> list[dict]:
-    """Creates few lines of code where the given dataframe can be visualized or
-    tested on a cell notebook or py file
+    """
+    Create few lines of code where the given dataframe can be visualized
+    or tested on a cell notebook or py file
     """
     return [
         nb_markdown_cell('### Debug section\n'

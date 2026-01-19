@@ -1,4 +1,5 @@
 """Forms handling data (flatfiles)"""
+
 from itertools import product
 
 import numpy as np
@@ -247,11 +248,12 @@ class PredictionsVisualizeForm(PredictionsForm):
 class ResidualsVisualizeForm(ResidualsForm):
     """Form returning residuals in form of plots"""
 
-    x = CharField(required=False, initial=None,
-                  help_text='the flatfile field to use for plot, or None/null: in '
-                            'this latter case a histogram will be returned '
-                            'depending on the value of the param. likelihood '
-                            '(True: LH values, else: residuals Z values)')
+    x = CharField(
+        required=False,
+        initial=None,
+        help_text='The flatfile field to use for plot, or None/null: in this latter case '
+                  'a histogram will be returned depending on the value of the parameter '
+                  'likelihood (True: LH values, else: residuals Z values)')
 
     def clean(self):
         cleaned_data = super().clean()
@@ -537,6 +539,7 @@ class FlatfileVisualizeForm(APIForm, FlatfileForm):
 
     def clean(self):
         """Call `super.clean()` and handle the flatfile"""
+
         cleaned_data = super().clean()
         x, y = cleaned_data.get('x', None), cleaned_data.get('y', None)
         if not x and not y:

@@ -33,8 +33,10 @@ class Command(BaseCommand):
     help = """Empty and repopulates the eGSIM database"""
 
     def add_arguments(self, parser):
-        """Implement here specific command options (this method is called
+        """
+        Implement here specific command options (this method is called
         automatically by the superclass)
+
         :param parser: :class:`argparse.ArgumentParser` instance
         """
         # For compatibility with the `flush` command (=empty db tables) which
@@ -51,6 +53,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         """Execute the command"""
+
         self.stdout.write('')
         self.stdout.write('Empty and populating the eGSIM database')
         self.stdout.write('Remember that you can always inspect the database on '
@@ -64,7 +67,8 @@ class Command(BaseCommand):
         self.handle_media_files(*args, **options)
 
     def handle_openquake(self, *args, **options):
-        """Register openquake data to DB
+        """
+        Register openquake data to DB
 
         :param args: positional arguments (?). Unclear what should be given
             here. Django doc and Google did not provide much help, source code
@@ -96,6 +100,7 @@ class Command(BaseCommand):
 
     def write_model(self, name, cls):
         """Write a GMM entry to DB"""
+
         prefix = 'Discarding'
         try:
             _ = gsim(name)  # check we can initialize the model
@@ -129,7 +134,8 @@ class Command(BaseCommand):
         return True
 
     def handle_media_files(self, *args, **options):
-        """Register media files data to DB
+        """
+        Register media files data to DB
 
         :param args: positional arguments (?). Unclear what should be given
             here. Django doc and Google did not provide much help, source code
@@ -166,6 +172,7 @@ class Command(BaseCommand):
 
     def write_media_file(self, db_model, path, data):
         """Write a media file entry to DB"""
+
         data['filepath'] = abspath(path)
         db_field_names = get_fieldnames(db_model)
         db_model.objects.create(**{k: data[k] for k in data if k in db_field_names})

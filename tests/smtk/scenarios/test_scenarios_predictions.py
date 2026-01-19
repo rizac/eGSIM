@@ -41,7 +41,8 @@ gsims = ["AkkarBommer2010", "CauzziFaccioli2008",
 
 def allclose(actual, expected, *, q=None,
              rtol=1e-05, atol=1e-08, equal_nan=True):
-    """Same as numpy `allclose` but with the possibility to remove outliers using
+    """
+    Same as numpy `allclose` but with the possibility to remove outliers using
     the quantile parameter `q` in [0, 1]. Also note that `equal_nan is True by
     default. E.g., to check if the arrays `a` and `b` are close, ignoring the elements
     whose abs. difference is in the highest 5%: `allclose(a, b, q=0.95)`
@@ -62,7 +63,8 @@ def allclose(actual, expected, *, q=None,
 
 
 def get_scenarios_predictions(gsims, imts, magnitudes, distances, rup_props, site_props):
-    """Run get_scenario_predictions with both multi- and single- header option,
+    """
+    Run get_scenario_predictions with both multi- and single- header option,
     assuring that the two dataframes are equal. Return the multi-header dataframe
     because tests here rely on that
     """
@@ -81,7 +83,8 @@ def get_scenarios_predictions(gsims, imts, magnitudes, distances, rup_props, sit
 
 
 def test_distance_imt_trellis():
-    """test trellis vs distance"""
+    """Test trellis vs distance"""
+
     distances = np.arange(0, 250.5, 1)
     magnitude = 6.5
     # Get trellis calculations
@@ -160,6 +163,7 @@ def test_distance_imt_trellis():
 
 def test_magnitude_imt_trellis():
     """Test trellis vs magnitudes"""
+
     magnitudes = np.arange(4., 8.1, 0.1)
     distance = 20.
 

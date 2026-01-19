@@ -20,7 +20,8 @@ _gsim_aliases_ = {v: k for k, v in gsim_aliases.items()}
 
 
 def test_gsim_special_case():
-    """simple test case for a model whose name and class name differ"""
+    """Simple test case for a model whose name and class name differ"""
+
     model_name = 'Idriss2014NSHMPUpper'
     model_class = registry[model_name]  # 'NSHMP2014'
     # assert gsim works:

@@ -1,4 +1,5 @@
 """Root module for the strong motion modeller toolkit (smtk) package of eGSIM"""
+
 from .scenarios import get_ground_motion_from_scenarios
 from .residuals import get_residuals
 from .ranking import get_measures_of_fit

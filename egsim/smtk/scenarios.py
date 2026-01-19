@@ -1,4 +1,5 @@
 """module for computing ground motion values from different scenarios"""
+
 from itertools import product
 from collections.abc import Collection, Iterable
 from typing import Union, Optional
@@ -284,6 +285,7 @@ def get_target_sites(
         z1pt0=None, z2pt5=None, **extras
 ):
     """Return a :class:`SiteCollection` from the given arguments"""
+
     # Get the site locations
     site_locations = sites_at_distance(
         hypocenter, surface, distances, line_azimuth, origin_point, distance_type
@@ -402,6 +404,7 @@ def _rup_to_point(
         maxiter: int = 1000
 ) -> Point:
     """Place a point at a given distance from a rupture along a specified azimuth"""
+
     pt1 = origin.point_at(distance, 0., azimuth)
     r_diff = np.inf
     dip = surface.dip

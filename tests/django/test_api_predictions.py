@@ -31,7 +31,7 @@ from egsim.smtk.registry import imt_name, Clabel
 
 @pytest.mark.django_db
 class Test:
-    """tests the gsim service"""
+    """Test the gsim service"""
 
     url = f"/{PREDICTIONS_URL_PATH}"
     request_filepath = abspath(join(dirname(__file__), 'data', 'request_trellis.yaml'))
@@ -48,7 +48,8 @@ class Test:
             self,
             # pytest fixtures:
             client):
-        """test trellis distance and distance stdev"""
+        """Test trellis distance and distance stdev"""
+
         with open(self.request_filepath) as _:
             inputdic = dict(yaml.safe_load(_))
 
@@ -146,6 +147,7 @@ class Test:
             client
     ):
         """Test invalid param names in request"""
+
         data = {
             'aspect': 1,
             'backarc': False,
@@ -271,10 +273,13 @@ class Test:
         assert resp1.status_code == 400
         assert 'AkkarBommer2010SWISS01' in self.error_message(resp2)
 
-    def test_mismatching_imt_gsim(self,
-                                  # pytest fixtures:
-                                  client):
-        """tests a model supplied with an invalid imt"""
+    def test_mismatching_imt_gsim(
+            self,
+            # pytest fixtures:
+            client
+    ):
+        """Test a model supplied with an invalid imt"""
+
         imtz = {
             imt_name(i) for i in AkkarEtAlRjb2014.DEFINED_FOR_INTENSITY_MEASURE_TYPES
         }
@@ -310,10 +315,12 @@ class Test:
             assert 'gsim' in self.error_message(resp1) and \
                    'imt' in self.error_message(resp1)
 
-    def test_trellis_error_ngaeast(self,
-                                   # pytest fixtures:
-                                   client):
-        """test trellis distance and distance stdev"""
+    def test_trellis_error_ngaeast(
+            self,
+            # pytest fixtures:
+            client
+    ):
+        """Test trellis distance and distance stdev"""
         with open(self.request_filepath) as _:
             inputdic = dict(yaml.safe_load(_))
 
@@ -345,8 +352,10 @@ class Test:
             self,
             mock_get_gmv,
             # pytest fixtures:
-            client):
-        """test trellis distance and distance stdev"""
+            client
+    ):
+        """Test trellis distance and distance stdev"""
+
         with open(self.request_filepath) as _:
             inputdic = dict(yaml.safe_load(_))
 

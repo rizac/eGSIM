@@ -20,6 +20,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         """Execute the command"""
+
         self.stdout.write(self.style.ERROR('Scanning Db tables...'))
         tables = {}
         for key in dir(models):
@@ -54,6 +55,7 @@ class Command(BaseCommand):
 
     def select_db_model(self, tables: dict[str, Model]) -> tuple[Optional[Model], str]:
         """Return (DbModel or None, aborted)"""
+
         self.stdout.write(f'{len(tables)} table(s): ' +
                           self.style.WARNING(" ".join(tables)))
         while True:
@@ -72,6 +74,7 @@ class Command(BaseCommand):
                               allow_fkey=False) -> \
             tuple[Optional[Field], Optional[Any], str]:
         """Return (Field, user_input)"""
+
         fields = {
             f.name: f for f in db_model._meta.get_fields()  # noqa
             if f.__class__ in self.f_types
@@ -119,6 +122,7 @@ class Command(BaseCommand):
 
     def select_db_instances(self, db_model: Model) -> tuple[Optional[QuerySet], str]:
         """Return (QuerySet, user_input)"""
+
         while True:
             msg = f'WHERE [COLUMN] [VALUE] ' \
                   f'({self.suffix["h"]}, {self.suffix["q"]}, {self.suffix["b"]}): '
@@ -149,6 +153,7 @@ class Command(BaseCommand):
 
     def update_db_instance(self, queryset: QuerySet) -> str:
         """Return user_input"""
+
         while True:
             msg = f'SET [COLUMN] [NEW VALUE] ' \
                   f'({self.suffix["h"]}, {self.suffix["q"]}, {self.suffix["b"]}): '
@@ -206,7 +211,8 @@ class Command(BaseCommand):
                     order_by: Optional[tuple[str]] = ('name',),
                     max_width: int = 120,
                     max_rows=5):
-        """Pretty print the given table rows.
+        """
+        Pretty print the given table rows.
 
         :param queryset: the QuerySet denoting a table rows collection,
             e.g. `db_model.objects.all()`

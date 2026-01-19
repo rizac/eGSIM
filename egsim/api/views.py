@@ -1,4 +1,5 @@
 """Module with the views for the web API (no GUI)"""
+
 from __future__ import annotations
 from collections.abc import Callable, Iterable
 from datetime import date, datetime
@@ -59,6 +60,7 @@ class EgsimView(View):
     """  # noqa
     def get(self, request: HttpRequest) -> HttpResponseBase:
         """Process a GET request and return a Django Response"""
+
         try:
             return self.response(request, data=self.parse_query_dict(request.GET))
         except Exception as exc:
@@ -66,6 +68,7 @@ class EgsimView(View):
 
     def post(self, request: HttpRequest) -> HttpResponseBase:
         """Process a POST request and return a Django Response"""
+
         try:
             if request.FILES:
                 # request.content_type='multipart/form-data' (see link below for details)
@@ -306,6 +309,7 @@ class SmtkView(APIFormView):
     @staticmethod
     def response_csv(form: APIForm) -> FileResponse:
         """Return CSV-data response. form is already validated"""
+
         content = write_df_to_csv_stream(form.output())
         content.seek(0)  # for safety
         return FileResponse(content, content_type=MimeType.csv, status=200)
@@ -313,6 +317,7 @@ class SmtkView(APIFormView):
     @staticmethod
     def response_hdf(form: APIForm) -> FileResponse:
         """Return CSV-data response. form is already validated"""
+
         content = write_df_to_hdf_stream({'egsim': form.output()})
         content.seek(0)  # for safety
         return FileResponse(content, content_type=MimeType.hdf, status=200)
@@ -354,6 +359,7 @@ class ResidualsView(SmtkView):
 
 def write_df_to_hdf_stream(frames: dict[str, pd.DataFrame], **kwargs) -> BytesIO:
     """Write pandas DataFrame(s) to a HDF BytesIO"""
+
     if any(k == 'table' for k in frames.keys()):
         raise ValueError('Key "table" invalid (https://stackoverflow.com/a/70467886)')
     with pd.HDFStore(
@@ -391,6 +397,7 @@ def read_df_from_hdf_stream(stream: Union[bytes, IO], **kwargs) -> pd.DataFrame:
 
 def write_df_to_csv_stream(data: pd.DataFrame, **csv_kwargs) -> BytesIO:
     """Write pandas DataFrame to a CSV BytesIO"""
+
     content = BytesIO()
     data.to_csv(content, **csv_kwargs)  # noqa
     return content

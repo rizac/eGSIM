@@ -1,4 +1,5 @@
 """Converter functions for the strong motion modeller toolkit (smtk) package of eGSIM"""
+
 from collections.abc import Collection
 
 from typing import Union
@@ -155,6 +156,7 @@ def na_values(
     values: Union[pd.Series, pd.DataFrame, np.ndarray]
 ) -> Union[pd.Series, pd.DataFrame, np.ndarray]:
     """Return a bool ndarray of values that are na (pandas "na" or +-inf)"""
+
     return pd.isna(values) | np.isin(values, [np.inf, -np.inf])
 
 

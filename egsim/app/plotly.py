@@ -25,6 +25,7 @@ class AxisType:
 
 def axis_type(values: Optional[Union[np.ndarray, pd.Series]]) -> str:
     """Return the Plotly axis type (str) to display the given values. See `AxisType`"""
+
     dtype = get_dtype_of(values)
     if dtype in (ColumnDtype.int, ColumnDtype.float):
         return AxisType.linear
@@ -36,7 +37,8 @@ def axis_type(values: Optional[Union[np.ndarray, pd.Series]]) -> str:
 
 
 def colors_cycle(hex_colors: Optional[Iterable[str]] = None) -> Iterator[str]:
-    """endless iterator cycling through default colors in `rgba(...)` form """
+    """Endless iterator cycling through default colors in `rgba(...)` form """
+
     values = []
     if hex_colors is None:
         hex_colors = [
@@ -61,6 +63,7 @@ def colors_cycle(hex_colors: Optional[Iterable[str]] = None) -> Iterator[str]:
 
 def values2json(values: Union[np.ndarray, pd.Series]) -> list:
     """Converter from numpy/pandas array to plotly compatible list"""
+
     if axis_type(values) == AxisType.date:  # plotly wants ISO strings
         values = datetime2str(values, '%Y-%m-%dT%H:%M:%S')
     return array2json(values)
@@ -104,6 +107,7 @@ def scatter_trace(
         **kwargs
 ) -> dict:
     """Return the properties and style for a trace of type scatter"""
+
     if 'x' in kwargs:
         kwargs['x'] = values2json(kwargs['x'])
     if 'y' in kwargs:
@@ -126,6 +130,7 @@ def scatter_trace(
 
 def line_trace(*, color: str, width=2, dash='solid', **kwargs) -> dict:
     """Return the properties and style for a trace of type scatter (lines only)"""
+
     if 'x' in kwargs:
         kwargs['x'] = values2json(kwargs['x'])
     if 'y' in kwargs:
@@ -150,6 +155,7 @@ def bar_trace(
         **kwargs
 ) -> dict:
     """Return the properties and style for a trace of type bar"""
+
     return _bar_like_trace(
         color, 'bar', line_width, line_dash, line_color, **kwargs
     )
@@ -164,6 +170,7 @@ def histogram_trace(
         **kwargs
 ) -> dict:
     """Return the properties and style for a trace of type histogram"""
+
     return _bar_like_trace(
         color, 'histogram', line_width, line_dash, line_color, **kwargs
     )

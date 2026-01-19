@@ -82,7 +82,8 @@ def test_flatfile_extract_from_yaml():
 
 
 def check_column_metadata(*, name: str, props: dict):
-    """checks the Column metadata dict issued from the YAML flatfile"""
+    """Check the Column metadata dict issued from the YAML flatfile"""
+
     # nb: use keyword arguments instead of a dict
     # so that we can easily track typos
     prefix = f'Column "{name}" metadata error (check YAML): '
@@ -167,7 +168,8 @@ def check_with_openquake(rupture_params: dict[str, set[str]],
                          sites_params: dict[str, set[str]],
                          distances: dict[str, set[str]],
                          imts: set[str]):
-    """Checks that the flatfile columns with a specific Type set
+    """
+    Check that the flatfile columns with a specific Type set
     (columns.ColumnType) match the OpenQuake corresponding name
     """
     oq_rupture_params = set()
@@ -288,8 +290,10 @@ def test_flatfile_invalid_categories():
 
 
 def test_get_dtype_mixed_categories():
-    """test that get_dtypoe_of mixed categorical returns None and not
-    ColumnDtype.category"""
+    """
+    Test that get_dtypoe_of mixed categorical returns None and not
+    ColumnDtype.category
+    """
     assert get_dtype_of(pd.Series([2, True]).astype('category')) is None
     assert (get_dtype_of(pd.Series([False, True]).astype('category'))
             is ColumnDtype.category)
@@ -313,6 +317,7 @@ def test_get_dtype_mixed_categories():
 
 def test_mixed_arrays_are_mostly_null_dtype():
     """test that arrays with mixed dtypes have None dtype (with some known exceptions)"""
+
     for val in combinations(['a', 2, 2.2, True, datetime.utcnow()], 2):
         # check that the two values have a dtype set:
         assert get_dtype_of(val[0]) is not None
@@ -352,7 +357,8 @@ def test_mixed_arrays_are_mostly_null_dtype():
 
 
 def test_dtypes_with_null():
-    """test that arrays with known dtype + 1 null preserve their dtype"""
+    """Test that arrays with known dtype + 1 null preserve their dtype"""
+
     for val in ['a', 2, 2.2, True, datetime.utcnow()]:
         # check that the two values have a dtype set:
         cdtype = get_dtype_of(val)
@@ -375,8 +381,10 @@ def test_dtypes_with_null():
 
 
 def test_str_and_o_dtypes_are_the_same():
-    """test that a Series of strings and a Series of strings and Nones have the
-    same dtype"""
+    """
+    Test that a Series of strings and a Series of strings and Nones have the
+    same dtype
+    """
     s1 = pd.Series(['s'])
     s2 = pd.Series(['s', None])
     assert s1.dtype == np.dtype('O')

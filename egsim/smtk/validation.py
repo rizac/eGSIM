@@ -1,4 +1,5 @@
 """Validation functions for the strong motion modeller toolkit (smtk) package of eGSIM"""
+
 from __future__ import annotations
 
 from typing import Union, Optional
@@ -142,6 +143,7 @@ def init_context_maker(
         tectonic_region=''
 ) -> ContextMaker:
     """Initialize a ContextMaker. Raise `InvalidModel`"""
+
     param = {
         "imtls": {i if isinstance(i, str) else imt_name(i): [] for i in imts},
         "mags":  [f"{mag:.2f}" for mag in magnitudes]
@@ -226,6 +228,7 @@ def get_ground_motion_values(
 
 def _format_model_error(model: Union[GMPE, str], exception: Exception) -> ModelError:
     """Re-format the given exception into  a ModelError"""
+
     suffix = str(exception.__class__.__name__)
     import sys
     import traceback
@@ -252,16 +255,19 @@ class InputError(ValueError):
 
     def __str__(self):
         """Reformat ``str(self)``"""
+
         return ", ".join(sorted(str(a) for a in self.args))
 
 
 class ModelError(InputError):
     """Error for invalid models (e.g., misspelled, unable to compute predictions)"""
+
     pass
 
 
 class ImtError(InputError):
     """Error for invalid intensity measures (e.g., misspelled)"""
+
     pass
 
 
@@ -276,9 +282,11 @@ class ConflictError(ValueError):
 
     def __str__(self):
         """Custom error msg"""
+
         return ", ".join(sorted(f'+'.join(sorted(a)) for a in self.args))
 
 
 class IncompatibleModelImtError(ConflictError):
     """Exception raised by conflicts within model and imts"""
+
     pass

@@ -1,4 +1,5 @@
 """Base eGSIM forms"""
+
 from __future__ import annotations
 
 from django.db.models import QuerySet
@@ -50,7 +51,8 @@ class EgsimBaseForm(Form):
     _field2params: dict[str, tuple[str]]
 
     def __init__(self, data=None, files=None, no_unknown_params=True, **kwargs):
-        """Override init: re-arrange `self.data` (renaming each key with the
+        """
+        Override init: re-arrange `self.data` (renaming each key with the
         corresponding field name, if needed) and treating non None initial values
         as default values for missing fields. As such, `data` might be modified inplace.
 
@@ -117,7 +119,8 @@ class EgsimBaseForm(Form):
             self.is_bound = False
 
     def has_error(self, field, code=None):
-        """Call `super.has_error` without forcing a full clean (if the form has not
+        """
+        Call `super.has_error` without forcing a full clean (if the form has not
         been cleaned, return whether the field resulted in an initialization error)
 
         :param field: a Form field name (not an input parameter name)
@@ -132,7 +135,8 @@ class EgsimBaseForm(Form):
         return super().has_error(field, code)
 
     class ErrMsg:
-        """Error messages container class: maps common Django ValueError's codes
+        """
+        Error messages container class: maps common Django ValueError's codes
         to a standardized message string. Usage within data cleaning:
             raise ValidationError(self.ErrMsg.invalid)
             self.add_error(field, self.ErrMsg.required)
@@ -142,7 +146,8 @@ class EgsimBaseForm(Form):
         invalid_choice = "value not found or misspelled"
 
     def errors_json_data(self) -> dict:
-        """Return a JSON serializable dict with the key `message` specifying
+        """
+        Return a JSON serializable dict with the key `message` specifying
         all invalid parameters grouped by error type. Typically, users call
         this method if `self.is_valid()` returns False.
         Note: API users should retrieve JSON formatted errors via this method only
@@ -175,7 +180,8 @@ class EgsimBaseForm(Form):
         }
 
     def param_name_of(self, field: str) -> str:
-        """Return the input parameter name of `field`. If no parameter name mapped to
+        """
+        Return the input parameter name of `field`. If no parameter name mapped to
         `field` has been provided as input `data`, return the 1st (=primary) parameter
         name of `field` or, in case of no mapping, `field` itself
         """
@@ -185,7 +191,8 @@ class EgsimBaseForm(Form):
 
     @classmethod
     def param_names_of(cls, field: str) -> tuple[str]:
-        """Return the parameter names of `field` registered at a class-level. The
+        """
+        Return the parameter names of `field` registered at a class-level. The
         returned tuple has nonzero length and might contain the passed field argument.
         In case of length > 1, the first item is the primary parameter name
         """
@@ -209,28 +216,32 @@ class GsimForm(EgsimBaseForm):
 
     # Set simple Fields and perform validation in `clean_gsim` and `clean_imt`:
     gsim = Field(required=False, help_text="Ground shaking intensity Model(s)")
-    latitude = FloatField(min_value=-90., max_value=90., required=False,
-                          help_text="The latitude of the geographic location for "
-                                    "model selection. This parameter is mandatory "
-                                    "if no model name is provided, otherwise is "
-                                    "optional. See also parameter regionalization "
-                                    "to configure which regionalizations will be used"
-                          )
-    longitude = FloatField(min_value=-180., max_value=180., required=False,
-                           help_text="The longitude of the geographic location for "
-                                     "model selection. This parameter is mandatory "
-                                     "if no model name is provided, otherwise is "
-                                     "optional. See also parameter regionalization "
-                                     "to configure which regionalizations will be used"
-                           )
-    regionalization = Field(required=False,
-                            help_text='The regionalization(s) (mappings from region to '
-                                      'model) to be used for searching the models '
-                                      'applicable on the given geographic '
-                                      'location (parameters latitude and longitude). '
-                                      'If no geographic location is provided, this '
-                                      'parameter is ignored. If missing, all '
-                                      'implemented regionalizations will be used')
+    latitude = FloatField(
+        min_value=-90.,
+        max_value=90.,
+        required=False,
+        help_text="The latitude of the geographic location for model selection. "
+                  "This parameter is mandatory if no model name is provided, "
+                  "otherwise is optional. See also parameter regionalization "
+                  "to configure which regionalizations will be used"
+    )
+    longitude = FloatField(
+        min_value=-180.,
+        max_value=180.,
+        required=False,
+        help_text="The longitude of the geographic location for model selection. "
+                  "This parameter is mandatory if no model name is provided, "
+                  "otherwise is optional. See also parameter regionalization "
+                  "to configure which regionalizations will be used"
+    )
+    regionalization = Field(
+        required=False,
+        help_text='The regionalization(s) (mappings from region to model) to be used '
+                  'for searching the models applicable on the given geographic location '
+                  '(parameters latitude and longitude). '
+                  'If no geographic location is provided, this parameter is ignored. '
+                  'If missing, all implemented regionalizations will be used'
+    )
 
     # Note above: do not use ModelChoiceField (overkill), validate in self.validate_gsim
 
@@ -297,7 +308,8 @@ class GsimForm(EgsimBaseForm):
 def get_region_selected_model_names(
         lat: float, lon: float, reg_names=None
 ) -> dict[str, list[str]]:
-    """Get the ground motion model names from the chosen regionalization(s),
+    """
+    Get the ground motion model names from the chosen regionalization(s),
     lat and lon. This method should be invoked only if `self.is_valid()` returns
     True (form successfully validated).
     Empty / not provided `lat` ar `lon` will return an empty dict,
@@ -326,7 +338,8 @@ def get_region_selected_model_names(
 
 
 def get_regionalizations(names=None) -> QuerySet[models.Regionalization]:
-    """Custom regionalization clean. Not called by Django but from clean_gsim
+    """
+    Custom regionalization clean. Not called by Django but from clean_gsim
 
     :param names: sequence of strings or None, indicating the names of the
         regionalizations to use. None (the default) will use all regionalizations
@@ -348,9 +361,8 @@ class GsimImtForm(GsimForm):
     imt = Field(required=False, help_text='Intensity Measure type(s)')
 
     def clean_imt(self) -> dict[str, IMT]:
-        """Custom imt clean.
-        The return value will replace self.cleaned_data['imt']
-        """
+        """Custom imt clean. The return value will replace self.cleaned_data['imt']"""
+
         # Implementation note: as of 2024, the 1st arg to ValidationError is not
         # really used, just pass the right `code` arg (see `error_json_data`)
         key = 'imt'
@@ -366,9 +378,8 @@ class GsimImtForm(GsimForm):
         return ret
 
     def clean(self):
-        """Perform a final validation checking models and intensity measures
-        compatibility
-        """
+        """Perform a final validation checking models and intensity measures compatibility"""
+
         gsim_field, imt_field = 'gsim', 'imt'
         cleaned_data = super().clean()
         # If both fields were ok (no error), check that their values match:
@@ -385,14 +396,16 @@ class GsimImtForm(GsimForm):
 
 
 class APIForm(EgsimBaseForm):
-    """API Form is the base Form for any eGSIM API view: in addition to handling
+    """
+    API Form is the base Form for any eGSIM API view: in addition to handling
     input validation, it processes the given input into a Python object to be served as
     http response body / content.
     Subclasses need to implement the abstract-like `output` method
     """
 
     def output(self) -> Any:
-        """Compute and return the output from the input data (`self.cleaned_data`).
+        """
+        Compute and return the output from the input data (`self.cleaned_data`).
         This method must be called after checking that `self.is_valid()` is True
 
         :return: any Python object (e.g., a JSON-serializable dict)
@@ -401,7 +414,8 @@ class APIForm(EgsimBaseForm):
 
 
 class GsimInfoForm(GsimForm, APIForm):
-    """API Form returning an info for a list of selected of models. Info is a dict
+    """
+    API Form returning an info for a list of selected of models. Info is a dict
     containing the supported imt(s), the required ground motion parameters,
     and the OpenQuake docstring
     """
@@ -417,7 +431,8 @@ class GsimInfoForm(GsimForm, APIForm):
     _field2params: dict[str, list[str]] = {'gsim': ('name', 'model')}
 
     def clean_gsim(self) -> list[str]:
-        """Pre-process the gsim given as input before calling super.clean,
+        """
+        Pre-process the gsim given as input before calling super.clean,
         by relaxing model matching to allow partially typed,
         case-insensitive names, eventually calling the super method.
         The return value will replace self.cleaned_data['gsim']
@@ -443,7 +458,8 @@ class GsimInfoForm(GsimForm, APIForm):
         return new_gmms
 
     def output(self) -> dict:
-        """Compute and return the output from the input data (`self.cleaned_data`).
+        """
+        Compute and return the output from the input data (`self.cleaned_data`).
         This method must be called after checking that `self.is_valid()` is True
 
         :return: any Python object (e.g., a JSON-serializable dict)

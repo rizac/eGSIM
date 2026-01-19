@@ -62,6 +62,7 @@ class EgsimDbModel(DjangoDbModel):
     @classmethod
     def names(cls) -> QuerySet[str]:
         """Return a QuerySet yielding all instance unique names (`str`)"""
+
         return cls.queryset('name').values_list('name', flat=True)
 
 
@@ -118,6 +119,7 @@ class Reference(DjangoDbModel):
 
 class MediaFile(EgsimDbModel):
     """Abstract class handling any data file in the MEDIA directory of eGSIM"""
+
     # for safety, do not store full file paths in the db (see `filepath` for details):
     filepath = TextField(
         unique=True,
@@ -133,7 +135,7 @@ class MediaFile(EgsimDbModel):
         abstract = True
 
     def __str__(self):
-        """string representation of this object"""
+        """String representation of this object"""
         return f'{self.name} ({self.filepath})'
 
 

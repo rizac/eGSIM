@@ -14,6 +14,7 @@ from egsim.smtk.converters import convert_accel_units, dataframe2dict, datetime2
 
 def test_dataframe2dict():
     """Test the flatfile metadata"""
+
     cols = [('mag', ''), ('PGA', 'CauzziEtAl')]
     data = [[np.nan, 1], [3, np.inf], [-np.inf, 5.37]]
     dfr = pd.DataFrame(columns=cols, data=data)
@@ -72,6 +73,7 @@ def test_dataframe2dict_orient_dict():
 
 def _check_dataframe2dict(dfr):
     """Test the flatfile metadata"""
+
     res = dataframe2dict(dfr, as_json=False, drop_empty_levels=False)
     expected = {
         ('mag', ''): [np.nan, 3, -np.inf],
@@ -103,7 +105,8 @@ def _check_dataframe2dict(dfr):
 
 
 def test_convert_accel_units():
-    """test convert accel units"""
+    """Test convert accel units"""
+
     from scipy.constants import g
     for m_sec in ["m/s/s", "m/s**2", "m/s^2"]:
         for cm_sec in ["cm/s/s", "cm/s**2", "cm/s^2"]:
