@@ -561,14 +561,10 @@ def apiview2help(view: Union[APIFormView, Type[APIFormView]]) -> dict:
     """
     params = form2help(view.formclass, compact=False)
     help_ = 'The response data format'
-    choices = list(view.supported_formats())
-    default_format = view.default_format
-    if len(choices) > 1:
-        # reorder:
-        choices = [default_format] + [f for f in choices if f != default_format]
+    choices = list(view.responses)
     params['format'] = {
         'names': ['format'],
-        'default_value': default_format,
+        'default_value': choices[0],
         'help': help_,
         'choices': choices
     }

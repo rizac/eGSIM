@@ -180,9 +180,8 @@ class APIFormView(EgsimView):
     
     Given an `APiForm` subclass named `MyApiForm`:
     
-    1. If this view is supposed to return JSON data only, then `MyApiForm.output()` 
-    must also return a JSON serializable dict. If this is the casse, you only need to
-    implement a new endpoint in `urls.py`:
+    1. If this view is supposed to return JSON data only and `MyApiForm.output()` 
+    returns a JSON serializable dict, then simply implement a new endpoint in `urls.py`:
     
     ```
     urlpatterns = [
@@ -192,22 +191,21 @@ class APIFormView(EgsimView):
     ]
     ```
 
-    2. If this view is supposed to return several data formats, then 
-    `MyApiForm.output()` can be any Python object, but you must serialize it here
-    depending on the requested format (including overriding the existing reponse_json,
-    if needed). For instance, if you want to serve HDF data, you must implement
-    the method `response_hdf`:
+    2. In any other case, here a snippet to serve HDF data:
     
     ```
     class MyApiFormView(APIFormView):
 
         formclass = MyApiForm  # bind this view to the given ApiForm **class**
         
-        def response_hdf(self, form_output: Any, form: APIForm, **kwargs) -> HttpResponse:
-            # Form is valid. First serialize `form_output`, e.g. as bytes:
-            s_output = ... 
-            # and then implement the HttpResponse from the given form output:
-            return HttpResponse(s_output, content_type=MimeType.hdf, ...)
+        responses: {
+            'hdf': lambda form: MyApiFormView.reponse_hdf(form)
+        }
+        
+        @staticmethod
+        def response_hdf(form: APIForm) -> HttpResponse:
+            s_output = ... serialize form.output() (into BytesIO probably) ...
+            return HttpResponse(s_output, content_type=MimeType.hdf, status=200, ...)
     ```
 
     Finally, bind as usual this class view to an endpoint in `urls.py`, .e.g.:
@@ -222,7 +220,9 @@ class APIFormView(EgsimView):
     # The APIForm of this view, to be set in subclasses:
     formclass: Type[APIForm] = None
 
-    default_format: str = 'json'
+    responses: dict[str, Callable[[APIForm], HttpResponseBase]] = {
+        'json': lambda form: JsonResponse(form.output(), status=200)
+    }
 
     def response(self,
                  request: HttpRequest,
@@ -233,37 +233,16 @@ class APIFormView(EgsimView):
         (`self.formclass(...).output()`) serialized into the appropriate bytes sequence
         according to the 'format' parameter in 'data'.
         """
-        rformat = data.pop('format', self.default_format)
+        rformat = data.pop('format', list(self.responses)[0])
         try:
-            response_function = self.supported_formats()[rformat]
+            response_function = self.responses[rformat]
         except KeyError:
             return self.error_response(f'format: {EgsimBaseForm.ErrMsg.invalid}')
 
         form = self.formclass(data, files)
         if form.is_valid():
-            return response_function(self, form.output(), form)  # noqa
+            return response_function(form)  # noqa
         return self.error_response(form.errors_json_data()['message'])
-
-    @classmethod
-    def supported_formats(cls) -> \
-            dict[str, Callable[[APIForm, APIForm], HttpResponse]]:
-        """Return a list of supported formats (content_types) by inspecting
-        this class implemented methods. Each dict key is a MimeType attr name,
-        mapped to a class method used to obtain the response data in that
-        mime type"""
-        formats = {}
-        for a in dir(cls):
-            if a.startswith('response_'):
-                meth = getattr(cls, a)
-                if callable(meth):
-                    frmt = a.split('_', 1)[1]
-                    if hasattr(MimeType, frmt):
-                        formats[frmt] = meth
-        return formats
-
-    def response_json(self, form_output: Any, form: APIForm, **kwargs) -> JsonResponse:
-        kwargs.setdefault('status', 200)
-        return JsonResponse(form_output, **kwargs)
 
 
 class GsimInfoView(APIFormView):
@@ -278,7 +257,10 @@ class SmtkView(APIFormView):
     Subclasses should in principle only implement the class attribute `formclass`
     """
 
-    default_format: str = 'hdf'
+    responses = {
+        'hdf': lambda form: SmtkView.response_hdf(form),
+        'csv': lambda form: SmtkView.response_csv(form)
+    }
 
     def response(self,
                  request: HttpRequest,
@@ -297,31 +279,19 @@ class SmtkView(APIFormView):
         # any other exception will be handled in self.get and self.post and returned as
         # 5xx response
 
-    def response_csv(  # noqa
-            self, form_output: pd.DataFrame, form: APIForm, **kwargs  # noqa
-    ) -> FileResponse:
-        content = write_df_to_csv_stream(form_output)
+    @staticmethod
+    def response_csv(form: APIForm) -> FileResponse:
+        """Return CSV-data response. form is already validated"""
+        content = write_df_to_csv_stream(form.output())
         content.seek(0)  # for safety
-        kwargs.setdefault('content_type', MimeType.csv)
-        kwargs.setdefault('status', 200)
-        return FileResponse(content, **kwargs)
+        return FileResponse(content, content_type=MimeType.csv, status=200)
 
-    def response_hdf(  # noqa
-            self, form_output: pd.DataFrame, form: APIForm, **kwargs  # noqa
-    ) -> FileResponse:
-        content = write_df_to_hdf_stream({'egsim': form_output})
+    @staticmethod
+    def response_hdf(form: APIForm) -> FileResponse:
+        """Return CSV-data response. form is already validated"""
+        content = write_df_to_hdf_stream({'egsim': form.output()})
         content.seek(0)  # for safety
-        kwargs.setdefault('content_type', MimeType.hdf)
-        kwargs.setdefault('status', 200)
-        return FileResponse(content, **kwargs)
-
-    def response_json(self, form_output: pd.DataFrame, form: APIForm, **kwargs) \
-            -> JsonResponse:
-        """Return a JSON response. This method is implemented for
-        legacy code/tests and should be avoided whenever possible"""
-        json_data = dataframe2dict(form_output, as_json=True, drop_empty_levels=True)
-        kwargs.setdefault('status', 200)
-        return JsonResponse(json_data, **kwargs)
+        return FileResponse(content, content_type=MimeType.hdf, status=200)
 
 
 class PredictionsView(SmtkView):
@@ -329,22 +299,29 @@ class PredictionsView(SmtkView):
 
     formclass = PredictionsForm
 
+    responses = SmtkView.responses | {
+        'json': lambda form: JsonResponse(
+            dataframe2dict(form.output(), as_json=True, drop_empty_levels=True), status=200
+        )
+    }
+
 
 class ResidualsView(SmtkView):
     """SmtkView subclass for residuals computation"""
 
     formclass = ResidualsForm
 
-    def response_json(self, form_output: pd.DataFrame, form: APIForm, **kwargs) \
-            -> JsonResponse:
-        """Return a JSON response. This method is overwritten because the dataframe to
-        JSON conversion differs if we computed measures of fit (param. `ranking=True`)
-        """
-        orient = 'dict' if form.cleaned_data['ranking'] else 'list'
-        json_data = dataframe2dict(form_output, as_json=True,
-                                   drop_empty_levels=True, orient=orient)
-        kwargs.setdefault('status', 200)
-        return JsonResponse(json_data, **kwargs)
+    responses = SmtkView.responses | {
+        'json': lambda form: JsonResponse(
+            dataframe2dict(
+                form.output(),
+                as_json=True,
+                drop_empty_levels=True,
+                orient='dict' if form.cleaned_data['ranking'] else 'list'
+            ),
+            status=200
+        )
+    }
 
 
 # functions to read from BytesIO:
