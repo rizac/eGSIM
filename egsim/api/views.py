@@ -57,9 +57,6 @@ class EgsimView(View):
     ]
     ```
     """  # noqa
-    # error codes for general client and server errors:
-    CLIENT_ERR_CODE, SERVER_ERR_CODE = 400, 500
-
     def get(self, request: HttpRequest) -> HttpResponseBase:
         """Process a GET request and return a Django Response"""
         try:
@@ -123,27 +120,12 @@ class EgsimView(View):
         server error (HttpResponse 500) with the exception string representation
         as response body / content
         """
-        return self.error_response(
+        return error_response(
             (f'Server error ({exc.__class__.__name__}): {exc}'.strip() +
              f'. Please contact the server administrator '
              f'if you think this error is due to a code bug'),
-            status=self.SERVER_ERR_CODE
+            status=500
         )
-
-    def error_response(
-            self,
-            message: Union[str, Exception, bytes] = '',
-            **kwargs
-    ) -> HttpResponse:
-        """
-        Return a HttpResponse with default status set to self.CLIENT_ERR_CODE
-        and custom message in the response body / content. For custom status,
-        provide the `status` explicitly as keyword argument
-        """
-        kwargs.setdefault('status', self.CLIENT_ERR_CODE)
-        if not isinstance(message, (str, bytes)):
-            message = str(message)
-        return HttpResponse(message, **kwargs)
 
     def parse_query_dict(  # noqa
             self,
@@ -175,6 +157,21 @@ class EgsimView(View):
         return ret
 
 
+def error_response(
+        message: Union[str, Exception, bytes] = '',
+        status=400,
+        **kwargs
+) -> HttpResponse:
+    """
+    Return a HttpResponse with status 400 (client error) as default
+    and custom message in the response body / content. For custom status,
+    provide the `status` explicitly as keyword argument
+    """
+    if not isinstance(message, (str, bytes)):
+        message = str(message)
+    return HttpResponse(message, status=status, **kwargs)
+
+
 class NotFound(EgsimView):
     """View for the 404 Not Found HttpResponse"""
 
@@ -184,7 +181,7 @@ class NotFound(EgsimView):
             data: dict,
             files: Optional[dict] = None
     ) -> HttpResponse:
-        return self.error_response(status=404)
+        return error_response(status=404)
 
 
 class APIFormView(EgsimView):
@@ -259,12 +256,12 @@ class APIFormView(EgsimView):
         try:
             response_function = self.responses[rformat]
         except KeyError:
-            return self.error_response(f'format: {EgsimBaseForm.ErrMsg.invalid}')
+            return error_response(f'format: {EgsimBaseForm.ErrMsg.invalid}')
 
         form = self.formclass(data, files)
         if form.is_valid():
             return response_function(form)  # noqa
-        return self.error_response(form.errors_json_data()['message'])
+        return error_response(form.errors_json_data()['message'])
 
 
 class GsimInfoView(APIFormView):
@@ -298,11 +295,11 @@ class SmtkView(APIFormView):
         try:
             return super().response(request=request, data=data, files=files)
         except MissingColumnError as mce:
-            return self.error_response(f'flatfile: missing column(s) {str(mce)}')
+            return error_response(f'flatfile: missing column(s) {str(mce)}')
         except FlatfileError as err:
-            return self.error_response(f"flatfile: {str(err)}")
+            return error_response(f"flatfile: {str(err)}")
         except ModelError as m_err:
-            return self.error_response(m_err)
+            return error_response(m_err)
         # any other exception will be handled in self.get and self.post and returned as
         # 5xx response
 

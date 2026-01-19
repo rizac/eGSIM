@@ -21,8 +21,15 @@ from ..api.forms import APIForm, EgsimBaseForm, GsimForm
 from ..api.forms.residuals import ResidualsForm
 from ..api.forms.scenarios import PredictionsForm
 from ..api.urls import MODEL_INFO_URL_PATH, RESIDUALS_URL_PATH, PREDICTIONS_URL_PATH
-from ..api.views import MimeType, EgsimView, GsimInfoView, PredictionsView, \
-    ResidualsView, APIFormView
+from ..api.views import (
+    MimeType,
+    EgsimView,
+    GsimInfoView,
+    PredictionsView,
+    ResidualsView,
+    APIFormView,
+    error_response
+)
 from .forms import PredictionsVisualizeForm, FlatfileVisualizeForm
 from ..smtk import registered_imts
 from ..smtk.registry import Clabel
@@ -144,7 +151,7 @@ class PlotsImgDownloader(EgsimView):
         try:
             content_type = getattr(MimeType, img_format)
         except AttributeError:
-            return self.error_response(f'Invalid format "{img_format}"')
+            return error_response(f'Invalid format "{img_format}"')
 
         from plotly import graph_objects as go, io as pio
         fig = go.Figure(data=data['data'], layout=data['layout'])
