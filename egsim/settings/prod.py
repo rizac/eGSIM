@@ -1,5 +1,5 @@
 """
-Django settings for eGSIM project (production). In principle, this is just a template
+Django settings for eGSIM project (production). In principle, this is just a template,
 and you should inherit from base using this as example
 """
 

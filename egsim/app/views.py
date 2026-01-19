@@ -82,7 +82,7 @@ if any(
 
 
 def main(request, page=''):
-    """view for the main page"""
+    """View for the main page"""
     regionalizations = list(models.Regionalization.queryset())
     flatfiles = list(models.Flatfile.queryset())
     init_data = get_init_data_json(regionalizations, flatfiles, settings.DEBUG)
@@ -128,8 +128,10 @@ class PlotsImgDownloader(EgsimView):
                  request: HttpRequest,
                  data: dict,
                  files: Optional[dict] = None) -> HttpResponseBase:
-        """Process the response from a given request and the data / files
-        extracted from it"""
+        """
+        Process the response from a given request and the data / files
+        extracted from it
+        """
         filename = request.path[request.path.rfind('/') + 1:]
         img_format = splitext(filename)[1][1:].lower()
         try:
@@ -159,8 +161,7 @@ class PredictionsHtmlTutorial(EgsimView):
                  request: HttpRequest,
                  data: dict,
                  files: Optional[dict] = None) -> HttpResponseBase:
-        """Process the response from a given request and the data / files
-        extracted from it"""
+        """Process the response from a given request and the data / files extracted from it"""
         from egsim.api.client.snippets.get_egsim_predictions import \
             get_egsim_predictions
         api_form = PredictionsForm({
@@ -214,7 +215,8 @@ def get_init_data_json(
         db_flatfiles: list[models.Flatfile],
         debug=False
 ) -> dict:
-    """Return the JSON data to be passed to the browser at startup to initialize
+    """
+    Return the JSON data to be passed to the browser at startup to initialize
     the page content
 
     :param debug: True or False, the value of the settings DEBUG flag
@@ -521,8 +523,10 @@ def get_display_name(
         obj: Union[models.Flatfile, models.Regionalization],
         extended=False
 ) -> str:
-    """return the name from the given Database obj, assuring it is not empty (either
-    display_name or name, or, if extended is True (default: False) both of them"""
+    """
+    Return the name from the given Database obj, assuring it is not empty (either
+    display_name or name, or, if extended is True (default: False) both of them
+    """
     display_name = obj.display_name
     name = obj.name
     if not display_name:
@@ -531,14 +535,15 @@ def get_display_name(
 
 
 def get_url(obj: models.Reference) -> str:
-    """return the URL or the DOI url from the given Reference obj"""
+    """Return the URL or the DOI url from the given Reference obj"""
     if obj.url:
         return obj.url
     return f'https://doi.org/{obj.doi}' if obj.doi else ''
 
 
 def get_bbox(reg: models.Regionalization) -> list[float]:
-    """Return the bounds of all the regions coordinates in the given regionalization
+    """
+    Return the bounds of all the regions coordinates in the given regionalization
 
     @param return: the 4-element list (minx, miny, maxx, maxy) i.e.
         (minLon, minLat, maxLon, maxLat)
@@ -555,7 +560,8 @@ def get_bbox(reg: models.Regionalization) -> list[float]:
 
 
 def apiview2help(view: Union[APIFormView, Type[APIFormView]]) -> dict:
-    """Return the same output as `form2help` from the given APIFormView. This method
+    """
+    Return the same output as `form2help` from the given APIFormView. This method
     First get the help from the view form class, and then adds the view `format`
     parameter as dict entry, before returning the dict
     """
@@ -603,7 +609,8 @@ def form2help(form: Union[EgsimBaseForm, Type[EgsimBaseForm]], compact=True) -> 
 
 
 def form2dict(form: EgsimBaseForm, compact=False) -> dict:
-    """Return the `data` argument passed in the form
+    """
+    Return the `data` argument passed in the form
     constructor in a JSON serializable dict
 
     @param form: the EgsimBaseForm (Django Form subclass)

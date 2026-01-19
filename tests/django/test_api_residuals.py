@@ -163,7 +163,8 @@ class Test:
         assert self.error_message(resp2) == 'flatfile: missing column(s) evt_id'
 
     def test_upload_hdf(self, client, settings):  # <- both pytest-django fixutures
-        """As of pandas 2.2.2, HDF cannot be read from buffer but only from file.
+        """
+        As of pandas 2.2.2, HDF cannot be read from buffer but only from file.
         Test this here
         """
 
@@ -374,7 +375,8 @@ class Test:
     def test_residuals_invalid_get(self,
                                    # pytest fixtures:
                                    client):
-        """Tests supplying twice the plot_type (invalid) and see what
+        """
+        Tests supplying twice the plot_type (invalid) and see what
         happens. This request error can happen only from an API request, not
         from the web portal"""
         resp1 = client.get(self.url +
@@ -387,7 +389,8 @@ class Test:
     def test_allen2012(self,
                        # pytest fixtures:
                        client):
-        """test a case where the browser simply stops calculating without
+        """
+        test a case where the browser simply stops calculating without
         error messages. The cause was due to an AssertionError with empty
         message. UPDATE 2021: the case seems to be fixed now in OpenQuake"""
         inputdict = {
@@ -406,7 +409,8 @@ class Test:
     def test_booreetal_esm(self,
                            # pytest fixtures:
                            client):
-        """test a case where we got very strange between events (intra events)
+        """
+        test a case where we got very strange between events (intra events)
         Bug discovered in sept 2024
         Tests also normalize parameter
         """

@@ -2,7 +2,7 @@
 
 ## Install for development
 
-Follow installation on github workflow, remember to add -e editable
+Follow installation on GitHub workflow, remember to add -e editable
 in the last command: `pip install -e ...`
 
 ## Run tests (smtk lib only)
@@ -157,7 +157,7 @@ To do so:
     (should be `egsim/api/migrations/0001_initial.py`, if more than
     one migration file in the directory, delete all of them)
 
-  - Recreate migration file (file to auto-populate the DB):
+  - Recreate migration file (file to autopopulate the DB):
     ```bash
     export DJANGO_SETTINGS_MODULE="egsim.settings.dev";python manage.py makemigrations && python manage.py migrate && python manage.py egsim-init
     ```

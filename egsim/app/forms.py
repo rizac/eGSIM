@@ -22,13 +22,15 @@ class PredictionsVisualizeForm(PredictionsForm):
     """Form returning predictions from configured scenarios in form of plots"""
 
     plot_type = ChoiceField(
-        required=True, initial=None,
+        required=True,
+        initial=None,
         choices=[
             ('m', 'IMT vs. Magnitude'),
             ('d', 'IMT vs. Distance'),
             ('s', 'Magnitude-Distance Spectra')
         ],
-        help_text='the plot type to be displayed: ')
+        help_text='the plot type to be displayed: '
+    )
 
     def clean(self):
         cleaned_data = super().clean()
@@ -135,8 +137,12 @@ class PredictionsVisualizeForm(PredictionsForm):
         plots = []
         for params, x_values, plot_data in groupby(dataframe):
             traces, layout = self.get_plot_traces_and_layout(
-                x_values, plot_data, x_label, y_label(params[imt_label]),
-                colors)
+                x_values,
+                plot_data,
+                x_label,
+                y_label(params[imt_label]),
+                colors
+            )
             plots.append({
                 'data': traces,
                 'params': params,
@@ -158,7 +164,7 @@ class PredictionsVisualizeForm(PredictionsForm):
         layout is a dict of layout configuration, such as plot title, x- or y-axis
         range and type (log/linear)
 
-        :param x: the x values (dict of str (model name) mapped to its x values
+        :param x: the x values, as dict of str (model name) mapped to its x values
         :param y: the y values, as dict. Each dict key is a model name (str) and it's
             mapped to the model y values, as tuple of two elements: (medians, stddev),
             where medians and stddev are numeric arrays of the same length as `x`
@@ -539,7 +545,8 @@ class FlatfileVisualizeForm(APIForm, FlatfileForm):
         return cleaned_data
 
     def output(self) -> dict:
-        """Compute and return the output from the input data (`self.cleaned_data`).
+        """
+        Compute and return the output from the input data (`self.cleaned_data`).
         This method must be called after checking that `self.is_valid()` is True
 
         :return: any Python object (e.g., a JSON-serializable dict)

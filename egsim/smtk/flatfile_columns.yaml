@@ -23,7 +23,7 @@
 #   "<="      The max. value (endpoint included) of the column data (see ">" for details)
 
 # YAML notes:
-# Unless required, strings (text sequences) don't need quotes ("'). Date-times must be
+# Unless required, strings (text sequences) don't need quotes (" or '). Date-times must be
 # given as ISO-formatted strings (e.g.: 2006-01-01T12:31:21). YAML is a superset of JSON,
 # so you can type sequences and mappings as JSON Arrays and Objects, respectively. If
 # you want to type over multiple lines for readability, prefix the text with >-

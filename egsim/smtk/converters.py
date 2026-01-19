@@ -8,7 +8,8 @@ from scipy.constants import g
 
 
 def vs30_to_z1pt0_cy14(vs30: Union[float, np.ndarray], japan=False):
-    """Return the estimate depth to the 1.0 km/s velocity layer based on Vs30
+    """
+    Return the estimate depth to the 1.0 km/s velocity layer based on Vs30
     from Chiou & Youngs (2014) California model
 
     :param vs30: Vs30 value(s) in m/s
@@ -28,7 +29,8 @@ def vs30_to_z1pt0_cy14(vs30: Union[float, np.ndarray], japan=False):
 
 
 def vs30_to_z2pt5_cb14(vs30: Union[float, np.ndarray], japan=False):
-    """Convert vs30 to depth to 2.5 km/s interface using model proposed by
+    """
+    Convert vs30 to depth to 2.5 km/s interface using model proposed by
     Campbell & Bozorgnia (2014)
 
     :param vs30: Vs30 value(s)
@@ -91,7 +93,8 @@ def dataframe2dict(
     drop_empty_levels=True,
     orient: str = 'list',  # or 'dict'
 ) -> dict[Union[str, tuple], list]:
-    """Convert the given dataframe into a Python dict, in the format:
+    """
+    Convert the given dataframe into a Python dict, in the format:
     ```
     { column:Union[str, tuple]: values:list[Any], ... }
     ```
@@ -156,10 +159,11 @@ def na_values(
 
 
 def array2json(
-    values: Union[pd.Series, np.ndarray, pd.DataFrame],
-    na_vals: Union[pd.Series, np.ndarray, pd.DataFrame, bool, None] = None
+        values: Union[pd.Series, np.ndarray, pd.DataFrame],
+        na_vals: Union[pd.Series, np.ndarray, pd.DataFrame, bool, None] = None
 ) -> list:
-    """Convert `values` to a JSON serializable list, basically converting
+    """
+    Convert `values` to a JSON serializable list, basically converting
     all NA (NaN, Null, +-Inf, NaT) into None (null in JSON)
 
     :param values: the values (pandas Series/ DataFrame or nd array)

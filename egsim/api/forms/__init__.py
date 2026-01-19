@@ -21,7 +21,8 @@ _base_singleton_renderer = BaseRenderer()  # singleton no-op renderer, see below
 
 
 def get_base_singleton_renderer(*a, **kw) -> BaseRenderer:  # noqa
-    """Default renderer instance (see "FORM_RENDERER" in the settings_debug.py and
+    """
+    Default renderer instance (see "FORM_RENDERER" in the settings_debug.py and
     `django.forms.forms.Form` or `django.forms.utils.ErrorDict` for usage).
 
     :return: a singleton, no-op dummy Renderer implemented for performance reasons
@@ -325,10 +326,10 @@ def get_region_selected_model_names(
 
 
 def get_regionalizations(names=None) -> QuerySet[models.Regionalization]:
-    """Custom regionalization clean. Not called bu Django but from clean_gsim
+    """Custom regionalization clean. Not called by Django but from clean_gsim
 
     :param names: sequence of strings or None, indicating the names of the
-        regionalizations to use. None (the default) willl use all regionalizations
+        regionalizations to use. None (the default) will use all regionalizations
     """
     reg_objs = models.Regionalization.queryset('name', 'filepath')
     names = GsimForm.to_list(names)
@@ -400,7 +401,7 @@ class APIForm(EgsimBaseForm):
 
 
 class GsimInfoForm(GsimForm, APIForm):
-    """API Form returning a info for a list of selected of models. Info is a dict
+    """API Form returning an info for a list of selected of models. Info is a dict
     containing the supported imt(s), the required ground motion parameters,
     and the OpenQuake docstring
     """

@@ -44,7 +44,8 @@ class EgsimDbModel(DjangoDbModel):
 
     @classmethod
     def queryset(cls, *only) -> QuerySet[Self]:
-        """Return a QuerySet of all visible model instances. This method calls
+        """
+        Return a QuerySet of all visible model instances. This method calls
         `cls.objects.filter(hidden=False)` and should be used to serve model data
         in the API instead of `cls.objects`. The latter should be used for internal
         operations only, e.g., in a management command where we want to empty a table
@@ -64,7 +65,8 @@ class EgsimDbModel(DjangoDbModel):
 
 
 class Gsim(EgsimDbModel):
-    """The Ground Shaking Intensity Models (GSIMs) available in eGSIM. This table
+    """
+    The Ground Shaking Intensity Models (GSIMs) available in eGSIM. This table
     is populated with valid OpenQuake models only (`passing valid.gsim` or not
     deprecated)
     """
@@ -89,7 +91,8 @@ class Gsim(EgsimDbModel):
 
 
 class Reference(DjangoDbModel):
-    """Abstract class for Table rows representing a reference to some work
+    """
+    Abstract class for Table rows representing a reference to some work
     (e.g. data, file, article)"""
 
     display_name = TextField(default=None, null=True)
@@ -122,13 +125,15 @@ class MediaFile(EgsimDbModel):
 
 
 class Flatfile(MediaFile, Reference):
-    """Class handling flatfiles stored in the file system. For each row of this table,
+    """
+    Class handling flatfiles stored in the file system. For each row of this table,
     the associated media file is an HDF file representing a valid flatfile (pandas
     DataFrame)
     """
 
     def read_from_filepath(self, **kwargs) -> Any:
-        """Return this instance media file as flatfile (pandas DataFrame)
+        """
+        Return this instance media file as flatfile (pandas DataFrame)
 
         @param kwargs: additional arguments to pandas `read_hdf` ('key' will
             be set in this function if not given)
@@ -138,7 +143,8 @@ class Flatfile(MediaFile, Reference):
 
 
 class Regionalization(MediaFile, Reference):
-    """Class handling regionalizations stored in the file system. A regionalization
+    """
+    Class handling regionalizations stored in the file system. A regionalization
     is a collection of regions, where each region is an object denoted by:
      - a geometry (e.g. a Polygon enclosed by poitns in (lat, lon) coordinates), 
      - a unique name (identifier) 
@@ -168,7 +174,8 @@ class Regionalization(MediaFile, Reference):
     """  # noqa
 
     def read_from_filepath(self, **kwargs) -> dict:
-        """Return this instance media file as geoJSON FeatureCollection object (dict).
+        """
+        Return this instance media file as geoJSON FeatureCollection object (dict).
         To convert each Feature geometry to a shapely `shape` object:
         ```python
         from shapely.geometry import shape

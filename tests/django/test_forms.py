@@ -30,7 +30,8 @@ flatfile_tk_path = abspath(join(dirname(dirname(__file__)), 'data',
 class Test:
 
     def test_gsimimt_form_invalid(self):
-        """tests the gsimimt form invalid case. The form is the base class for all
+        """
+        Tests the gsimimt form invalid case. The form is the base class for all
         forms using imt and gsim as input"""
         # test by providing the 'model' parameter (not gsim, still valid byt 'hidden',
         # see below)
@@ -187,8 +188,10 @@ class Test:
                'Invalid request. Problems found in: gmm'
 
     def test_gsimimt_form_not_defined_for_skip_invalid_periods(self):
-        """tests that mismatching gsim <-> imt has the priority over bad
-        SA periods"""
+        """
+        test that mismatching gsim <-> imt has the priority over bad
+        SA periods
+        """
         data = {
             GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],  # not defined for PGD
             IMT: ['SA(0.1)', 'SA(0.2)', 'PGA', 'PGV', 'PGD']
@@ -202,7 +205,8 @@ class Test:
         )
 
     def test_arrayfields_all_valid_input_types(self):
-        """Tests some valid inputs in the egsim Fields accepting array of values
+        """
+        Tests some valid inputs in the egsim Fields accepting array of values
         (MultipleChoiceWildcardField and NArrayField) using the trellis form
         because it's the most heterogeneous. What we want to check is:
         1. a MultipleChoiceWildcardField can be input as string S and will be
@@ -235,7 +239,7 @@ class Test:
         assert sorted(form.cleaned_data['imt']) == ['PGA', 'PGV']  # testing 3)
 
     def test_trellisform_invalid(self):
-        """Tests trellis form invalid"""
+        """Test trellis form invalid"""
         data = {GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
                 IMT: ['SA', 'PGA', 'PGV'],
                 'distance': [1, 'x', ''],

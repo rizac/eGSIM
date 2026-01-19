@@ -330,7 +330,8 @@ class Test:
         assert response.status_code == 400
 
     def test_predictions_visualize_no_missing_plots(self):
-        """Some models do not produce plots for specific IMTs or residuals type
+        """
+        Some models do not produce plots for specific IMTs or residuals type
         Test that we return those plots, albeit empty
         """
         client = Client()
@@ -370,7 +371,8 @@ class Test:
             (len(plots[1]['data']) == 6 and len(plots[0]['data']) == 3)
 
     def test_predictions_visualize_missing_periods_no_exc(self):
-        """Some models do not produce plots for specific IMTs or residuals type
+        """
+        Some models do not produce plots for specific IMTs or residuals type
         Test that we return those plots, albeit empty
         """
         client = Client()
@@ -401,7 +403,8 @@ class Test:
         assert all(d['x'] == [0.5, 0.6] for d in data)
 
     def test_residuals_visualize_no_missing_plots(self):
-        """Some models do not produce plots for specific IMTs or residuals type
+        """
+        Some models do not produce plots for specific IMTs or residuals type
         Test that we return those plots, albeit empty
         """
         client = Client()
@@ -546,7 +549,8 @@ class Test:
             assert response.content.strip().startswith(b'<!DOCTYPE html>')
 
     def test_oq_version(self):
-        """Test oq_version matches. Because we do provide our 'oq_version' global
+        """
+        Test oq_version matches. Because we do provide our 'oq_version' global
         variable to speedup HTML page rendering in egsim.app.views, we need to be
         sure it matches current OQ version """
         from openquake.engine import __version__ as real_oq_version

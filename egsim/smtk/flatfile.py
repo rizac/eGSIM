@@ -44,7 +44,8 @@ def read_flatfile(
         dtypes: dict[str, Union[str, list]] = None,
         defaults: dict[str, Any] = None,
         csv_sep: str = None,
-        **kwargs) -> pd.DataFrame:
+        **kwargs
+) -> pd.DataFrame:
     """
     Read a flatfile from either a comma-separated values (CSV) or HDF file,
     returning the corresponding pandas DataFrame.
@@ -183,8 +184,10 @@ def validate_flatfile_dataframe(
         dfr: pd.DataFrame,
         extra_dtypes: dict[str, Union[ColumnDtype, pd.CategoricalDtype]] = None,  # noqa
         extra_defaults: dict[str, Any] = None,
-        mixed_dtype_categorical='raise'):
-    """Validate the flatfile dataframe checking data types, conflicting column names,
+        mixed_dtype_categorical='raise'
+):
+    """
+    Validate the flatfile dataframe checking data types, conflicting column names,
     or missing mandatory columns (e.g. IMT related columns). This method raises
     or returns None on success
 
@@ -257,7 +260,8 @@ def validate_flatfile_dataframe(
 
 
 def optimize_flatfile_dataframe(dfr: pd.DataFrame):
-    """Optimize the given dataframe by replacing str column with
+    """
+    Optimize the given dataframe by replacing str column with
     categorical (if the conversion saves memory)
     """
     for c in dfr.columns:
@@ -353,7 +357,8 @@ def cast_to_dtype(
         dtype: Union[ColumnDtype, pd.CategoricalDtype],
         mixed_dtype_categorical='raise'
 ) -> Any:
-    """Cast the given value to the given dtype, raise ValueError if unsuccessful
+    """
+    Cast the given value to the given dtype, raise ValueError if unsuccessful
 
     :param value: pandas Series/Index or Python scalar
     :param dtype: the base `ColumnDtype`, or a pandas CategoricalDtype. In the latter
@@ -437,7 +442,8 @@ def cast_to_dtype(
 
 
 def column_exists(column: str) -> bool:
-    """Return whether the given argument is a registered flatfile column name
+    """
+    Return whether the given argument is a registered flatfile column name
     (including aliases. 'SA(<period>)' is valid and will default to 'SA')
     """
     return column in _load_flatfile_columns_properties()
@@ -445,7 +451,8 @@ def column_exists(column: str) -> bool:
 
 
 def column_names(*, type: Union[str, ColumnType]='all') -> set[str]:  # noqa
-    """Return a set of strings with all column names, filtered by the type parameter
+    """
+    Return a set of strings with all column names, filtered by the type parameter
     (default : "all", no filter). Spectral acceleration, if returned, will be
     given with no arguments, i.e. "SA", not "SA(...)".
 
@@ -462,21 +469,24 @@ def column_names(*, type: Union[str, ColumnType]='all') -> set[str]:  # noqa
 
 
 def column_type(column: str) -> Union[ColumnType, None]:
-    """Return the `ColumnType` enum item of the given column, or None.
+    """
+    Return the `ColumnType` enum item of the given column, or None.
     if `column` is 'SA(<period>)', it will default to 'SA'
     """
     return _load_flatfile_columns_properties()[column].get('type', None)
 
 
 def column_default(column: str) -> Union[None, Any]:
-    """Return the default of the given column name (used to fill missing data), or
+    """
+    Return the default of the given column name (used to fill missing data), or
     None if no default is set. if `column` is 'SA(<period>)', it will default to 'SA'
     """
     return _load_flatfile_columns_properties()[column].get('default', None)
 
 
 def column_aliases(column: str) -> tuple[str]:
-    """Return all possible names of the given column, as tuple set of strings
+    """
+    Return all possible names of the given column, as tuple set of strings
     where the first element is assured to be the flatfile default column name
     (primary name) and all remaining the secondary names. The tuple will be composed
     of `column` alone if `column` does not have registered aliases.
@@ -486,14 +496,16 @@ def column_aliases(column: str) -> tuple[str]:
 
 
 def column_help(column: str) -> str:
-    """Return the help (description) of the given column name, or ''.
+    """
+    Return the help (description) of the given column name, or ''.
     If `column` is 'SA(<period>)', it will default to 'SA'
     """
     return _load_flatfile_columns_properties()[column].get('help', "")
 
 
 def column_dtype(column: str) -> Union[ColumnDtype, None]:
-    """Return the data type of the given column name, as `ColumnDtype` Enum item,
+    """
+    Return the data type of the given column name, as `ColumnDtype` Enum item,
     or None if the column has no known data type. If the return value is
     `ColumnDtype.category`, get more info via `get_categorical_dtype(column)`.
     If `column` is 'SA(<period>)', it will default to 'SA'
@@ -538,7 +550,8 @@ _flatfile_columns_props: ColumnsPropertyDict = None  # noqa
 
 
 def _load_flatfile_columns_properties(cache=True) -> ColumnsPropertyDict:
-    """Load the flatfile metadata from the associated YAML file into a Python dict
+    """
+    Load the flatfile metadata from the associated YAML file into a Python dict
 
     :param cache: if True, a cache version will be returned (faster, but remember
         that any change to the cached version will persist permanently!). Otherwise,

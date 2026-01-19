@@ -125,7 +125,8 @@ def test_convert_datetimes():
         StringIO(csv_str),
         skip_blank_lines=False,
         parse_dates=['time'],
-        date_format='ISO8601')['time']
+        date_format='ISO8601'
+    )['time']
     vals = datetime2str(series)
     # default format is seconds, micro/milliseconds are rounded/removed:
     assert all(_ == '2006-01-01T00:00:00' for _ in vals[1:])

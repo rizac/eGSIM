@@ -293,7 +293,7 @@ def get_hr_flatfile_column_meta(name: str, values: Optional[pd.Series] = None) -
 
 def sa_hr_help(gsims, sa_help: str, sa_p_limits: list[float]) -> str:
     """
-    builds the SA field help, human readable (hr). The output will be HTML.
+    builds the SA field help, human-readable (hr). The output will be HTML.
     `sa_help` should be text in flatfile_metadata for the field 'SA'
     """
     sa_p_min = sa_p_max = sa_p_limits[0]

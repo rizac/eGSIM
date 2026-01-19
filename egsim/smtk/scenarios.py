@@ -98,7 +98,8 @@ def get_ground_motion_from_scenarios(
     if site_properties is None:
         site_properties = SiteProperties()
     ctxts = build_contexts(
-        gsims, imts, magnitudes, distances, rupture_properties, site_properties)
+        gsims, imts, magnitudes, distances, rupture_properties, site_properties
+    )
 
     # Get the ground motion values
     data = []
@@ -150,8 +151,10 @@ def build_contexts(
         magnitudes: Collection[float],
         distances: Collection[float],
         r_props: RuptureProperties,
-        s_props: SiteProperties) -> np.recarray:
-    """Build the context objects from the set of magnitudes and distances and
+        s_props: SiteProperties
+) -> np.recarray:
+    """
+    Build the context objects from the set of magnitudes and distances and
     then returns them as a numpy recarray
 
     :param gsims: dict of GSIM names mapped to a GSIM instance (class `GMPE`)
@@ -268,7 +271,7 @@ def get_target_sites(
         distance_type="rrup",
         z1pt0=None, z2pt5=None, **extras
 ):
-    """Sets a set of target sites in the class"""
+    """Return a :class:`SiteCollection` from the given arguments"""
     # Get the site locations
     site_locations = sites_at_distance(hypocenter, surface, distances,
                                        line_azimuth, origin_point, distance_type)
@@ -290,8 +293,10 @@ def sites_at_distance(
         distances: Iterable[float],
         azimuth: float,
         origin_point: tuple[float, float],
-        dist_type: str = "rrup") -> list[Point]:
-    """Determine the locations of the target sites according to their specified
+        dist_type: str = "rrup"
+) -> list[Point]:
+    """
+    Determine the locations of the target sites according to their specified
     distances and distance configuration
     """
     azimuth = (surface.get_strike() + azimuth) % 360.
@@ -330,7 +335,8 @@ def sites_at_distance(
 
 def get_hypocentre_on_planar_surface(
         plane: PlanarSurface,
-        hypo_loc: Optional[tuple[float, float]] = None) -> Point:
+        hypo_loc: Optional[tuple[float, float]] = None
+) -> Point:
     """
     Determine the location of the hypocentre within the plane
 
@@ -376,12 +382,15 @@ def get_hypocentre_on_planar_surface(
 
 
 def _rup_to_point(
-        distance: float, surface: PlanarSurface, origin: Point, azimuth: float,
-        distance_type: str = 'rjb', iter_stop: float = 1E-3, maxiter: int = 1000)\
-        -> Point:
-    """
-    Place a point at a given distance from a rupture along a specified azimuth
-    """
+        distance: float,
+        surface: PlanarSurface,
+        origin: Point,
+        azimuth: float,
+        distance_type: str = 'rjb',
+        iter_stop: float = 1E-3,
+        maxiter: int = 1000
+) -> Point:
+    """Place a point at a given distance from a rupture along a specified azimuth"""
     pt1 = origin.point_at(distance, 0., azimuth)
     r_diff = np.inf
     dip = surface.dip

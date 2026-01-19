@@ -110,7 +110,7 @@ USE_TZ = False
 
 
 # static files root (path on the server) I GUESS it is not used at all in development
-# mode. In production, it is used as URL to retreive static files, if they
+# mode. In production, it is used as URL to retrieve static files, if they
 # are hosted on some machine (e.g. AWS), or by some server on the same
 # machine (after configuring Nginx accordingly to serve static files at this url):
 STATIC_URL = '/static/'

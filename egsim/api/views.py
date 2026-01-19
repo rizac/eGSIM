@@ -23,7 +23,8 @@ from .forms.residuals import ResidualsForm
 
 
 class MimeType:  # noqa
-    """A collection of supported mime types (content_type in Django Response),
+    """
+    A collection of supported mime types (content_type in Django Response),
     loosely copied from mimetypes.types_map
     (https://docs.python.org/stable/library/mimetypes.html)
     """
@@ -39,7 +40,8 @@ class MimeType:  # noqa
 
 
 class EgsimView(View):
-    """Base View class for serving eGSIM HttpResponse. All views should inherits from 
+    """
+    Base View class for serving eGSIM HttpResponse. All views should inherits from 
     this class, implementing the abstract-like method `response` (**see docstring therein 
     for details**). After that, you can map this view to a given URL as usual (in `urls.py`):
     ```
@@ -85,7 +87,8 @@ class EgsimView(View):
                  request: HttpRequest,
                  data: dict,
                  files: Optional[dict] = None) -> HttpResponseBase:
-        """Return a Django HttpResponse from the given arguments extracted from a GET
+        """
+        Return a Django HttpResponse from the given arguments extracted from a GET
         or POST request. Any Exception raised here will be returned as 500 HttpResponse
         with `str(exception)` as Response body / content. Other specific error responses
         need to be returned in try except clauses, as usual:
@@ -136,7 +139,8 @@ class EgsimView(View):
             nulls=("null",),
             literal_comma: Optional[set] = frozenset()
     ) -> dict[str, Union[str, list[str]]]:
-        """parse the given query dict and returns a Python dict. This method parses
+        """
+        Parse the given query dict and returns a Python dict. This method parses
         GET and POST request data and can be overwritten in subclasses.
 
         :param query_dict: a QueryDict resulting from an `HttpRequest.POST` or
@@ -170,7 +174,8 @@ class NotFound(EgsimView):
 
 
 class APIFormView(EgsimView):
-    """:class:`EgsimView` subclass serving :class:`ApiForm.output()` objects and 
+    """
+    :class:`EgsimView` subclass serving :class:`ApiForm.output()` objects and 
     expecting a 'format' request parameter (any attribute of :class:`MimeType`)
     dictating the response type. Form validation errors will be 
     returned as 400 HttpResponse, any uncaught exception as 500 HttpResponse.
@@ -228,7 +233,8 @@ class APIFormView(EgsimView):
                  request: HttpRequest,
                  data: dict,
                  files: Optional[dict] = None):
-        """Return a HttpResponse from the given arguments. The Response body / content
+        """
+        Return a HttpResponse from the given arguments. The Response body / content
         will be populated with the output of this class Form
         (`self.formclass(...).output()`) serialized into the appropriate bytes sequence
         according to the 'format' parameter in 'data'.
@@ -252,7 +258,8 @@ class GsimInfoView(APIFormView):
 
 
 class SmtkView(APIFormView):
-    """APIFormView for strong motion toolkit (smtk) output, e.g., Predictions, Residuals.
+    """
+    APIFormView for strong motion toolkit (smtk) output, e.g., Predictions, Residuals.
     This view supported response formats are 'json', 'csv', 'hdf' (the default).
     Subclasses should in principle only implement the class attribute `formclass`
     """
@@ -266,8 +273,10 @@ class SmtkView(APIFormView):
                  request: HttpRequest,
                  data: dict,
                  files: Optional[dict] = None):
-        """Calls superclass method but catch ModelError(s) returning the appropriate
-        HTTPResponse (Client error)"""
+        """
+        Call superclass method but catch ModelError(s) returning the appropriate
+        HTTPResponse (Client error)
+        """
         try:
             return super().response(request=request, data=data, files=files)
         except MissingColumnError as mce:
@@ -337,7 +346,8 @@ def write_df_to_hdf_stream(frames: dict[str, pd.DataFrame], **kwargs) -> BytesIO
             mode="w",
             driver="H5FD_CORE",  # create in-memory file
             driver_core_backing_store=0,  # prevent saving to file on close
-            **kwargs) as out:
+            **kwargs
+    ) as out:
         for key, dfr in frames.items():
             out.put(key, dfr, format='table')
             # out[key] = df
@@ -346,7 +356,8 @@ def write_df_to_hdf_stream(frames: dict[str, pd.DataFrame], **kwargs) -> BytesIO
 
 
 def read_df_from_hdf_stream(stream: Union[bytes, IO], **kwargs) -> pd.DataFrame:
-    """Read pandas DataFrame from an HDF BytesIO or bytes sequence
+    """
+    Read pandas DataFrame from an HDF BytesIO or bytes sequence
 
     :param stream: the stream / file-like (e.g. open file content)
     :param kwargs: additional arguments to be passed to pandas `read_hdf`
@@ -358,7 +369,8 @@ def read_df_from_hdf_stream(stream: Union[bytes, IO], **kwargs) -> pd.DataFrame:
             mode="r",
             driver="H5FD_CORE",  # create in-memory file
             driver_core_backing_store=0,  # for safety, just in case
-            driver_core_image=content) as store:
+            driver_core_image=content
+    ) as store:
         return pd.read_hdf(store, **kwargs)  # noqa
 
 
@@ -400,8 +412,10 @@ def as_querystring(
         safe=QUERY_STRING_SAFE_CHARS,
         none_value='null',
         encoding: str = None,
-        errors: str = None) -> str:
-    """Return `data` as query string (URL portion after the '?' character) for GET
+        errors: str = None
+) -> str:
+    """
+    Return `data` as query string (URL portion after the '?' character) for GET
     requests. With the default set of input parameters, this function encodes strings
     exactly as JavaScript encodeURIComponent:
     https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURIComponent#description

@@ -17,7 +17,8 @@ from django.test.client import Client
 
 @pytest.fixture()
 def client() -> Client:
-    """A Django test client instance. Overwrite default pytest-django fixture with
+    """
+    A Django test client instance. Overwrite default pytest-django fixture with
     the same name to provide a client with enforce_csrf_checks=True.
     This allows to spot when a request would need a csfr token, and fix it by
     adding the CSFR Token it or making the request @csrf_exempt
@@ -33,7 +34,8 @@ def client() -> Client:
 # @pytest.mark.django_db
 @pytest.fixture(scope='session')
 def django_db_setup(django_db_setup, django_db_blocker):  # noqa
-    """Set up the database and populates it with eGSIM data. This fixture is
+    """
+    Set up the database and populates it with eGSIM data. This fixture is
     called whenever we decorate a test function with `@pytest.mark.django_db`.
     For info see:
 

@@ -15,7 +15,8 @@ from .registry import (gsim_name, intensity_measures_defined_for, gsim, imt,
 
 
 def harmonize_input_gsims(gsims: Iterable[Union[str, GMPE]]) -> dict[str, GMPE]:
-    """harmonize GSIMs given as names (str), OpenQuake Gsim classes or instances
+    """
+    Harmonize GSIMs given as names (str), OpenQuake Gsim classes or instances
     (:class:`GMPE`) into a dict[str, GMPE] where each name is mapped to
     the relative Gsim instance. Names will be sorted ascending.
 
@@ -48,7 +49,8 @@ def harmonize_input_gsims(gsims: Iterable[Union[str, GMPE]]) -> dict[str, GMPE]:
 
 
 def harmonize_input_imts(imts: Iterable[Union[str, float, IMT]]) -> dict[str, IMT]:
-    """harmonize IMTs given as names (str) or instances (IMT) returning a
+    """
+    Harmonize IMTs given as names (str) or instances (IMT) returning a
     dict[str, IMT] where each name is mapped to the relative instance. Dict keys will
     be sorted ascending comparing SAs using their period. E.g.: 'PGA' 'SA(2)' 'SA(10)'
     """
@@ -73,7 +75,8 @@ def _imtkey(imt_inst) -> tuple[str, float]:
 
 
 def validate_inputs(gsims: dict[str, GMPE], imts: dict[str, IMT]):
-    """Validate the input ground motion models (`gsims`)
+    """
+    Validate the input ground motion models (`gsims`)
     and intensity measures types (`imts`), raising `IncompatibleInput` in case
     of failure, and simply returning (None) otherwise
 
@@ -97,7 +100,8 @@ def validate_inputs(gsims: dict[str, GMPE], imts: dict[str, IMT]):
 
 
 def validate_imt_sa_limits(model: GMPE, imts: dict[str, IMT]) -> dict[str, IMT]:
-    """Return a dict of IMT names mapped to the IMT instances that are either not SA,
+    """
+    Return a dict of IMT names mapped to the IMT instances that are either not SA,
     or have a period within the model SA period limits
 
     :param model: a Ground motion model instance
@@ -222,7 +226,8 @@ def _format_model_error(model: Union[GMPE, str], exception: Exception) -> ModelE
 
 
 class InputError(ValueError):
-    """Base **abstract** exception for any input error (model, imt, flatfile).
+    """
+    Base **abstract** exception for any input error (model, imt, flatfile).
     Note that `str(InputError(arg1, arg2, ...)) = str(arg1) + ", " + str(arg2) + ...
     """
 
@@ -242,7 +247,8 @@ class ImtError(InputError):
 
 
 class ConflictError(ValueError):
-    """Describes conflicts among entities (model and imt, flatfile column names).
+    """
+    Exception raised by conflicts among entities (model and imt, flatfile column names).
     Each argument to this class is a conflict, represented by a sequence of the
     items E1, ... EN in conflict within each other. As such,
     `str(ConflictError([E1, E2, E3], ...)) =
@@ -255,5 +261,5 @@ class ConflictError(ValueError):
 
 
 class IncompatibleModelImtError(ConflictError):
-    """Describes conflicts within model and imts"""
+    """Exception raised by conflicts within model and imts"""
     pass

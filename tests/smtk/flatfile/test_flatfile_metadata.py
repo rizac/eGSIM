@@ -26,9 +26,9 @@ from egsim.smtk.flatfile import (ColumnType, ColumnDtype,
 def test_flatfile_extract_from_yaml():
     """Test the flatfile metadata"""
 
-    # read directly from columns registry and asure aliases are well formed.
+    # read directly from columns registry and asure aliases are well-formed.
     # Do not use _load_column_registry because it is assumed to rely on the following
-    # test passing (no duplicates, no single alias euqal to column name, and so on):
+    # test passing (no duplicates, no single alias equal to column name, and so on):
     with open(_flatfile_columns_path) as _:
         dic = yaml.safe_load(_)
         all_names = set(dic)

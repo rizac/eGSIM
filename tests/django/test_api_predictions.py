@@ -156,8 +156,10 @@ class Test:
     def test_error(self,
                    # pytest fixtures:
                    client):
-        """tests a special case where we supply a deprecated gsim (not in
-        EGSIM list)"""
+        """
+        tests a special case where we supply a deprecated gsim (not in
+        EGSIM list)
+        """
         inputdic = {
             "gsim": ["AkkarEtAl2013", "AkkarEtAlRepi2014"],
             "imt": ["PGA", "PGV"],
@@ -197,7 +199,8 @@ class Test:
     def test_empty_gsim(self,
                         # pytest fixtures:
                         client):
-        """tests a special case where a Model has a bug in OpenQuake.
+        """
+        tests a special case where a Model has a bug in OpenQuake.
          WARNING: THE BUG MIGHT BE FIXED IN FUTURE OPENQUAKE VERSIONS. As such this test
          could make no sense
         """

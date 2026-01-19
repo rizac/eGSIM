@@ -15,7 +15,8 @@ registered_gsims: dict[str, type[GMPE]] = registry
 
 
 def gsim(model: Union[str, GMPE], raise_deprecated=True) -> GMPE:
-    """Return a Gsim instance (Python object of class `GMPE`) from the given input
+    """
+    Return a Gsim instance (Python object of class `GMPE`) from the given input
 
     :param model: a gsim name or Gsim instance. If str, it can also denote a
         GMPETable in the form "GMPETable(gmpe_table=filepath)"
@@ -45,7 +46,8 @@ def gsim(model: Union[str, GMPE], raise_deprecated=True) -> GMPE:
 
 
 def imt(arg: Union[float, str, IMT]) -> IMT:
-    """Return an IMT object from the given argument
+    """
+    Return an IMT object from the given argument
 
     :raise: TypeError, ValueError, KeyError
     """
@@ -99,7 +101,8 @@ def imt_name(imtx: Union[Callable, IMT]) -> str:
 
 
 def sa_period(obj: Union[float, str, IMT]) -> Union[float, None]:
-    """Return the period (float) from the given `obj` argument, or None if `obj`
+    """
+    Return the period (float) from the given `obj` argument, or None if `obj`
     does not indicate a Spectral Acceleration object/string with a finite period
     (e.g. "SA(NaN)", "SA(inf)", "SA" return None).
 
@@ -143,13 +146,13 @@ def intensity_measures_defined_for(model: Union[str, GMPE]) -> frozenset[str]:
     return frozenset(_.__name__ for _ in model.DEFINED_FOR_INTENSITY_MEASURE_TYPES)
 
 
-def ground_motion_properties_required_by(
-        *models: Union[str, GMPE]) -> frozenset[str]:
-    """Return the aggregated required ground motion properties (distance measures,
-       rupture and site params all together) from all the passed models. Note: the
-       returned names are those implemented in OpenQuake, use
-       `smtk.flatfile.ColumnRegistry` to translate them into the registered flatfile
-       column names
+def ground_motion_properties_required_by(*models: Union[str, GMPE]) -> frozenset[str]:
+    """
+    Return the aggregated required ground motion properties (distance measures,
+    rupture and site params all together) from all the passed models. Note: the
+    returned names are those implemented in OpenQuake, use
+    `smtk.flatfile.ColumnRegistry` to translate them into the registered flatfile
+    column names
     """
     ret = []
     for model in models:
@@ -167,7 +170,8 @@ def ground_motion_properties_required_by(
 
 
 def gsim_info(model: Union[str, GMPE]) -> tuple[str, list, list, Union[list, None]]:
-    """Return the model info as a tuple with elements:
+    """
+    Return the model info as a tuple with elements:
      - the source code documentation (Python docstring) of the model
      - the list of the intensity measures defined for the model
      - the list of the ground motion properties required to compute the
