@@ -1,4 +1,4 @@
-"""flatfile root module"""
+"""Flatfile root module"""
 
 from __future__ import annotations
 
@@ -170,9 +170,11 @@ def _read_csv_get_header(filepath_or_buffer: IOBase, sep=None, **kwargs) -> list
         _pos = filepath_or_buffer.tell()
     # use only args necessary to parse columns, we might raise unnecessary errors
     # otherwise (these errors might be fixed afterward before reading the whole csv):
-    args = ['header', 'names', 'skip_blank_lines', 'skipinitialspace', 'engine',
-            'lineterminator', 'quotechar', 'quoting', 'doublequote', 'escapechar',
-            'comment', 'dialect', 'delim_whitespace']
+    args = [
+        'header', 'names', 'skip_blank_lines', 'skipinitialspace', 'engine',
+        'lineterminator', 'quotechar', 'quoting', 'doublequote', 'escapechar',
+        'comment', 'dialect', 'delim_whitespace'
+    ]
     _kwargs = {k: kwargs[k] for k in args if k in kwargs}
     _kwargs['nrows'] = 0  # read just header
     _kwargs['sep'] = sep

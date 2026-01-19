@@ -132,9 +132,7 @@ def get_ground_motion_from_scenarios(
     # build our dataframe data (horizontal concat data + meta_data into data):
     data.append(meta_data)
     # build our dataframe columns (append the meta_data columns from meta_columns):
-    meta_columns = [
-        (Clabel.input, str(column_type(m).value), m) for m in meta_fields
-    ]
+    meta_columns = [(Clabel.input, str(column_type(m).value), m) for m in meta_fields]
     columns.extend(meta_columns)
 
     # compute final DataFrame:
@@ -142,8 +140,7 @@ def get_ground_motion_from_scenarios(
 
     # sort columns (maybe we could use reindex but let's be more explicit):
     computed_cols = set(output.columns)
-    expected_cols = \
-        list(product(imts, [Clabel.median, Clabel.std], gsims)) + meta_columns
+    expected_cols = list(product(imts, [Clabel.median, Clabel.std], gsims)) + meta_columns
     output = output[[c for c in expected_cols if c in computed_cols]].copy()
     if header_sep:
         output.columns = [header_sep.join(c) for c in output.columns]
@@ -242,8 +239,7 @@ def create_planar_surface(
     :param aspect: Aspect ratio of rupture
     :param ztor: top of rupture depth, in km
 
-    :return: Rupture as an instance of
-        :class:`openquake.hazardlib.geo.surface.planar.PlanarSurface`
+    :return: Rupture as instance of :class:`openquake.hazardlib.geo.surface.planar.PlanarSurface`
     """
     # If the top of rupture depth in the initial
     if fabs(top_centroid.depth - ztor) > 1E-9:
@@ -362,8 +358,7 @@ def get_hypocentre_on_planar_surface(
         a hypocentre located in a position 3/4 along the length, and 1/4 of the
         way down dip of the rupture plane would be entered as (0.75, 0.25)
 
-    :return: Hypocentre location as instance of
-        :class:`openquake.hazardlib.geo.point.Point`
+    :return: Hypocentre location as instance of :class:`openquake.hazardlib.geo.point.Point`
     """
     centroid = plane.get_middle_point()
     if hypo_loc is None:
@@ -412,17 +407,18 @@ def _rup_to_point(
     dist_sin_dip = distance / sin_dip
     iterval = 0
     while (np.fabs(r_diff) >= iter_stop) and (iterval <= maxiter):
-        pt1mesh = Mesh(np.array([pt1.longitude]),
-                       np.array([pt1.latitude]),
-                       None)
+        pt1mesh = Mesh(
+            np.array([pt1.longitude]),
+            np.array([pt1.latitude]),
+            None
+        )
         if distance_type == 'rjb' or np.fabs(dip - 90.0) < 1.0E-3:
             r_diff = (distance - surface.get_joyner_boore_distance(pt1mesh)).flatten()
             pt0 = Point(pt1.longitude, pt1.latitude)
             if r_diff > 0.:
                 pt1 = pt0.point_at(r_diff, 0., azimuth)
             else:
-                pt1 = pt0.point_at(np.fabs(r_diff), 0.,
-                                   (azimuth + 180.) % 360.)
+                pt1 = pt0.point_at(np.fabs(r_diff), 0., (azimuth + 180.) % 360.)
         elif distance_type == 'rrup':
             rrup = surface.get_min_distance(pt1mesh).flatten()
             if 0.0 <= azimuth <= 180.0:
@@ -435,8 +431,7 @@ def _rup_to_point(
             if r_diff > 0.:
                 pt1 = pt0.point_at(r_diff, 0., azimuth)
             else:
-                pt1 = pt0.point_at(np.fabs(r_diff), 0.,
-                                   (azimuth + 180.) % 360.)
+                pt1 = pt0.point_at(np.fabs(r_diff), 0., (azimuth + 180.) % 360.)
         else:
             raise ValueError('Distance type must be rrup or rjb')
         iterval += 1

@@ -176,10 +176,8 @@ def get_observed_motions(flatfile: pd.DataFrame, imts: Container[str], log=True)
 
 
 def yield_event_contexts(flatfile: pd.DataFrame) -> Iterable[EventContext]:
-    """
-    Group the flatfile by events, and yield `EventContext`s objects, one for
-    each event
-    """
+    """Group the flatfile by events, and yield `EventContext`s objects, one for each event"""
+
     # check event id column or use the event location to group events:
     # group flatfile by events. Use ev. id (_EVENT_COLUMNS[0]) or, when
     # no ID found, event spatio-temporal coordinates (_EVENT_COLUMNS[1:])
@@ -372,8 +370,7 @@ def get_residuals_likelihood(residuals: pd.DataFrame, inplace=True) -> pd.DataFr
 
 def get_likelihood(values: Union[np.ndarray, pd.Series]) -> Union[np.ndarray, pd.Series]:
     """
-    Return the likelihood of the given values according to Equation 9 of
-    Scherbaum et al. (2004)
+    Return the likelihood of the given values according to Equation 9 of Scherbaum et al. (2004)
     """
     zvals = np.fabs(values)
     return 1.0 - erf(zvals / sqrt(2.))
@@ -384,9 +381,10 @@ def get_likelihood(values: Union[np.ndarray, pd.Series]) -> Union[np.ndarray, pd
 def get_column_name(flatfile: pd.DataFrame, column: str) -> Union[str, None]:
     """
     Return the flatfile column matching `column`. This could be `column`
-     itself, or any of its aliases (see `columns` module and YAML file)
-     Returns None if no column is found, raise `IncompatibleColumnError` if more than
-     a matching column is found"""
+    itself, or any of its aliases (see `columns` module and YAML file)
+    Returns None if no column is found, raise `IncompatibleColumnError` if more than
+    a matching column is found
+    """
     ff_cols = set(flatfile.columns)
     cols = set(column_aliases(column)) & ff_cols
     if len(cols) > 1:

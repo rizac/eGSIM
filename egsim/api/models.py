@@ -159,34 +159,10 @@ class Flatfile(MediaFile, Reference):
 
 class Regionalization(MediaFile, Reference):
     """
-    Class handling regionalizations stored in the file system. A regionalization
-    is a collection of regions, where each region is an object denoted by:
-     - a geometry (e.g. a Polygon enclosed by poitns in (lat, lon) coordinates), 
-     - a unique name (identifier) 
-     - a list of ground shaking models selected for the region.
-    For each row of this table, the associated media file is a geoJSON file where a 
-    regionalization is stored as FeatureCollection object, and each region is a 
-    geoJSON Feature object. E.g.:
-    ```
-    {
-        "type": 'FeatureCollection',
-        "features" : [
-            {
-                "type": "Feature",
-                "geometry": list,
-                "properties": {
-                    "region": str,
-                    "models": list[str],
-                    ...
-                }
-            },
-            ...
-        ]
-    }
-    ```
-    Note for developers:. See `read_from_filepath` to convert a Feature
-    geometry to a shapely `shape` object
-    """  # noqa
+    Class handling regionalizations stored in the file system.  For each row of this table,
+    the associated media file is a geoJSON text file representing a valid regionalization
+    mapping regions to models (in each Polygon or MultiPolygon "properties")
+    """
 
     def read_from_filepath(self, **kwargs) -> dict:
         """

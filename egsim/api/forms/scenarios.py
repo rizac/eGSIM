@@ -83,16 +83,16 @@ class PredictionsForm(GsimImtForm, APIForm):
     # RUPTURE PARAMS:
     magnitude = ArrayField(
         FloatField(),
-        help_text='Magnitude(s). Each magnitude defines a Rupture of the user-defined scenario',
-        required=True
+        required=True,
+        help_text='Magnitude(s). Each magnitude defines a Rupture of the user-defined scenario'
     )
     distance = ArrayField(
         FloatField(),
-        help_text='Distances (km). Each distance defines a Site of the user-defined Scenario',
-        required=True
+        required=True,
+        help_text='Distances (km). Each distance defines a Site of the user-defined Scenario'
     )
     aspect = FloatField(
-        help_text='Rupture Length / Width ≥ 0 and ≤ 1', min_value=0., initial=1.0
+        min_value=0., initial=1.0, help_text='Rupture Length / Width ≥ 0 and ≤ 1'
     )
     dip = FloatField(
         min_value=0., max_value=90., initial=90, help_text="Dip of rupture (deg) ≥ 0 and ≤ 90"
@@ -107,13 +107,13 @@ class PredictionsForm(GsimImtForm, APIForm):
         min_value=0., max_value=360., initial=0., help_text="Strike of rupture (deg) ≥ 0 and ≤ 360"
     )
     ztor = FloatField(
-        help_text='Top of Rupture Depth (km) ≥ 0', min_value=0., initial=0.
+        min_value=0., initial=0., help_text='Top of Rupture Depth (km) ≥ 0'
     )
     # WARNING IF RENAMING FIELD BELOW: RENAME+MODIFY also `clean_msr`
     msr = ChoiceField(
-        help_text='Magnitude-Area Scaling Relationship',
         choices=[(_, _) for _ in _mag_scalerel],
-        initial="WC1994"
+        initial="WC1994",
+        help_text='Magnitude-Area Scaling Relationship'
     )
     # WARNING IF RENAMING FIELD BELOW: RENAME+MODIFY also `clean_location`
     initial_point = ArrayField(

@@ -124,9 +124,9 @@ class EgsimView(View):
         as response body / content
         """
         return error_response(
-            (f'Server error ({exc.__class__.__name__}): {exc}'.strip() +
-             f'. Please contact the server administrator '
-             f'if you think this error is due to a code bug'),
+            f'Server error ({exc.__class__.__name__}): {str(exc).strip()}. '
+            f'. Please contact the server administrator '
+            f'if you think this error is due to a code bug',
             status=500
         )
 
@@ -166,7 +166,7 @@ def error_response(
         **kwargs
 ) -> HttpResponse:
     """
-    Return a HttpResponse with status 400 (client error) as default
+    Return a HttpResponse with default status 400 (client error)
     and custom message in the response body / content. For custom status,
     provide the `status` explicitly as keyword argument
     """

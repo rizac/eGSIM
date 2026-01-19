@@ -15,12 +15,17 @@ import numpy as np
 
 from openquake.hazardlib import imt
 from egsim.smtk import gsim, registered_imts, registered_gsims
-from egsim.smtk.flatfile import (ColumnType, ColumnDtype,
-                                 _flatfile_columns_path, cast_to_dtype,
-                                 column_type, column_aliases,
-                                 _load_flatfile_columns_properties, get_dtype_of,
-                                 validate_flatfile_dataframe,
-                                 ColumnDataError)
+from egsim.smtk.flatfile import (
+    ColumnType,
+    ColumnDtype,
+    _flatfile_columns_path,
+    cast_to_dtype,
+    column_type, column_aliases,
+    _load_flatfile_columns_properties,
+    get_dtype_of,
+    validate_flatfile_dataframe,
+    ColumnDataError
+)
 
 
 def test_flatfile_extract_from_yaml():
@@ -164,10 +169,12 @@ def check_column_metadata(*, name: str, props: dict):
                          f'remove from YAML: {list(props.keys())}')
 
 
-def check_with_openquake(rupture_params: dict[str, set[str]],
-                         sites_params: dict[str, set[str]],
-                         distances: dict[str, set[str]],
-                         imts: set[str]):
+def check_with_openquake(
+        rupture_params: dict[str, set[str]],
+        sites_params: dict[str, set[str]],
+        distances: dict[str, set[str]],
+        imts: set[str]
+):
     """
     Check that the flatfile columns with a specific Type set
     (columns.ColumnType) match the OpenQuake corresponding name
@@ -295,24 +302,17 @@ def test_get_dtype_mixed_categories():
     ColumnDtype.category
     """
     assert get_dtype_of(pd.Series([2, True]).astype('category')) is None
-    assert (get_dtype_of(pd.Series([False, True]).astype('category'))
-            is ColumnDtype.category)
-    assert (get_dtype_of(pd.Series([False, None]).astype('category'))
-            is ColumnDtype.category)
-    assert get_dtype_of(pd.Series([datetime.utcnow(), pd.NaT]).astype(
-        'category')) is ColumnDtype.category
-    assert get_dtype_of(pd.Series([2, 3]).astype(
-        'category')) is ColumnDtype.category
-    assert get_dtype_of(pd.Series([2, None]).astype(
-        'category')) is ColumnDtype.category
-    assert get_dtype_of(pd.Series([2, np.nan]).astype(
-        'category')) is ColumnDtype.category
-    assert get_dtype_of(pd.Series([2, 2.2]).astype(
-        'category')) is ColumnDtype.category
-    assert get_dtype_of(pd.Series(['2', 'None']).astype(
-        'category')) is ColumnDtype.category
-    assert get_dtype_of(pd.Series(['2', None]).astype(
-        'category')) is ColumnDtype.category
+    assert get_dtype_of(pd.Series([False, True]).astype('category')) is ColumnDtype.category
+    assert get_dtype_of(pd.Series([False, None]).astype('category')) is ColumnDtype.category
+    assert get_dtype_of(
+        pd.Series([datetime.utcnow(), pd.NaT]).astype('category')
+    ) is ColumnDtype.category
+    assert get_dtype_of(pd.Series([2, 3]).astype('category')) is ColumnDtype.category
+    assert get_dtype_of(pd.Series([2, None]).astype('category')) is ColumnDtype.category
+    assert get_dtype_of(pd.Series([2, np.nan]).astype('category')) is ColumnDtype.category
+    assert get_dtype_of(pd.Series([2, 2.2]).astype('category')) is ColumnDtype.category
+    assert get_dtype_of(pd.Series(['2', 'None']).astype('category')) is ColumnDtype.category
+    assert get_dtype_of(pd.Series(['2', None]).astype('category')) is ColumnDtype.category
 
 
 def test_mixed_arrays_are_mostly_null_dtype():

@@ -209,7 +209,8 @@ def get_ground_motion_values(
                     m_buf[:, start:end],
                     s_buf[:, start:end],
                     t_buf[:, start:end],
-                    p_buf[:, start:end])
+                    p_buf[:, start:end]
+                )
             except oq_exceptions as exc:
                 raise _format_model_error(model_name or model, exc)
             # set computed values back to our variables:
@@ -240,8 +241,9 @@ def _format_model_error(model: Union[GMPE, str], exception: Exception) -> ModelE
         if '/openquake/' in fname and fname.rfind('/') < len(fname) - 3:
             suffix = f"OpenQuake {suffix} @{fname[fname.rfind('/') + 1:]}:{lineno}"
 
-    return ModelError(f'{model if isinstance(model, str) else gsim_name(model)}: '
-                      f'{str(exception)} ({suffix})')
+    return ModelError(
+        f'{model if isinstance(model, str) else gsim_name(model)}: {str(exception)} ({suffix})'
+    )
 
 
 # Custom Exceptions ===========================================================

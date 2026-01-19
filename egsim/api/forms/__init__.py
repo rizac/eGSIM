@@ -175,8 +175,9 @@ class EgsimBaseForm(Form):
 
         # build message. Sort params to make tests deterministic
         return {
-            'message': '; '.join(sorted(f'{", ".join(sorted(ps))}: {err}'
-                                        for err, ps in errors.items()))
+            'message': '; '.join(sorted(
+                f'{", ".join(sorted(ps))}: {err}' for err, ps in errors.items()
+            ))
         }
 
     def param_name_of(self, field: str) -> str:
@@ -317,6 +318,8 @@ def get_region_selected_model_names(
     The returned dict keys are ground motion models, mapped to the hazard source
     regionalizations they were defined for (e.g. {'CauzziEtAl2014: ['share']})
 
+    :param lat: latitude, in degrees
+    :param lon: longitude, in degrees
     :param reg_names: sequence of strings or None, indicating the names of the
         regionalizations to use None (the default) will use all regionalizations
     """
@@ -423,9 +426,8 @@ class GsimInfoForm(GsimForm, APIForm):
     gsim = GsimForm.base_fields['gsim'].__class__(
         required=False,
         help_text=f"{GsimForm.base_fields['gsim'].help_text}. For any input value, "
-                  f"any model whose name contains (case-insensitive search) the value "
-                  f"is used. The model names are usually formatted as "
-                  f"[AuthorYearAdditionalInformation]"
+                  f"any model whose name contains the value is used (case-insensitive search). "
+                  f"The model names are usually formatted as [AuthorYearAdditionalInformation]"
     )
 
     _field2params: dict[str, list[str]] = {'gsim': ('name', 'model')}
@@ -478,7 +480,10 @@ class GsimInfoForm(GsimForm, APIForm):
             }
             # pretty print doc (removing all newlines, double quotes, etc.):
             doc = " ".join(
-                line.strip().replace("\n", " ").replace("\t", " ").replace('"', "''").
+                line.strip().
+                replace("\n", " ").
+                replace("\t", " ").
+                replace('"', "''").
                 replace(":class:`", "`")
                 for line in doc.strip().split("\n") if line.strip()
             )

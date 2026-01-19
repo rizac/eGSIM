@@ -38,7 +38,7 @@ class PredictionsVisualizeForm(PredictionsForm):
             ('d', 'IMT vs. Distance'),
             ('s', 'Magnitude-Distance Spectra')
         ],
-        help_text='the plot type to be displayed: '
+        help_text='the plot type to be displayed'
     )
 
     def clean(self):
@@ -164,7 +164,9 @@ class PredictionsVisualizeForm(PredictionsForm):
     def get_plot_traces_and_layout(
             x: dict[str, np.ndarray],
             y: dict[str, tuple[np.ndarray, np.ndarray]],
-            x_label, y_label, colors: dict[str, str]
+            x_label,
+            y_label,
+            colors: dict[str, str]
     ) -> tuple[list[dict], dict]:
         """
         Return the traces and layout of a prediction plot (to be displayed using the
@@ -291,11 +293,17 @@ class ResidualsVisualizeForm(ResidualsForm):
 
         plots = {}  # will be returned as list (taking the dict values)
 
-        total_res, intra_res, inter_res = \
-            (Clabel.total_res, Clabel.intra_ev_res, Clabel.inter_ev_res)
+        total_res, intra_res, inter_res = (
+            Clabel.total_res,
+            Clabel.intra_ev_res,
+            Clabel.inter_ev_res
+        )
         if likelihood:
-            total_res, intra_res, inter_res = \
-                (Clabel.total_lh, Clabel.intra_ev_lh, Clabel.inter_ev_lh)
+            total_res, intra_res, inter_res = (
+                Clabel.total_lh,
+                Clabel.intra_ev_lh,
+                Clabel.inter_ev_lh
+            )
         res_columns = {total_res, intra_res, inter_res}
         residual_label = {
             total_res: 'Total',
@@ -569,7 +577,9 @@ class FlatfileVisualizeForm(APIForm, FlatfileForm):
         data, layout = self.get_plot_traces_and_layout(
             dataframe[x_label] if x_label else None,
             dataframe[y_label] if y_label else None,
-            x_label, y_label, next(colors_cycle())
+            x_label,
+            y_label,
+            next(colors_cycle())
         )
         plot = {
             'data': data,
