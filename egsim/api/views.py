@@ -9,8 +9,13 @@ from urllib.parse import quote as urlquote
 
 import yaml
 import pandas as pd
-from django.http import (JsonResponse, HttpRequest, QueryDict, FileResponse,
-                         HttpResponseBase)
+from django.http import (
+    JsonResponse,
+    HttpRequest,
+    QueryDict,
+    FileResponse,
+    HttpResponseBase
+)
 from django.http.response import HttpResponse
 from django.views.generic.base import View
 
@@ -68,9 +73,11 @@ class EgsimView(View):
             if request.FILES:
                 # request.content_type='multipart/form-data' (see link below for details)
                 # https://docs.djangoproject.com/en/stable/ref/request-response/#django.http.HttpRequest.FILES  # noqa
-                return self.response(request,
-                                     data=self.parse_query_dict(request.POST),
-                                     files=request.FILES)
+                return self.response(
+                    request,
+                    data=self.parse_query_dict(request.POST),
+                    files=request.FILES
+                )
             else:
                 # request.content_type might be anything (most likely
                 # 'application/json' or 'application/x-www-form-urlencoded')
@@ -83,10 +90,12 @@ class EgsimView(View):
         except Exception as exc:
             return self.handle_exception(exc, request)
 
-    def response(self,
-                 request: HttpRequest,
-                 data: dict,
-                 files: Optional[dict] = None) -> HttpResponseBase:
+    def response(
+            self,
+            request: HttpRequest,
+            data: dict,
+            files: Optional[dict] = None
+    ) -> HttpResponseBase:
         """
         Return a Django HttpResponse from the given arguments extracted from a GET
         or POST request. Any Exception raised here will be returned as 500 HttpResponse
@@ -114,15 +123,18 @@ class EgsimView(View):
         server error (HttpResponse 500) with the exception string representation
         as response body / content
         """
-        return self.error_response((
-                f'Server error ({exc.__class__.__name__}): {exc}'.strip() +
-                f'. Please contact the server administrator '
-                f'if you think this error is due to a code bug'
-        ), status=self.SERVER_ERR_CODE)
+        return self.error_response(
+            (f'Server error ({exc.__class__.__name__}): {exc}'.strip() +
+             f'. Please contact the server administrator '
+             f'if you think this error is due to a code bug'),
+            status=self.SERVER_ERR_CODE
+        )
 
-    def error_response(self,
-                       message: Union[str, Exception, bytes] = '',
-                       **kwargs) -> HttpResponse:
+    def error_response(
+            self,
+            message: Union[str, Exception, bytes] = '',
+            **kwargs
+    ) -> HttpResponse:
         """
         Return a HttpResponse with default status set to self.CLIENT_ERR_CODE
         and custom message in the response body / content. For custom status,
@@ -166,10 +178,12 @@ class EgsimView(View):
 class NotFound(EgsimView):
     """View for the 404 Not Found HttpResponse"""
 
-    def response(self,
-                 request: HttpRequest,
-                 data: dict,
-                 files: Optional[dict] = None) -> HttpResponse:
+    def response(
+            self,
+            request: HttpRequest,
+            data: dict,
+            files: Optional[dict] = None
+    ) -> HttpResponse:
         return self.error_response(status=404)
 
 
@@ -229,10 +243,12 @@ class APIFormView(EgsimView):
         'json': lambda form: JsonResponse(form.output(), status=200)
     }
 
-    def response(self,
-                 request: HttpRequest,
-                 data: dict,
-                 files: Optional[dict] = None):
+    def response(
+            self,
+            request: HttpRequest,
+            data: dict,
+            files: Optional[dict] = None
+    ) -> HttpResponseBase:
         """
         Return a HttpResponse from the given arguments. The Response body / content
         will be populated with the output of this class Form
@@ -269,10 +285,12 @@ class SmtkView(APIFormView):
         'csv': lambda form: SmtkView.response_csv(form)
     }
 
-    def response(self,
-                 request: HttpRequest,
-                 data: dict,
-                 files: Optional[dict] = None):
+    def response(
+            self,
+            request: HttpRequest,
+            data: dict,
+            files: Optional[dict] = None
+    ) -> HttpResponseBase:
         """
         Call superclass method but catch ModelError(s) returning the appropriate
         HTTPResponse (Client error)

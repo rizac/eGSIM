@@ -53,16 +53,21 @@ class Test:
     def error_message(response: HttpResponse):
         return response.content.decode(response.charset)
 
-    def test_uploaded_flatfile(self,
-                               # pytest fixtures:
-                               client):
+    def test_uploaded_flatfile(
+            self,
+            # pytest fixtures:
+            client
+    ):
         with open(self.request_filepath) as _:
             inputdic = yaml.safe_load(_)
 
         # Uploaded flatfile, but not well-formed:
         # column in data-query not defined:
-        csv = SimpleUploadedFile("file.csv", b"PGA,b,c,d\n1.1,,,", 
-                                 content_type="text/csv")
+        csv = SimpleUploadedFile(
+            "file.csv",
+            b"PGA,b,c,d\n1.1,,,",
+            content_type="text/csv"
+        )
         inputdic2 = dict(inputdic, flatfile=csv)
         # test wrong flatfile:
         resp2 = client.post(self.url, data=inputdic2)
@@ -70,8 +75,11 @@ class Test:
         assert self.error_message(resp2) == 'data-query: undefined column "vs30"'
 
         # 1b no rows matching query:
-        csv = SimpleUploadedFile("file.csv", b"PGA,vs30,mag,b,c,d\n1.1,,,",
-                                 content_type="text/csv")
+        csv = SimpleUploadedFile(
+            "file.csv",
+            b"PGA,vs30,mag,b,c,d\n1.1,,,",
+            content_type="text/csv"
+        )
         inputdic2 = dict(inputdic, flatfile=csv)
         # test wrong flatfile:
         resp2 = client.post(self.url, data=inputdic2)
@@ -79,8 +87,11 @@ class Test:
         assert self.error_message(resp2) == "data-query: no rows matching query"
 
         # 1c missing ground motion properties:
-        csv = SimpleUploadedFile("file.csv", b"PGA,vs30,mag,b,c,d\n1.1,,,",
-                                 content_type="text/csv")
+        csv = SimpleUploadedFile(
+            "file.csv",
+            b"PGA,vs30,mag,b,c,d\n1.1,,,",
+            content_type="text/csv"
+        )
         inputdic2 = dict(inputdic, flatfile=csv)
         inputdic2.pop('data-query')  # to avoid adata-query errors (already checked)
         # test wrong flatfile:
@@ -89,8 +100,11 @@ class Test:
         assert self.error_message(resp2) == "flatfile: missing column(s) PGV"
 
         # 1d missing ground motion properties (2):
-        csv = SimpleUploadedFile("file.csv", b"PGA,PGV,vs30,mag,b,c,d\n1.1,,,",
-                                 content_type="text/csv")
+        csv = SimpleUploadedFile(
+            "file.csv",
+            b"PGA,PGV,vs30,mag,b,c,d\n1.1,,,",
+            content_type="text/csv"
+        )
         inputdic2 = dict(inputdic, flatfile=csv)
         inputdic2.pop('data-query')  # to avoid adata-query errors (already checked)
         # test wrong flatfile:

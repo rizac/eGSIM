@@ -145,9 +145,11 @@ class Test:
             data |= additional_data
             data['format'] = file_ext
             client = Client()
-            response = client.post(f"/{url}.{file_ext}",
-                                   json.dumps(data),
-                                   content_type="application/json")
+            response = client.post(
+                f"/{url}.{file_ext}",
+                json.dumps(data),
+                content_type="application/json"
+            )
             assert response.status_code == 200
             content = b''.join(response.streaming_content)
             if file_ext == 'csv':
@@ -166,8 +168,10 @@ class Test:
     def test_flatfile_validate(self):
         url = URLS.FLATFILE_VALIDATION
 
-        ff = SimpleUploadedFile('flatfile',
-                                self.flatfile_tk_content)
+        ff = SimpleUploadedFile(
+            'flatfile',
+            self.flatfile_tk_content
+        )
         data = {'flatfile': ff}
         client = Client()  # do not use the fixture client as we want
         # to disable CSRF Token check
@@ -179,8 +183,10 @@ class Test:
         # now try with a bigger flatfile (Django does not use a InMemory uploaded
         # file, we want to check everything is read properly anyway):
         # Build a "double sized" file content:
-        csv = (self.flatfile_tk_content +
-               b'\n'.join(self.flatfile_tk_content.split(b'\n')[1:]))
+        csv = (
+                self.flatfile_tk_content +
+                b'\n'.join(self.flatfile_tk_content.split(b'\n')[1:])
+        )
         ff = SimpleUploadedFile('flatfile', csv)
         data = {'flatfile': ff}
         client = Client()  # do not use the fixture client as we want

@@ -19,11 +19,24 @@ from openquake.hazardlib import imt, const
 from openquake.hazardlib.contexts import RuptureContext
 from openquake.hazardlib.scalerel import PeerMSR
 
-from .flatfile import (FlatfileError, MissingColumnError, column_names, column_type, column_aliases,
-                       ColumnDataError, IncompatibleColumnError, EVENT_ID_COLUMN_NAME)
-from .validation import (validate_inputs, harmonize_input_gsims, init_context_maker,
-                         harmonize_input_imts, validate_imt_sa_limits,
-                         get_ground_motion_values)
+from .flatfile import (
+    FlatfileError,
+    MissingColumnError,
+    column_names,
+    column_type,
+    column_aliases,
+    ColumnDataError,
+    IncompatibleColumnError,
+    EVENT_ID_COLUMN_NAME
+)
+from .validation import (
+    validate_inputs,
+    harmonize_input_gsims,
+    init_context_maker,
+    harmonize_input_imts,
+    validate_imt_sa_limits,
+    get_ground_motion_values
+)
 from .registry import (Clabel, sa_period, ground_motion_properties_required_by)
 from .converters import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
 
@@ -103,9 +116,11 @@ def get_residuals(
     return residuals
 
 
-def prepare_flatfile(flatfile: pd.DataFrame,
-                     gsims: dict[str, GMPE],
-                     imts: dict[str, imt.IMT]) -> pd.DataFrame:
+def prepare_flatfile(
+        flatfile: pd.DataFrame,
+        gsims: dict[str, GMPE],
+        imts: dict[str, imt.IMT]
+) -> pd.DataFrame:
     """
     Return a version of flatfile ready for residuals computation with
     the given gsims and imts
@@ -304,8 +319,9 @@ def get_residuals_from_expected_and_observed_motions(
         intra_ev = expected.get((imtx, Clabel.intra_ev_std, gsim))
         if inter_ev is None or intra_ev is None:
             continue
-        inter, intra = _get_random_effects_residuals(obs, mean, inter_ev,
-                                                     intra_ev, normalise)
+        inter, intra = _get_random_effects_residuals(
+            obs, mean, inter_ev, intra_ev, normalise
+        )
         residuals[(imtx, Clabel.inter_ev_res, gsim)] = inter
         residuals[(imtx, Clabel.intra_ev_res, gsim)] = intra
     return residuals

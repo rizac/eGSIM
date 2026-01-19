@@ -160,9 +160,13 @@ def ground_motion_properties_required_by(*models: Union[str, GMPE]) -> frozenset
             # try loading the class first from registry (faster), otherwise the instance
             # if the class does not hold the info we need:
             cls = registry[model]
-            model = cls if any((cls.REQUIRES_DISTANCES,
-                                cls.REQUIRES_SITES_PARAMETERS,
-                                cls.REQUIRES_RUPTURE_PARAMETERS)) else gsim(model)
+            model = cls if any(
+                (
+                    cls.REQUIRES_DISTANCES,
+                    cls.REQUIRES_SITES_PARAMETERS,
+                    cls.REQUIRES_RUPTURE_PARAMETERS
+                )
+            ) else gsim(model)
         ret.extend(model.REQUIRES_DISTANCES or [])
         ret.extend(model.REQUIRES_SITES_PARAMETERS or [])
         ret.extend(model.REQUIRES_RUPTURE_PARAMETERS or [])

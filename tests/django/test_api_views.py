@@ -61,9 +61,11 @@ def test_model_info():
     assert all(v['hazard_source_models'] is None for v in resp_json.values())
 
     data = {'model': ['BindiEtAl2014Rjb', 'CauzziEtAl2014']}
-    response = client.post(f"/{MODEL_INFO_URL_PATH}",
-                           json.dumps(data),
-                           content_type="application/json")
+    response = client.post(
+        f"/{MODEL_INFO_URL_PATH}",
+        json.dumps(data),
+        content_type="application/json"
+    )
     assert response.status_code == 200
     resp_json = response.json()
     assert sorted(resp_json.keys()) == ['BindiEtAl2014Rjb', 'CauzziEtAl2014']
@@ -73,9 +75,11 @@ def test_model_info():
     assert all(v['hazard_source_models'] is None for v in resp_json.values())
 
     data = {'model': ['zww', 'CauzziEtAl2014']}
-    response = client.post(f"/{MODEL_INFO_URL_PATH}",
-                           json.dumps(data),
-                           content_type="application/json")
+    response = client.post(
+        f"/{MODEL_INFO_URL_PATH}",
+        json.dumps(data),
+        content_type="application/json"
+    )
     assert response.status_code == 400
     assert error_message(response) == 'model: invalid model(s) zww'
 

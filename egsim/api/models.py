@@ -27,12 +27,13 @@ class EgsimDbModel(DjangoDbModel):
     _meta: Options  # https://docs.djangoproject.com/en/stable/ref/models/options/
 
     name = TextField(null=False, unique=True, help_text="Unique name")
-    hidden = BooleanField(default=False, null=False,
-                          help_text="Hide this item, i.e. make it publicly "
-                                    "unavailable to the whole API. This field "
-                                    "is intended to hide/show items quickly from "
-                                    "the admin panel without executing management "
-                                    "scrips")
+    hidden = BooleanField(
+        default=False,
+        null=False,
+        help_text="Hide this item, i.e. make it publicly unavailable to the whole API. "
+                  "This field is intended to hide/show items quickly without re-creating "
+                  "the DB data"
+    )
 
     class Meta:
         abstract = True
@@ -70,23 +71,29 @@ class Gsim(EgsimDbModel):
     is populated with valid OpenQuake models only (`passing valid.gsim` or not
     deprecated)
     """
-    imts = TextField(null=False,
-                     help_text='The intensity measure types '
-                               'defined for the model, space separated '
-                               '(e.g.: "PGA SA")')
-    min_sa_period = FloatField(null=True,
-                               help_text='The minimum SA period supported '
-                                         'by the model, or None (no lower limit)')
-    max_sa_period = FloatField(null=True,
-                               help_text='The maximum SA period supported '
-                                         'by the model, or None (no upper limit)')
+    imts = TextField(
+        null=False,
+        help_text='The intensity measure types defined for the model, '
+                  'space separated (e.g.: "PGA SA")'
+    )
+    min_sa_period = FloatField(
+        null=True,
+        help_text='The minimum SA period supported by the model, or None (no lower limit)'
+    )
+    max_sa_period = FloatField(
+        null=True,
+        help_text='The maximum SA period supported by the model, or None (no upper limit)'
+    )
 
     unverified = BooleanField(default=False, help_text="not independently verified")
-    experimental = BooleanField(default=False, help_text="experimental: may "
-                                                         "change in future versions")
-    adapted = BooleanField(default=False, help_text="not intended for general use: "
-                                                    "the behaviour may not be "
-                                                    "as expected")
+    experimental = BooleanField(
+        default=False,
+        help_text="experimental: may change in future versions"
+    )
+    adapted = BooleanField(
+        default=False,
+        help_text="not intended for general use: the behaviour may not be as expected"
+    )
     # Note: `superseded_by` is not used (we do not save deprecated Gsims)
 
 
@@ -98,8 +105,11 @@ class Reference(DjangoDbModel):
     display_name = TextField(default=None, null=True)
     url = URLField(default=None, null=True)
     license = TextField(default=None, null=True)
-    citation = TextField(default=None, null=True,
-                         help_text="Bibliographic citation, as text")
+    citation = TextField(
+        default=None,
+        null=True,
+        help_text="Bibliographic citation, as text"
+    )
     doi = TextField(default=None, null=True)
 
     class Meta:
@@ -109,9 +119,12 @@ class Reference(DjangoDbModel):
 class MediaFile(EgsimDbModel):
     """Abstract class handling any data file in the MEDIA directory of eGSIM"""
     # for safety, do not store full file paths in the db (see `filepath` for details):
-    filepath = TextField(unique=True, null=False,
-                         help_text="the file absolute path (usually within the "
-                                   "MEDIA_ROOT path defined in Django settings)")
+    filepath = TextField(
+        unique=True,
+        null=False,
+        help_text="the file absolute path (usually within the MEDIA_ROOT path "
+                  "defined in Django settings)"
+    )
 
     def read_from_filepath(self, **kwargs) -> Any:
         raise NotImplementedError()

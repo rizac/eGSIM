@@ -48,9 +48,12 @@ def test_dataframe2dict_orient_dict():
         'Sa(0.1) llh': {'model1': 1., 'model2': np.inf, 'model3': 5.37}
     })
     for as_json, drop_empty_levels in product([True, False], [True, False]):
-        res = dataframe2dict(dfr, as_json=as_json,
-                             drop_empty_levels=drop_empty_levels,
-                             orient='dict')
+        res = dataframe2dict(
+            dfr,
+            as_json=as_json,
+            drop_empty_levels=drop_empty_levels,
+            orient='dict'
+        )
         assert len(res) == 2
         assert all(isinstance(v, dict) for v in res.values())
         assert list(res['PGA lh'].keys()) == ['model1', 'model2', 'model3']
@@ -119,8 +122,15 @@ def test_convert_accel_units():
 
 
 def test_convert_datetimes():
-    csv_str = "\n".join(['time', '', '2006', '2006-01-01', '2006-01-01T00:00:00',
-                         '2006-01-01T00:00:00.0', '2006-01-01T00:00:00.001'])
+    csv_str = "\n".join([
+        'time',
+        '',
+        '2006',
+        '2006-01-01',
+        '2006-01-01T00:00:00',
+        '2006-01-01T00:00:00.0',
+        '2006-01-01T00:00:00.001'
+    ])
     series = pd.read_csv(
         StringIO(csv_str),
         skip_blank_lines=False,

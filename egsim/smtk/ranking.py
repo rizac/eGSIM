@@ -42,8 +42,9 @@ def get_measures_of_fit(
             residuals = residuals.copy()
             residuals.columns = pd.MultiIndex.from_tuples(cols)
         else:
-            raise TypeError('The passed DataFrame does not seem to be issued from '
-                            'residuals computation')
+            raise TypeError(
+                'The passed DataFrame does not seem to be issued from residuals computation'
+            )
 
     result = {}
     for res in [
@@ -63,8 +64,8 @@ def get_measures_of_fit(
 
 
 def get_residuals_stats(
-        gsims: Iterable[str], imts: Iterable[str], residuals: pd.DataFrame) -> \
-        dict[str, dict[str, float]]:
+        gsims: Iterable[str], imts: Iterable[str], residuals: pd.DataFrame
+) -> dict[str, dict[str, float]]:
     """
     Retrieve the mean and standard deviation values of the residuals
 
@@ -89,8 +90,8 @@ def get_residuals_stats(
 
 
 def get_residuals_likelihood_stats(
-        gsims: Iterable[str], imts: Iterable[str], residuals: pd.DataFrame) -> \
-        dict[str, dict[str, float]]:
+        gsims: Iterable[str], imts: Iterable[str], residuals: pd.DataFrame
+) -> dict[str, dict[str, float]]:
     """
     Return the likelihood values for the residuals column found in `flatfile`
     (e.g. Total, inter- intra-event) according to Equation 9 of Scherbaum et al. (2004)
@@ -116,8 +117,8 @@ def get_residuals_likelihood_stats(
 
 
 def get_residuals_loglikelihood(
-        gsims: Iterable[str], imts: Iterable[str], residuals: pd.DataFrame) -> \
-        dict[str, dict[str, float]]:
+        gsims: Iterable[str], imts: Iterable[str], residuals: pd.DataFrame
+) -> dict[str, dict[str, float]]:
     """
     Return the loglikelihood fit for the "Total residuals"
     using the loglikehood (LLH) function described in Scherbaum et al. (2009)
@@ -156,9 +157,12 @@ def get_residuals_loglikelihood(
 
 
 def get_residuals_edr_values(
-        gsims: Iterable[str], imts: Iterable[str], residuals: pd.DataFrame,
-        bandwidth=0.01, multiplier=3.0) -> \
-        dict[str, dict[str, float]]:
+        gsims: Iterable[str],
+        imts: Iterable[str],
+        residuals: pd.DataFrame,
+        bandwidth=0.01,
+        multiplier=3.0
+) -> dict[str, dict[str, float]]:
     """
     Calculates the EDR values for each Gsim found in `flatfile` with computed residuals
     according to the Euclidean Distance Ranking method of Kale & Akkar (2013)
@@ -186,8 +190,10 @@ def get_residuals_edr_values(
 
 
 def _get_edr_gsim_information(
-        gsim: str, imts: Iterable[str], residuals: pd.DataFrame) -> \
-        tuple[np.ndarray, np.ndarray, np.ndarray]:
+        gsim: str,
+        imts: Iterable[str],
+        residuals: pd.DataFrame
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Extract the observed ground motions, expected and total standard
     deviation for the given model `gsim` (aggregating over all IMTs)
@@ -212,10 +218,13 @@ def _get_edr_gsim_information(
     return obs, expected, stddev
 
 
-def get_edr(obs: Union[np.ndarray, pd.Series],
-            expected: Union[np.ndarray, pd.Series],
-            stddev: Union[np.ndarray, pd.Series],
-            bandwidth=0.01, multiplier=3.0) -> tuple[float, float, float]:
+def get_edr(
+        obs: Union[np.ndarray, pd.Series],
+        expected: Union[np.ndarray, pd.Series],
+        stddev: Union[np.ndarray, pd.Series],
+        bandwidth=0.01,
+        multiplier=3.0
+) -> tuple[float, float, float]:
     """
     Calculated the Euclidean Distanced-Based Rank for a set of
     observed and expected values from a particular Gsim
@@ -249,8 +258,9 @@ def get_edr(obs: Union[np.ndarray, pd.Series],
     return float(mde_norm), float(np.sqrt(kappa)), float(edr)
 
 
-def _get_edr_kappa(obs: Union[np.ndarray, pd.Series],
-                   expected: Union[np.ndarray, pd.Series]) -> np.floating:
+def _get_edr_kappa(
+        obs: Union[np.ndarray, pd.Series], expected: Union[np.ndarray, pd.Series]
+) -> np.floating:
     """
     Return the correction factor kappa
     """

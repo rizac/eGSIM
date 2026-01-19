@@ -19,9 +19,14 @@ from openquake.hazardlib.source.point import PointSource
 from .registry import Clabel
 from .flatfile import column_exists, column_type
 from .converters import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
-from .validation import (validate_inputs, harmonize_input_gsims, init_context_maker,
-                         harmonize_input_imts, validate_imt_sa_limits,
-                         get_ground_motion_values)
+from .validation import (
+    validate_inputs,
+    harmonize_input_gsims,
+    init_context_maker,
+    harmonize_input_imts,
+    validate_imt_sa_limits,
+    get_ground_motion_values
+)
 
 
 @dataclass
@@ -109,8 +114,9 @@ def get_ground_motion_from_scenarios(
         if not imts_ok:
             continue
         imt_names, imt_vals = list(imts_ok.keys()), list(imts_ok.values())
-        median, sigma, tau, phi = get_ground_motion_values(gsim, imt_vals, ctxts,
-                                                           model_name=gsim_name)
+        median, sigma, tau, phi = get_ground_motion_values(
+            gsim, imt_vals, ctxts, model_name=gsim_name
+        )
         data.append(median)
         columns.extend((i, Clabel.median, gsim_name) for i in imt_names)
         data.append(sigma)
@@ -167,13 +173,18 @@ def build_contexts(
     :return: Context objects in the form of a single numpy recarray of length:
         len(magnitudes) * len(distances)
     """
-    cmaker = init_context_maker(gsims, imts, magnitudes,
-                                tectonic_region=r_props.tectonic_region)
+    cmaker = init_context_maker(
+        gsims, imts, magnitudes, tectonic_region=r_props.tectonic_region
+    )
     ctxts = []
     for i, magnitude in enumerate(magnitudes):
         area = r_props.msr.get_median_area(magnitude, r_props.rake)
         surface = create_planar_surface(
-            r_props.initial_point, r_props.strike, r_props.dip, area, r_props.aspect,
+            r_props.initial_point,
+            r_props.strike,
+            r_props.dip,
+            area,
+            r_props.aspect,
             r_props.ztor
         )
         hypocenter = get_hypocentre_on_planar_surface(
@@ -241,24 +252,25 @@ def create_planar_surface(
     length = aspect * width
     # Get end points by moving the top_centroid along strike
     top_right = top_centroid.point_at(length / 2., 0., strike)
-    top_left = top_centroid.point_at(length / 2.,
-                                     0.,
-                                     (strike + 180.) % 360.)
+    top_left = top_centroid.point_at(
+        length / 2., 0., (strike + 180.) % 360.
+    )
     # Along surface width
     surface_width = width * cos(rad_dip)
     vertical_depth = width * sin(rad_dip)
     dip_direction = (strike + 90.) % 360.
 
-    bottom_right = top_right.point_at(surface_width,
-                                      vertical_depth,
-                                      dip_direction)
-    bottom_left = top_left.point_at(surface_width,
-                                    vertical_depth,
-                                    dip_direction)
+    bottom_right = top_right.point_at(
+        surface_width, vertical_depth, dip_direction
+    )
+    bottom_left = top_left.point_at(
+        surface_width, vertical_depth, dip_direction
+    )
 
     # Create the rupture
-    return PlanarSurface(strike, dip, top_left, top_right,
-                         bottom_right, bottom_left)
+    return PlanarSurface(
+        strike, dip, top_left, top_right, bottom_right, bottom_left
+    )
 
 
 def get_target_sites(
@@ -273,8 +285,9 @@ def get_target_sites(
 ):
     """Return a :class:`SiteCollection` from the given arguments"""
     # Get the site locations
-    site_locations = sites_at_distance(hypocenter, surface, distances,
-                                       line_azimuth, origin_point, distance_type)
+    site_locations = sites_at_distance(
+        hypocenter, surface, distances, line_azimuth, origin_point, distance_type
+    )
     # Turn them into OpenQuake Site objects, adding in the site properties
     if z1pt0 is None:
         z1pt0 = vs30_to_z1pt0_cy14(vs30)
@@ -300,8 +313,9 @@ def sites_at_distance(
     distances and distance configuration
     """
     azimuth = (surface.get_strike() + azimuth) % 360.
-    origin_location = get_hypocentre_on_planar_surface(surface,
-                                                       origin_point)
+    origin_location = get_hypocentre_on_planar_surface(
+        surface, origin_point
+    )
     # origin_depth = deepcopy(origin_location.depth)
     origin_location.depth = 0.0
     locations = []
@@ -315,9 +329,7 @@ def sites_at_distance(
                     "hypocentral depth (%.1f km)" % (dist, hypocenter.depth)
                 )
             xdist = sqrt(dist ** 2. - hypocenter.depth ** 2.)
-            locations.append(
-                hypocenter.point_at(xdist, - hypocenter.depth, azimuth)
-            )
+            locations.append(hypocenter.point_at(xdist, - hypocenter.depth, azimuth))
         elif dist_type == "rjb":
             locations.append(
                 _rup_to_point(dist, surface, origin_location, azimuth, 'rjb')
@@ -363,8 +375,7 @@ def get_hypocentre_on_planar_surface(
         along_strike_azimuth = (plane.strike + 180.) % 360.
         along_strike_dist = (0.5 - hypo_loc[0]) * plane.length
     # Translate along strike
-    hypocentre = centroid.point_at(along_strike_dist, 0.,
-                                   along_strike_azimuth)
+    hypocentre = centroid.point_at(along_strike_dist, 0., along_strike_azimuth)
     # Translate down dip
     TO_RAD = pi / 180.  # noqa
     horizontal_dist = down_dip_dist * cos(TO_RAD * plane.dip)
@@ -376,9 +387,9 @@ def get_hypocentre_on_planar_surface(
         down_dip_dist = (0.5 - hypo_loc[1]) * plane.width
         horizontal_dist = down_dip_dist * cos(TO_RAD * plane.dip)
 
-    return hypocentre.point_at(horizontal_dist,
-                               vertical_dist,
-                               down_dip_azimuth)
+    return hypocentre.point_at(
+        horizontal_dist, vertical_dist, down_dip_azimuth
+    )
 
 
 def _rup_to_point(
@@ -402,8 +413,7 @@ def _rup_to_point(
                        np.array([pt1.latitude]),
                        None)
         if distance_type == 'rjb' or np.fabs(dip - 90.0) < 1.0E-3:
-            r_diff = (distance -
-                      surface.get_joyner_boore_distance(pt1mesh)).flatten()
+            r_diff = (distance - surface.get_joyner_boore_distance(pt1mesh)).flatten()
             pt0 = Point(pt1.longitude, pt1.latitude)
             if r_diff > 0.:
                 pt1 = pt0.point_at(r_diff, 0., azimuth)

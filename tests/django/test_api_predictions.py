@@ -54,8 +54,11 @@ class Test:
 
         # and from now on,
         resp1 = client.get(self.querystring(inputdic | {'format': 'json'}))
-        resp2 = client.post(self.url, data=inputdic | {'format': 'json'},
-                            content_type=MimeType.json)
+        resp2 = client.post(
+            self.url,
+            data=inputdic | {'format': 'json'},
+            content_type=MimeType.json
+        )
         assert resp1.status_code == resp2.status_code == 200
         result = resp1.json()
         assert result == resp2.json()
@@ -87,17 +90,27 @@ class Test:
         assert sorted(result_csv.columns) == sorted(result_hdf.columns)
 
         for col in result_csv.columns:
-            assert (result_csv[col] == result_hdf[col]).all() or \
-                np.allclose(result_csv[col], result_hdf[col],
-                            rtol=1.e-12, atol=0, equal_nan=True)
+            if not  (result_csv[col] == result_hdf[col]).all():  # noqa
+                assert np.allclose(
+                    result_csv[col],
+                    result_hdf[col],
+                    rtol=1.e-12,
+                    atol=0,
+                    equal_nan=True
+                )
             if col[-1]:  # not ('mag', '', '') or ('rrup, '', ''),
                 # but computed trellis data (e.g. ('PGA', 'median', 'model_name')):
                 result_json_col = result_json[col[0]][col[1]][col[2]]
             else:
                 result_json_col = result_json[col[0]]
-            assert (result_csv[col] == result_json_col).all() or \
-                np.allclose(result_csv[col], result_json_col,
-                            rtol=1.e-12, atol=0, equal_nan=True)
+            if not (result_csv[col] == result_json_col).all():  # noqa
+                assert  np.allclose(
+                    result_csv[col],
+                    result_json_col,
+                    rtol=1.e-12,
+                    atol=0,
+                    equal_nan=True
+                )
 
     def test_trellis_single_multi_header(
             self,
@@ -108,8 +121,11 @@ class Test:
         inputdic['format'] = 'hdf'
 
         # test the hdf response:
-        resp = client.post(self.url, data=inputdic,
-                           content_type=MimeType.json)
+        resp = client.post(
+            self.url,
+            data=inputdic,
+            content_type=MimeType.json
+        )
         assert resp.status_code == 200
         result_hdf = read_df_from_hdf_stream(BytesIO(b''.join(resp.streaming_content)))
 
@@ -124,9 +140,11 @@ class Test:
         result_hdf.columns = [Clabel.sep.join(c) for c in result_hdf.columns]  # noqa
         pd.testing.assert_frame_equal(result_hdf, result_hdf_single_header)
 
-    def test_400_invalid_param_names(self,
-                                     # pytest fixtures:
-                                     client):
+    def test_400_invalid_param_names(
+            self,
+            # pytest fixtures:
+            client
+    ):
         """Test invalid param names in request"""
         data = {
             'aspect': 1,
@@ -149,13 +167,18 @@ class Test:
             "z2pt5": None,
             "ztor": 0
         }
-        resp = client.post(self.url, data=data,
-                           content_type='application/json')
+        resp = client.post(
+            self.url,
+            data=data,
+            content_type='application/json'
+        )
         assert resp.status_code == 400
 
-    def test_error(self,
-                   # pytest fixtures:
-                   client):
+    def test_error(
+            self,
+            # pytest fixtures:
+            client
+    ):
         """
         tests a special case where we supply a deprecated gsim (not in
         EGSIM list)
@@ -181,8 +204,11 @@ class Test:
         }
         qstr = self.querystring(inputdic)
         resp1 = client.get(qstr)
-        resp2 = client.post(self.url, data=inputdic,
-                            content_type='application/json')
+        resp2 = client.post(
+            self.url,
+            data=inputdic,
+            content_type='application/json'
+        )
         assert resp1.status_code == 400
         assert self.error_message(resp1) == self.error_message(resp2)
         assert self.error_message(resp1) == 'gsim: invalid model(s) AkkarEtAl2013'
@@ -191,14 +217,19 @@ class Test:
     def test_500_err(self, mocked_output_method, client):  # noqa
         with open(self.request_filepath) as _:
             inputdic = dict(yaml.safe_load(_))
-        resp1 = client.post(self.url, data=inputdic,
-                            content_type='application/json')
+        resp1 = client.post(
+            self.url,
+            data=inputdic,
+            content_type='application/json'
+        )
         assert resp1.status_code == 500
         assert 'ValueError' in self.error_message(resp1)
 
-    def test_empty_gsim(self,
-                        # pytest fixtures:
-                        client):
+    def test_empty_gsim(
+            self,
+            # pytest fixtures:
+            client
+    ):
         """
         tests a special case where a Model has a bug in OpenQuake.
          WARNING: THE BUG MIGHT BE FIXED IN FUTURE OPENQUAKE VERSIONS. As such this test

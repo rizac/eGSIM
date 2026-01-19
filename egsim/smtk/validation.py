@@ -10,8 +10,15 @@ from openquake.hazardlib.imt import IMT
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
 
-from .registry import (gsim_name, intensity_measures_defined_for, gsim, imt,
-                       get_sa_limits, imt_name, sa_period)
+from .registry import (
+    gsim_name,
+    intensity_measures_defined_for,
+    gsim,
+    imt,
+    get_sa_limits,
+    imt_name,
+    sa_period
+)
 
 
 def harmonize_input_gsims(gsims: Iterable[Union[str, GMPE]]) -> dict[str, GMPE]:
@@ -39,8 +46,16 @@ def harmonize_input_gsims(gsims: Iterable[Union[str, GMPE]]) -> dict[str, GMPE]:
             if not isinstance(gs, str):
                 gs = gsim_name(gsim_inst)
             output_gsims[gs] = gsim_inst
-        except (TypeError, ValueError, IndexError, KeyError, FileNotFoundError,
-                OSError, AttributeError, DeprecationWarning) as _:
+        except (
+                TypeError,
+                ValueError,
+                IndexError,
+                KeyError,
+                FileNotFoundError,
+                OSError,
+                AttributeError,
+                DeprecationWarning
+        ) as _:
             errors.append(gs if isinstance(gs, str) else gsim_name(gs))
     if errors:
         raise ModelError(*errors)
@@ -120,10 +135,12 @@ def validate_imt_sa_limits(model: GMPE, imts: dict[str, IMT]) -> dict[str, IMT]:
     }
 
 
-def init_context_maker(gsims: dict[str, GMPE],
-                       imts: Iterable[Union[str, IMT]],
-                       magnitudes: Iterable[float],
-                       tectonic_region='') -> ContextMaker:
+def init_context_maker(
+        gsims: dict[str, GMPE],
+        imts: Iterable[Union[str, IMT]],
+        magnitudes: Iterable[float],
+        tectonic_region=''
+) -> ContextMaker:
     """Initialize a ContextMaker. Raise `InvalidModel`"""
     param = {
         "imtls": {i if isinstance(i, str) else imt_name(i): [] for i in imts},
@@ -143,8 +160,9 @@ def init_context_maker(gsims: dict[str, GMPE],
         raise err
 
 
-def get_ground_motion_values(model: GMPE, imts: list[IMT], ctx: np.recarray, *,
-                             model_name: Optional[str] = None):
+def get_ground_motion_values(
+        model: GMPE, imts: list[IMT], ctx: np.recarray, *, model_name: Optional[str] = None
+):
     """
     Compute the ground motion values from the arguments returning 4 arrays each
     one of shape `( len(ctx), len(imts) )`. This is the main function to compute
@@ -184,11 +202,12 @@ def get_ground_motion_values(model: GMPE, imts: list[IMT], ctx: np.recarray, *,
             # onto the passed array (and not a copy) we will need to use slices:
             end = start + len(idxs)
             try:
-                model.compute(ctx[idxs], imts,
-                              m_buf[:, start:end],
-                              s_buf[:, start:end],
-                              t_buf[:, start:end],
-                              p_buf[:, start:end])
+                model.compute(
+                    ctx[idxs], imts,
+                    m_buf[:, start:end],
+                    s_buf[:, start:end],
+                    t_buf[:, start:end],
+                    p_buf[:, start:end])
             except oq_exceptions as exc:
                 raise _format_model_error(model_name or model, exc)
             # set computed values back to our variables:

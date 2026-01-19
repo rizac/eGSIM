@@ -23,16 +23,22 @@ from .views import (
 
 
 urlpatterns = [
-    re_path(r'^$', RedirectView.as_view(pattern_name='main', url='home',
-                                        permanent=False)),
-    re_path((r'^(?P<page>' +
-             '|'.join([URLS.WEBPAGE_HOME, URLS.WEBPAGE_PREDICTIONS,
-                       URLS.WEBPAGE_RESIDUALS,
-                       URLS.WEBPAGE_FLATFILE_INSPECTION_PLOT,
-                       URLS.WEBPAGE_FLATFILE_COMPILATION_INFO,
-                       URLS.WEBPAGE_API_DOC,
-                       URLS.WEBPAGE_IMPRINT, URLS.WEBPAGE_CITATIONS_AND_LICENSE]) +
-             ')/?$'), main),
+    re_path(
+        r'^$',
+        RedirectView.as_view(pattern_name='main', url='home', permanent=False)
+    ),
+    re_path(
+        (r'^(?P<page>' +
+         '|'.join([
+             URLS.WEBPAGE_HOME, URLS.WEBPAGE_PREDICTIONS,
+             URLS.WEBPAGE_RESIDUALS,
+             URLS.WEBPAGE_FLATFILE_INSPECTION_PLOT,
+             URLS.WEBPAGE_FLATFILE_COMPILATION_INFO,
+             URLS.WEBPAGE_API_DOC,
+             URLS.WEBPAGE_IMPRINT, URLS.WEBPAGE_CITATIONS_AND_LICENSE
+         ]) + ')/?$'),
+        main
+    ),
 
     re_path(
         fr'^{URLS.DOWNLOAD_PREDICTIONS_DATA}.(?:{"|".join(data_ext)})$',

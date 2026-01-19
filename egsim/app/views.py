@@ -14,8 +14,9 @@ from django.shortcuts import render
 from django.conf import settings
 
 from ..api import models
-from ..api.forms.flatfile import (FlatfileMetadataInfoForm,
-                                  FlatfileValidationForm)
+from ..api.forms.flatfile import (
+    FlatfileMetadataInfoForm, FlatfileValidationForm
+)
 from ..api.forms import APIForm, EgsimBaseForm, GsimForm
 from ..api.forms.residuals import ResidualsForm
 from ..api.forms.scenarios import PredictionsForm
@@ -72,8 +73,10 @@ if any(
         "/" in getattr(URLS, _) and not getattr(URLS, _).startswith('https://')
         for _ in dir(URLS) if 'WEBPAGE' in _
 ):
-    raise SystemError("Remove '/' in URL WEBPAGES: '/' create nested paths which might "
-                      "mess up requests performed on the page (error 404)")
+    raise SystemError(
+        "Remove '/' in URL WEBPAGES: '/' create nested paths which might "
+        "mess up requests performed on the page (error 404)"
+    )
 
 
 ############################################
@@ -109,10 +112,12 @@ def main(request, page=''):
 class GsimFromRegion(EgsimView):
     """View handling clicks on the GUI map and returning region-selected model(s)"""
 
-    def response(self,
-                 request: HttpRequest,
-                 data: dict,
-                 files: Optional[dict] = None) -> HttpResponseBase:
+    def response(
+            self,
+            request: HttpRequest,
+            data: dict,
+            files: Optional[dict] = None
+    ) -> HttpResponseBase:
         form = GsimForm(data)
         if form.is_valid():
             gm_models = form.cleaned_data['regionalization']
@@ -124,10 +129,12 @@ class GsimFromRegion(EgsimView):
 class PlotsImgDownloader(EgsimView):
     """View returning the browser displayed plots in image format"""
 
-    def response(self,
-                 request: HttpRequest,
-                 data: dict,
-                 files: Optional[dict] = None) -> HttpResponseBase:
+    def response(
+            self,
+            request: HttpRequest,
+            data: dict,
+            files: Optional[dict] = None
+    ) -> HttpResponseBase:
         """
         Process the response from a given request and the data / files
         extracted from it
@@ -157,10 +164,12 @@ class PlotsImgDownloader(EgsimView):
 class PredictionsHtmlTutorial(EgsimView):
     """View returning the HTML page(s) explaining predictions table structure"""
 
-    def response(self,
-                 request: HttpRequest,
-                 data: dict,
-                 files: Optional[dict] = None) -> HttpResponseBase:
+    def response(
+            self,
+            request: HttpRequest,
+            data: dict,
+            files: Optional[dict] = None
+    ) -> HttpResponseBase:
         """Process the response from a given request and the data / files extracted from it"""
         from egsim.api.client.snippets.get_egsim_predictions import \
             get_egsim_predictions
@@ -182,10 +191,12 @@ class PredictionsHtmlTutorial(EgsimView):
 class ResidualsHtmlTutorial(EgsimView):
     """View returning the HTML page(s) explaining residuals table structure"""
 
-    def response(self,
-                 request: HttpRequest,
-                 data: dict,
-                 files: Optional[dict] = None) -> HttpResponseBase:
+    def response(
+            self,
+            request: HttpRequest,
+            data: dict,
+            files: Optional[dict] = None
+    ) -> HttpResponseBase:
         """Process the response from a given request and the data / files
         extracted from it"""
         from egsim.api.client.snippets.get_egsim_residuals import \
@@ -240,8 +251,9 @@ def get_init_data_json(
             model_warnings.append(models.Gsim.adapted.field.help_text)
         if model_warnings:
             warning_text = "; ".join(model_warnings)
-            warning_group_index = warning_groups.setdefault(warning_text,
-                                                            len(warning_groups))
+            warning_group_index = warning_groups.setdefault(
+                warning_text, len(warning_groups)
+            )
             gsims.append([gsim.name, imt_group_index, sa_limits, warning_group_index])
         else:
             gsims.append([gsim.name, imt_group_index, sa_limits])
