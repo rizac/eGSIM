@@ -140,7 +140,9 @@ def get_ground_motion_from_scenarios(
 
     # sort columns (maybe we could use reindex but let's be more explicit):
     computed_cols = set(output.columns)
-    expected_cols = list(product(imts, [Clabel.median, Clabel.std], gsims)) + meta_columns
+    expected_cols = (
+        list(product(imts, [Clabel.median, Clabel.std], gsims)) + meta_columns
+    )
     output = output[[c for c in expected_cols if c in computed_cols]].copy()
     if header_sep:
         output.columns = [header_sep.join(c) for c in output.columns]
@@ -239,7 +241,8 @@ def create_planar_surface(
     :param aspect: Aspect ratio of rupture
     :param ztor: top of rupture depth, in km
 
-    :return: Rupture as instance of :class:`openquake.hazardlib.geo.surface.planar.PlanarSurface`
+    :return: Rupture as instance of
+        :class:`openquake.hazardlib.geo.surface.planar.PlanarSurface`
     """
     # If the top of rupture depth in the initial
     if fabs(top_centroid.depth - ztor) > 1E-9:

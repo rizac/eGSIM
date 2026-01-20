@@ -32,8 +32,9 @@ def gsim(model: Union[str, GMPE], raise_deprecated=True) -> GMPE:
         if model.startswith('GMPETable'):
             # GMPETable. raises: TypeError, ValueError, FileNotFoundError, OSError,
             # AttributeError
-            filepath = re.match(r'^GMPETable\(([^)]+?)\)$', model).\
-                group(1).split("=")[1]  # get table filename
+            filepath = (
+                re.match(r'^GMPETable\(([^)]+?)\)$', model).group(1).split("=")[1]
+            )
             return GMPETable(gmpe_table=filepath)
         else:
             # "normal" str case, calls valid_gsim which raises:
@@ -122,9 +123,7 @@ def sa_period(obj: Union[float, str, IMT]) -> Union[float, None]:
     return float(period) if np.isfinite(period) else None
 
 
-def get_sa_limits(
-        model: Union[str, GMPE]
-) -> Union[tuple[float, float], None]:
+def get_sa_limits(model: Union[str, GMPE]) -> Union[tuple[float, float], None]:
     """Return the SA period limits defined for the given gsim, or None"""
 
     if isinstance(model, str):

@@ -165,7 +165,7 @@ def init_context_maker(
 
 
 def get_ground_motion_values(
-        model: GMPE, imts: list[IMT], ctx: np.recarray, *, model_name: Optional[str] = None
+    model: GMPE, imts: list[IMT], ctx: np.recarray, *, model_name: Optional[str] = None
 ):
     """
     Compute the ground motion values from the arguments returning 4 arrays each

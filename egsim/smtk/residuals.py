@@ -176,8 +176,9 @@ def get_observed_motions(flatfile: pd.DataFrame, imts: Container[str], log=True)
 
 
 def yield_event_contexts(flatfile: pd.DataFrame) -> Iterable[EventContext]:
-    """Group the flatfile by events, and yield `EventContext`s objects, one for each event"""
-
+    """
+    Group the flatfile by events, and yield `EventContext`s objects, one for each event
+    """
     # check event id column or use the event location to group events:
     # group flatfile by events. Use ev. id (_EVENT_COLUMNS[0]) or, when
     # no ID found, event spatio-temporal coordinates (_EVENT_COLUMNS[1:])
@@ -270,8 +271,11 @@ def get_expected_motions(
             columns.extend((i, Clabel.intra_ev_std, gsim_name) for i in imt_names)
             data.append(intra)
 
-    return pd.DataFrame(columns=pd.MultiIndex.from_tuples(columns),
-                        data=np.hstack(data), index=ctx.sids)
+    return pd.DataFrame(
+        columns=pd.MultiIndex.from_tuples(columns),
+        data=np.hstack(data),
+        index=ctx.sids
+    )
 
 
 def get_residuals_from_expected_and_observed_motions(
@@ -332,8 +336,9 @@ def _get_random_effects_residuals(obs, mean, inter, intra, normalise=True):
     # TODO this is the only part where grouping by event is relevant: maybe
     #  move groupby here?
     nvals = float(len(mean))
-    inter_res = ((inter ** 2.) * sum(obs - mean)) /\
-        (nvals * (inter ** 2.) + (intra ** 2.))
+    inter_res = (
+        ((inter ** 2.) * sum(obs - mean)) / (nvals * (inter ** 2.) + (intra ** 2.))
+    )
     intra_res = obs - (mean + inter_res)
     if normalise:
         return inter_res / inter, intra_res / intra
@@ -370,7 +375,8 @@ def get_residuals_likelihood(residuals: pd.DataFrame, inplace=True) -> pd.DataFr
 
 def get_likelihood(values: Union[np.ndarray, pd.Series]) -> Union[np.ndarray, pd.Series]:
     """
-    Return the likelihood of the given values according to Equation 9 of Scherbaum et al. (2004)
+    Return the likelihood of the given values according to
+    Equation 9 of Scherbaum et al. (2004)
     """
     zvals = np.fabs(values)
     return 1.0 - erf(zvals / sqrt(2.))
@@ -554,7 +560,7 @@ def get_required_ground_motion_properties(
     for p in required_props:
         try:
             # https://stackoverflow.com/a/29706954
-            # `required_props_flatfile` is a dataframe with a specific index (see above).
+            # `required_props_flatfile` is a dataframe with a specific index.
             # Adding a Series to it might result in NaNs where the Series index
             # does not match the DataFrame index. As such, assign the series.values to
             # the DataFrame (see test_residuals.test_assign_series to assure this is ok)
