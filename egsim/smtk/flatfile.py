@@ -519,10 +519,6 @@ def column_dtype(column: str) -> Union[ColumnDtype, pd.CategoricalDtype, None]:
     return _load_flatfile_columns_properties()[column].get('dtype', None)
 
 
-def _column_dtype(column: str) -> Union[pd.CategoricalDtype, ColumnDtype, None]:
-    return _load_flatfile_columns_properties()[column].get('dtype', None)
-
-
 # YAML file path:
 _flatfile_columns_path = join(dirname(__file__), 'flatfile_columns.yaml')
 
