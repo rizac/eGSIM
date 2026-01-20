@@ -1,6 +1,5 @@
-"""
-eGSIM management command. See `Command.help` for details
-"""
+"""eGSIM management command. See `Command.help` for details"""
+
 import warnings
 from os.path import join, expanduser, abspath, isfile, dirname, basename
 
@@ -13,8 +12,10 @@ from ... import models
 from django.conf import settings
 
 
-if any(_['ENGINE'] == 'django.db.backends.sqlite3' for _ in settings.DATABASES.values()):
-    # check JSON1 extension (it should be enabled in all newest OSs and Python versions):
+if any(
+    _['ENGINE'] == 'django.db.backends.sqlite3' for _ in settings.DATABASES.values()
+):
+    # check JSON1 extension (should be enabled in all newest OSs and Python versions):
     # Note that Django does also this (JSONField) but for safety we do it here again
     try:
         import sqlite3
@@ -47,7 +48,9 @@ class Command(BaseCommand):
         # value is False when *present*, and thus `options["interactive"]` is
         # True by default.
         parser.add_argument(
-            '--noinput', '--no-input', action='store_false', dest='interactive',
+            '--noinput', '--no-input',
+            action='store_false',
+            dest='interactive',
             help='Do NOT prompt the user for input of any kind.',
         )
 
@@ -60,8 +63,10 @@ class Command(BaseCommand):
                           'the browser via the Django admin panel (see README '
                           'file for info)')
         # remove interactive
-        if options.pop('interactive', False) and \
-                input('Do you want to continue (y/n)?') != 'y':
+        if (
+            options.pop('interactive', False) and
+            input('Do you want to continue (y/n)?') != 'y'
+        ):
             return
         self.handle_openquake(*args, **options)
         self.handle_media_files(*args, **options)
@@ -85,8 +90,11 @@ class Command(BaseCommand):
             for name, model_cls in registered_gsims.items():
                 if model_cls.superseded_by:
                     continue
-                if model_cls.experimental or model_cls.non_verified or \
-                        model_cls.adapted:
+                if (
+                    model_cls.experimental or
+                    model_cls.non_verified or
+                    model_cls.adapted
+                ):
                     warnings.simplefilter('ignore')
                 else:
                     warnings.simplefilter('error')
@@ -95,8 +103,9 @@ class Command(BaseCommand):
                 ok += self.write_model(name, model_cls)
 
         discarded = len(registered_gsims) - ok
-        self.stdout.write(self.style.SUCCESS(f'Models saved: {ok}, '
-                                             f'discarded: {discarded}'))
+        self.stdout.write(self.style.SUCCESS(
+            f'Models saved: {ok}, discarded: {discarded}'
+        ))
 
     def write_model(self, name, cls):
         """Write a GMM entry to DB"""
@@ -110,13 +119,16 @@ class Command(BaseCommand):
                 return False
             gmp = ground_motion_properties_required_by(_)
             if not gmp:
-                self.stdout.write(f"  {prefix} {name}. No ground motion property "
-                                  f"defined")
+                self.stdout.write(
+                    f"  {prefix} {name}. No ground motion property defined"
+                )
                 return False
             invalid = sorted(c for c in gmp if not column_exists(c))
             if invalid:
-                self.stdout.write(f"  {prefix} {name}. Unregistered "
-                                  f"ground motion properties: {invalid}")
+                self.stdout.write(
+                    f"  {prefix} {name}. Unregistered ground motion properties: "
+                    f"{invalid}"
+                )
                 return False
             sa_lim = get_sa_limits(_)
             models.Gsim.objects.create(
@@ -128,8 +140,7 @@ class Command(BaseCommand):
                 adapted=cls.adapted,
                 experimental=cls.experimental)
         except (TypeError, KeyError, IndexError, ValueError, AttributeError) as exc:
-            self.stdout.write(f"  {prefix} {name}. Initialization error: "
-                              f"{str(exc)}")
+            self.stdout.write(f"  {prefix} {name}. Initialization error: {str(exc)}")
             return False
         return True
 

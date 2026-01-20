@@ -64,7 +64,9 @@ class ArrayField(Field):
 
 
 class PredictionsForm(GsimImtForm, APIForm):
-    """Form for the computation of Ground motion model predictions from different scenarios"""
+    """
+    Form for the computation of Ground motion model predictions from different scenarios
+    """
 
     # Custom API param names (see doc of `EgsimBaseForm._field2params` for details):
     _field2params = {
@@ -84,18 +86,23 @@ class PredictionsForm(GsimImtForm, APIForm):
     magnitude = ArrayField(
         FloatField(),
         required=True,
-        help_text='Magnitude(s). Each magnitude defines a Rupture of the user-defined scenario'
+        help_text='Magnitude(s). '
+                  'Each magnitude defines a Rupture of the user-defined scenario'
     )
     distance = ArrayField(
         FloatField(),
         required=True,
-        help_text='Distances (km). Each distance defines a Site of the user-defined Scenario'
+        help_text='Distances (km). '
+                  'Each distance defines a Site of the user-defined Scenario'
     )
     aspect = FloatField(
         min_value=0., initial=1.0, help_text='Rupture Length / Width ≥ 0 and ≤ 1'
     )
     dip = FloatField(
-        min_value=0., max_value=90., initial=90, help_text="Dip of rupture (deg) ≥ 0 and ≤ 90"
+        min_value=0.,
+        max_value=90.,
+        initial=90,
+        help_text="Dip of rupture (deg) ≥ 0 and ≤ 90"
     )
     rake = FloatField(
         min_value=-180.,
@@ -104,7 +111,10 @@ class PredictionsForm(GsimImtForm, APIForm):
         help_text="Rake of rupture (deg) ≥ -180 and ≤ 180"
     )
     strike = FloatField(
-        min_value=0., max_value=360., initial=0., help_text="Strike of rupture (deg) ≥ 0 and ≤ 360"
+        min_value=0.,
+        max_value=360.,
+        initial=0.,
+        help_text="Strike of rupture (deg) ≥ 0 and ≤ 360"
     )
     ztor = FloatField(
         min_value=0., initial=0., help_text='Top of Rupture Depth (km) ≥ 0'
@@ -119,7 +129,8 @@ class PredictionsForm(GsimImtForm, APIForm):
     initial_point = ArrayField(
         FloatField(initial=0, min_value=-180, max_value=180),
         FloatField(initial=0, min_value=-90, max_value=90),
-        help_text="Location on Earth (Longitude  ≥ -180 and ≤ 180, Latitude ≥ -90 and ≤ 90)"
+        help_text="Location on Earth "
+                  "(Longitude  ≥ -180 and ≤ 180, Latitude ≥ -90 and ≤ 90)"
     )
     hypocenter_location = ArrayField(
         FloatField(initial=0.5, min_value=0, max_value=1),
@@ -140,11 +151,14 @@ class PredictionsForm(GsimImtForm, APIForm):
             (4, '4 - Average'),
             (5, '5 - Very slow'),
         ],
-        help_text="Attenuation cluster region (https://doi.org/10.1007/s10518-020-00899-9)"
+        help_text="Attenuation cluster region "
+                  "(https://doi.org/10.1007/s10518-020-00899-9)"
     )
 
     vs30measured = BooleanField(
-        initial=True, required=False, help_text='Whether vs30 is measured (otherwise is inferred)'
+        initial=True,
+        required=False,
+        help_text='Whether vs30 is measured (otherwise is inferred)'
     )
     line_azimuth = FloatField(
         min_value=0.,
@@ -154,11 +168,13 @@ class PredictionsForm(GsimImtForm, APIForm):
     )
     z1pt0 = FloatField(
         required=False,
-        help_text="Depth to 1 km/s Vs layer (m). If missing, it will be calculated from the vs30"
+        help_text="Depth to 1 km/s Vs layer (m). "
+                  "If missing, it will be calculated from the vs30"
     )
     z2pt5 = FloatField(
         required=False,
-        help_text="Depth to 2.5 km/s Vs layer (km). If missing, it will be calculated from the vs30"
+        help_text="Depth to 2.5 km/s Vs layer (km). "
+                  "If missing, it will be calculated from the vs30"
     )
     backarc = BooleanField(help_text='Backarc Path', initial=False, required=False)
 
@@ -246,6 +262,3 @@ PredictionsForm.rupture_fieldnames = tuple(sorted(
 PredictionsForm.site_fieldnames = tuple(sorted(
     set(SiteProperties.__annotations__) & set(PredictionsForm.base_fields)
 ))
-
-
-# PredictionsForm.magnitude.help_text += '. See also {}  (all parameters are applied to each created Rupture)'

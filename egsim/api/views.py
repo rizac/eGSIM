@@ -47,9 +47,10 @@ class MimeType:  # noqa
 
 class EgsimView(View):
     """
-    Base View class for serving eGSIM HttpResponse. All views should inherits from 
-    this class, implementing the abstract-like method `response` (**see docstring therein 
-    for details**). After that, you can map this view to a given URL as usual (in `urls.py`):
+    Base View class for serving eGSIM HttpResponse. All views should inherit from
+    this class, implementing the abstract-like method `response` (**see docstring
+    therein for details**). After that, you can map this view to a given URL as usual
+    (in `urls.py`):
     ```
     urlpatterns = [
         ...
@@ -57,7 +58,7 @@ class EgsimView(View):
         ...
     ]
     ```
-    """  # noqa
+    """
     def get(self, request: HttpRequest) -> HttpResponseBase:
         """Process a GET request and return a Django Response"""
 
@@ -72,7 +73,7 @@ class EgsimView(View):
         try:
             if request.FILES:
                 # request.content_type='multipart/form-data' (see link below for details)
-                # https://docs.djangoproject.com/en/stable/ref/request-response/#django.http.HttpRequest.FILES  # noqa
+                # <https://docs.djangoproject.com/en/stable/ref/request-response/#django.http.HttpRequest.FILES>
                 return self.response(
                     request,
                     data=self.parse_query_dict(request.POST),
@@ -91,10 +92,10 @@ class EgsimView(View):
             return self.handle_exception(exc, request)
 
     def response(
-            self,
-            request: HttpRequest,
-            data: dict,
-            files: Optional[dict] = None
+        self,
+        request: HttpRequest,
+        data: dict,
+        files: Optional[dict] = None
     ) -> HttpResponseBase:
         """
         Return a Django HttpResponse from the given arguments extracted from a GET
@@ -131,10 +132,10 @@ class EgsimView(View):
         )
 
     def parse_query_dict(  # noqa
-            self,
-            query_dict: QueryDict, *,
-            nulls=("null",),
-            literal_comma: Optional[set] = frozenset()
+        self,
+        query_dict: QueryDict, *,
+        nulls=("null",),
+        literal_comma: Optional[set] = frozenset()
     ) -> dict[str, Union[str, list[str]]]:
         """
         Parse the given query dict and returns a Python dict. This method parses
@@ -161,9 +162,9 @@ class EgsimView(View):
 
 
 def error_response(
-        message: Union[str, Exception, bytes] = '',
-        status=400,
-        **kwargs
+    message: Union[str, Exception, bytes] = '',
+    status=400,
+    **kwargs
 ) -> HttpResponse:
     """
     Return a HttpResponse with default status 400 (client error)
@@ -179,10 +180,10 @@ class NotFound(EgsimView):
     """View for the 404 Not Found HttpResponse"""
 
     def response(
-            self,
-            request: HttpRequest,
-            data: dict,
-            files: Optional[dict] = None
+        self,
+        request: HttpRequest,
+        data: dict,
+        files: Optional[dict] = None
     ) -> HttpResponse:
         return error_response(status=404)
 
@@ -218,7 +219,7 @@ class APIFormView(EgsimView):
         formclass = MyApiForm  # bind this view to the given ApiForm **class**
         
         responses: {
-            'hdf': lambda form: MyApiFormView.reponse_hdf(form)
+            'hdf': lambda form: MyApiFormView.response_hdf(form)
         }
         
         @staticmethod
@@ -235,7 +236,7 @@ class APIFormView(EgsimView):
         ...
     ]
     ```
-    """  # noqa
+    """
     # The APIForm of this view, to be set in subclasses:
     formclass: Type[APIForm] = None
 
@@ -244,10 +245,10 @@ class APIFormView(EgsimView):
     }
 
     def response(
-            self,
-            request: HttpRequest,
-            data: dict,
-            files: Optional[dict] = None
+        self,
+        request: HttpRequest,
+        data: dict,
+        files: Optional[dict] = None
     ) -> HttpResponseBase:
         """
         Return a HttpResponse from the given arguments. The Response body / content
@@ -286,10 +287,10 @@ class SmtkView(APIFormView):
     }
 
     def response(
-            self,
-            request: HttpRequest,
-            data: dict,
-            files: Optional[dict] = None
+        self,
+        request: HttpRequest,
+        data: dict,
+        files: Optional[dict] = None
     ) -> HttpResponseBase:
         """
         Call superclass method but catch ModelError(s) returning the appropriate
@@ -330,7 +331,8 @@ class PredictionsView(SmtkView):
 
     responses = SmtkView.responses | {
         'json': lambda form: JsonResponse(
-            dataframe2dict(form.output(), as_json=True, drop_empty_levels=True), status=200
+            dataframe2dict(form.output(), as_json=True, drop_empty_levels=True),
+            status=200
         )
     }
 
@@ -363,11 +365,11 @@ def write_df_to_hdf_stream(frames: dict[str, pd.DataFrame], **kwargs) -> BytesIO
     if any(k == 'table' for k in frames.keys()):
         raise ValueError('Key "table" invalid (https://stackoverflow.com/a/70467886)')
     with pd.HDFStore(
-            "data.h5",  # apparently unused for in-memory data
-            mode="w",
-            driver="H5FD_CORE",  # create in-memory file
-            driver_core_backing_store=0,  # prevent saving to file on close
-            **kwargs
+        "data.h5",  # apparently unused for in-memory data
+        mode="w",
+        driver="H5FD_CORE",  # create in-memory file
+        driver_core_backing_store=0,  # prevent saving to file on close
+        **kwargs
     ) as out:
         for key, dfr in frames.items():
             out.put(key, dfr, format='table')
@@ -386,11 +388,11 @@ def read_df_from_hdf_stream(stream: Union[bytes, IO], **kwargs) -> pd.DataFrame:
     content = stream if isinstance(stream, bytes) else stream.read()
     # https://www.pytables.org/cookbook/inmemory_hdf5_files.html
     with pd.HDFStore(
-            "data.h5",  # apparently unused for in-memory data
-            mode="r",
-            driver="H5FD_CORE",  # create in-memory file
-            driver_core_backing_store=0,  # for safety, just in case
-            driver_core_image=content
+        "data.h5",  # apparently unused for in-memory data
+        mode="r",
+        driver="H5FD_CORE",  # create in-memory file
+        driver_core_backing_store=0,  # for safety, just in case
+        driver_core_image=content
     ) as store:
         return pd.read_hdf(store, **kwargs)  # noqa
 
@@ -430,17 +432,17 @@ QUERY_STRING_SAFE_CHARS = "-_.~!*'()"
 
 
 def as_querystring(
-        data: Any,
-        safe=QUERY_STRING_SAFE_CHARS,
-        none_value='null',
-        encoding: str = None,
-        errors: str = None
+    data: Any,
+    safe=QUERY_STRING_SAFE_CHARS,
+    none_value='null',
+    encoding: str = None,
+    errors: str = None
 ) -> str:
     """
     Return `data` as query string (URL portion after the '?' character) for GET
     requests. With the default set of input parameters, this function encodes strings
     exactly as JavaScript encodeURIComponent:
-    https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURIComponent#description
+    <https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURIComponent#description>
     
     Examples:
     ```
@@ -456,7 +458,7 @@ def as_querystring(
     :param none_value: string to be used when encountering None (default 'null')
     :param encoding: used to deal with non-ASCII characters. See `urllib.parse.quote`
     :param errors: used to deal with non-ASCII characters. See `urllib.parse.quote`
-    """  # noqa
+    """
     if data is None:
         return none_value
     if data is True or data is False:

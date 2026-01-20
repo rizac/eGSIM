@@ -104,8 +104,12 @@ urlpatterns = [
     path(URLS.GSIMS_INFO, GsimInfoView.as_view()),
 
     # test code returning specific response (in this case, no EgsimView required):
-    path("test_response/<int:code>",
-         csrf_exempt(lambda req, code: HttpResponse(b'test response msg', status=code))),
+    path(
+        "test_response/<int:code>",
+         csrf_exempt(
+             lambda req, code: HttpResponse(b'test response msg', status=code)
+         )
+    ),
 
     # Fallback: return a 404 not-found HttpResponse (unlike Django, with empty content):
     re_path(r".*", csrf_exempt(NotFound.as_view()))

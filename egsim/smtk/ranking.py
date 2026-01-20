@@ -15,8 +15,12 @@ from .registry import Clabel
 
 
 def get_measures_of_fit(
-        gsims: Iterable[str], imts: Iterable[str], residuals: pd.DataFrame,
-        as_dataframe=True, edr_bandwidth=0.01, edr_multiplier=3.0
+    gsims: Iterable[str],
+    imts: Iterable[str],
+    residuals: pd.DataFrame,
+    as_dataframe=True,
+    edr_bandwidth=0.01,
+    edr_multiplier=3.0
 ) -> Union[pd.DataFrame, dict]:
     """
     Retrieve several Measures of fit from the given residuals, models and imts
@@ -43,7 +47,8 @@ def get_measures_of_fit(
             residuals.columns = pd.MultiIndex.from_tuples(cols)
         else:
             raise TypeError(
-                'The passed DataFrame does not seem to be issued from residuals computation'
+                'The passed DataFrame does not seem to be issued '
+                'from residuals computation'
             )
 
     result = {}
@@ -64,7 +69,7 @@ def get_measures_of_fit(
 
 
 def get_residuals_stats(
-        gsims: Iterable[str], imts: Iterable[str], residuals: pd.DataFrame
+    gsims: Iterable[str], imts: Iterable[str], residuals: pd.DataFrame
 ) -> dict[str, dict[str, float]]:
     """
     Retrieve the mean and standard deviation values of the residuals
@@ -77,7 +82,9 @@ def get_residuals_stats(
     result = {}
     for gsim in gsims:
         for imt in imts:
-            for res_type in (Clabel.total_res, Clabel.inter_ev_res, Clabel.intra_ev_res):
+            for res_type in (
+                    Clabel.total_res, Clabel.inter_ev_res, Clabel.intra_ev_res
+            ):
                 mean, std = np.nan, np.nan
                 col = (imt, res_type, gsim)
                 if residuals.get(col) is not None:
@@ -90,7 +97,7 @@ def get_residuals_stats(
 
 
 def get_residuals_likelihood_stats(
-        gsims: Iterable[str], imts: Iterable[str], residuals: pd.DataFrame
+    gsims: Iterable[str], imts: Iterable[str], residuals: pd.DataFrame
 ) -> dict[str, dict[str, float]]:
     """
     Return the likelihood values for the residuals column found in `flatfile`
@@ -117,7 +124,7 @@ def get_residuals_likelihood_stats(
 
 
 def get_residuals_loglikelihood(
-        gsims: Iterable[str], imts: Iterable[str], residuals: pd.DataFrame
+    gsims: Iterable[str], imts: Iterable[str], residuals: pd.DataFrame
 ) -> dict[str, dict[str, float]]:
     """
     Return the loglikelihood fit for the "Total residuals"
@@ -157,11 +164,11 @@ def get_residuals_loglikelihood(
 
 
 def get_residuals_edr_values(
-        gsims: Iterable[str],
-        imts: Iterable[str],
-        residuals: pd.DataFrame,
-        bandwidth=0.01,
-        multiplier=3.0
+    gsims: Iterable[str],
+    imts: Iterable[str],
+    residuals: pd.DataFrame,
+    bandwidth=0.01,
+    multiplier=3.0
 ) -> dict[str, dict[str, float]]:
     """
     Calculates the EDR values for each Gsim found in `flatfile` with computed residuals
@@ -190,9 +197,9 @@ def get_residuals_edr_values(
 
 
 def _get_edr_gsim_information(
-        gsim: str,
-        imts: Iterable[str],
-        residuals: pd.DataFrame
+    gsim: str,
+    imts: Iterable[str],
+    residuals: pd.DataFrame
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Extract the observed ground motions, expected and total standard
@@ -219,11 +226,11 @@ def _get_edr_gsim_information(
 
 
 def get_edr(
-        obs: Union[np.ndarray, pd.Series],
-        expected: Union[np.ndarray, pd.Series],
-        stddev: Union[np.ndarray, pd.Series],
-        bandwidth=0.01,
-        multiplier=3.0
+    obs: Union[np.ndarray, pd.Series],
+    expected: Union[np.ndarray, pd.Series],
+    stddev: Union[np.ndarray, pd.Series],
+    bandwidth=0.01,
+    multiplier=3.0
 ) -> tuple[float, float, float]:
     """
     Calculated the Euclidean Distanced-Based Rank for a set of
@@ -247,10 +254,8 @@ def get_edr(
         d_val = (min_d + (float(iloc) * bandwidth)) * np.ones(nvals)
         d_1 = d_val - min_d
         d_2 = d_val + min_d
-        p_1 = norm.cdf((d_1 - mu_d) / stddev) -\
-            norm.cdf((-d_1 - mu_d) / stddev)
-        p_2 = norm.cdf((d_2 - mu_d) / stddev) -\
-            norm.cdf((-d_2 - mu_d) / stddev)
+        p_1 = norm.cdf((d_1 - mu_d) / stddev) - norm.cdf((-d_1 - mu_d) / stddev)
+        p_2 = norm.cdf((d_2 - mu_d) / stddev) - norm.cdf((-d_2 - mu_d) / stddev)
         mde += (p_2 - p_1) * d_val
     inv_n = 1.0 / float(nvals)
     mde_norm = np.sqrt(inv_n * np.sum(mde ** 2.))
@@ -259,7 +264,7 @@ def get_edr(
 
 
 def _get_edr_kappa(
-        obs: Union[np.ndarray, pd.Series], expected: Union[np.ndarray, pd.Series]
+    obs: Union[np.ndarray, pd.Series], expected: Union[np.ndarray, pd.Series]
 ) -> np.floating:
     """
     Return the correction factor kappa

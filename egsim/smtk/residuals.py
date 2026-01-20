@@ -41,13 +41,13 @@ from .converters import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
 
 
 def get_residuals(
-        gsims: Iterable[Union[str, GMPE]],
-        imts: Iterable[Union[str, imt.IMT]],
-        flatfile: pd.DataFrame,
-        likelihood=False,
-        normalise=True,
-        mean=False,
-        header_sep: Union[str, None] = Clabel.sep
+    gsims: Iterable[Union[str, GMPE]],
+    imts: Iterable[Union[str, imt.IMT]],
+    flatfile: pd.DataFrame,
+    likelihood=False,
+    normalise=True,
+    mean=False,
+    header_sep: Union[str, None] = Clabel.sep
 ) -> pd.DataFrame:
     """
     Calculate the residuals from a given flatfile gsim(s) and imt(s)
@@ -116,9 +116,9 @@ def get_residuals(
 
 
 def prepare_flatfile(
-        flatfile: pd.DataFrame,
-        gsims: dict[str, GMPE],
-        imts: dict[str, imt.IMT]
+    flatfile: pd.DataFrame,
+    gsims: dict[str, GMPE],
+    imts: dict[str, imt.IMT]
 ) -> pd.DataFrame:
     """
     Return a version of flatfile ready for residuals computation with
@@ -140,11 +140,11 @@ def prepare_flatfile(
 
 
 def get_residuals_from_validated_inputs(
-        gsims: dict[str, GMPE],
-        imts: dict[str, imt.IMT],
-        flatfile: pd.DataFrame,
-        normalise=True,
-        return_mean=False
+    gsims: dict[str, GMPE],
+    imts: dict[str, imt.IMT],
+    flatfile: pd.DataFrame,
+    normalise=True,
+    return_mean=False
 ) -> pd.DataFrame:
     residuals = []
     # compute the observations (compute the log for all once here):
@@ -237,9 +237,9 @@ class EventContext(RuptureContext):
 
 
 def get_expected_motions(
-        gsims: dict[str, GMPE],
-        imts: dict[str, imt.IMT],
-        ctx: EventContext
+    gsims: dict[str, GMPE],
+    imts: dict[str, imt.IMT],
+    ctx: EventContext
 ) -> pd.DataFrame:
     """
     Calculate the expected ground motions from the context
@@ -275,10 +275,10 @@ def get_expected_motions(
 
 
 def get_residuals_from_expected_and_observed_motions(
-        expected: pd.DataFrame,
-        observed: pd.DataFrame,
-        normalise=True,
-        return_mean=False
+    expected: pd.DataFrame,
+    observed: pd.DataFrame,
+    normalise=True,
+    return_mean=False
 ) -> pd.DataFrame:
     """
     Calculate the residual terms, returning a new DataFrame
@@ -419,9 +419,7 @@ def get_station_id_column_names(flatfile: pd.DataFrame) -> list[str]:
 
 
 def get_flatfile_for_residual_analysis(
-        flatfile: pd.DataFrame,
-        gsims: Collection[GMPE],
-        imts: Collection[str]
+    flatfile: pd.DataFrame, gsims: Collection[GMPE], imts: Collection[str]
 ) -> pd.DataFrame:
     """
     Return a new dataframe with all columns required to compute residuals
@@ -536,8 +534,7 @@ def get_required_sa(flatfile: pd.DataFrame, sa_imts: Iterable[str]) -> pd.DataFr
 
 
 def get_required_ground_motion_properties(
-        flatfile: pd.DataFrame,
-        gsims: Iterable[GMPE]
+    flatfile: pd.DataFrame, gsims: Iterable[GMPE]
 ) -> pd.DataFrame:
     """
     Return a new dataframe with all columns required to compute residuals
@@ -575,8 +572,7 @@ DEFAULT_MSR = PeerMSR()
 
 
 def get_ground_motion_property_values(
-        flatfile: pd.DataFrame,
-        gm_property: str
+    flatfile: pd.DataFrame, gm_property: str
 ) -> pd.Series:
     """
     Get the values (pandas Series) relative to the ground motion property
@@ -648,9 +644,7 @@ def get_ground_motion_property_values(
 
 
 def fill_na(
-        flatfile: pd.DataFrame,
-        src_col: str,
-        dest: Union[None, np.ndarray, pd.Series]
+    flatfile: pd.DataFrame, src_col: str, dest: Union[None, np.ndarray, pd.Series]
 ) -> Union[None, np.ndarray, pd.Series]:
     """
     Fill NAs (NaNs/Nulls) of `dest` with relative values from `src`.

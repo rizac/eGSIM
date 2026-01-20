@@ -30,9 +30,9 @@ class EgsimDbModel(DjangoDbModel):
     hidden = BooleanField(
         default=False,
         null=False,
-        help_text="Hide this item, i.e. make it publicly unavailable to the whole API. "
-                  "This field is intended to hide/show items quickly without re-creating "
-                  "the DB data"
+        help_text="Hide this item, making it publicly unavailable to the whole API. "
+                  "This field is intended to hide/show items quickly without "
+                  "re-creating the DB data "
     )
 
     class Meta:
@@ -79,11 +79,13 @@ class Gsim(EgsimDbModel):
     )
     min_sa_period = FloatField(
         null=True,
-        help_text='The minimum SA period supported by the model, or None (no lower limit)'
+        help_text='The minimum SA period supported by the model, '
+                  'or None (no lower limit)'
     )
     max_sa_period = FloatField(
         null=True,
-        help_text='The maximum SA period supported by the model, or None (no upper limit)'
+        help_text='The maximum SA period supported by the model, '
+                  'or None (no upper limit)'
     )
 
     unverified = BooleanField(default=False, help_text="not independently verified")
@@ -159,9 +161,10 @@ class Flatfile(MediaFile, Reference):
 
 class Regionalization(MediaFile, Reference):
     """
-    Class handling regionalizations stored in the file system.  For each row of this table,
-    the associated media file is a geoJSON text file representing a valid regionalization
-    mapping regions to models (in each Polygon or MultiPolygon "properties")
+    Class handling regionalizations stored in the file system.  For each row of this
+    table, the associated media file is a geoJSON text file representing a valid
+    regionalization mapping regions to models (in each Polygon or MultiPolygon
+    "properties")
     """
 
     def read_from_filepath(self, **kwargs) -> dict:

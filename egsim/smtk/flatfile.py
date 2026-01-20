@@ -40,12 +40,12 @@ EVENT_ID_COLUMN_NAME = 'evt_id'
 
 
 def read_flatfile(
-        filepath_or_buffer: Union[str, IOBase],
-        rename: dict[str, str] = None,
-        dtypes: dict[str, Union[str, list]] = None,
-        defaults: dict[str, Any] = None,
-        csv_sep: str = None,
-        **kwargs
+    filepath_or_buffer: Union[str, IOBase],
+    rename: dict[str, str] = None,
+    dtypes: dict[str, Union[str, list]] = None,
+    defaults: dict[str, Any] = None,
+    csv_sep: str = None,
+    **kwargs
 ) -> pd.DataFrame:
     """
     Read a flatfile from either a comma-separated values (CSV) or HDF file,
@@ -62,7 +62,7 @@ def read_flatfile(
         check and cast column data. Standard flatfile columns should not be present,
         otherwise the value provided in this dict will overwrite the registered dtype,
         if set. Columns in `dtypes` not present in the file will be ignored.
-        Dict values can be either 'int', 'bool', 'float', 'str', 'datetime', 'category'`,
+        Dict values can be 'int', 'bool', 'float', 'str', 'datetime', 'category'`,
         list: 'category' and lists denote data that can take only a limited amount of
         possible values and should be mostly used with string data for saving space
         (with "category", pandas will infer the possible values from the data. In this
@@ -185,10 +185,10 @@ def _read_csv_get_header(filepath_or_buffer: IOBase, sep=None, **kwargs) -> list
 
 
 def validate_flatfile_dataframe(
-        dfr: pd.DataFrame,
-        extra_dtypes: dict[str, Union[ColumnDtype, pd.CategoricalDtype]] = None,  # noqa
-        extra_defaults: dict[str, Any] = None,
-        mixed_dtype_categorical='raise'
+    dfr: pd.DataFrame,
+    extra_dtypes: dict[str, Union[ColumnDtype, pd.CategoricalDtype]] = None,  # noqa
+    extra_defaults: dict[str, Any] = None,
+    mixed_dtype_categorical='raise'
 ):
     """
     Validate the flatfile dataframe checking data types, conflicting column names,
@@ -299,7 +299,7 @@ class ColumnDtype(Enum):
 
 
 def get_dtype_of(
-        obj: Union[IndexOpsMixin, np.dtype, str, float, int, datetime, bool]
+    obj: Union[IndexOpsMixin, np.dtype, str, float, int, datetime, bool]
 ) -> Union[ColumnDtype, None]:
     """
     Get the dtype of the given pandas array, dtype or Python scalar. If
@@ -343,7 +343,8 @@ def get_dtype_of(
         return ColumnDtype.str
 
     # Final check for data with str and Nones, whose dtype (np.dtype('O')) equals the
-    # dtype of only-string Series, but for which `pd.api.types.is_string_dtype` is False:
+    # dtype of only-string Series, but for which `pd.api.types.is_string_dtype` is
+    # False:
     obj_dtype = None
     if getattr(obj, 'dtype', None) == np.dtype('O') and pd.api.types.is_list_like(obj):
         # check element-wise (very inefficient but unavoidable). Return ColumnDtype.str
@@ -359,9 +360,9 @@ def get_dtype_of(
 
 
 def cast_to_dtype(
-        value: Any,
-        dtype: Union[ColumnDtype, pd.CategoricalDtype],
-        mixed_dtype_categorical='raise'
+    value: Any,
+    dtype: Union[ColumnDtype, pd.CategoricalDtype],
+    mixed_dtype_categorical='raise'
 ) -> Any:
     """
     Cast the given value to the given dtype, raise ValueError if unsuccessful
@@ -687,9 +688,11 @@ def prepare_expr(expr: str, columns: list[str]) -> dict:
     meth_placeholder = replacement_col + '_'
     while meth_placeholder in cols:
         meth_placeholder += '_'
-    new_expr = re.sub(r'\.\s*(notna|mean|std|median|min|max)\s*\(\s*\)',
-                      f' {meth_placeholder} ',
-                      new_expr)
+    new_expr = re.sub(
+        r'\.\s*(notna|mean|std|median|min|max)\s*\(\s*\)',
+        f' {meth_placeholder} ',
+        new_expr
+    )
 
     # analyze string and return the replacements to be done:
     replacements = {}

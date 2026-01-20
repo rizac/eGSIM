@@ -85,8 +85,10 @@ def convert_accel_units(
         if to_ in cm_sec_square:
             return acceleration
 
-    raise ValueError("Unrecognised time history units. "
-                     "Should take either ''g'', ''m/s/s'' or ''cm/s/s''")
+    raise ValueError(
+        "Unrecognised time history units. "
+        "Should take either ''g'', ''m/s/s'' or ''cm/s/s''"
+    )
 
 
 def dataframe2dict(
@@ -161,8 +163,8 @@ def na_values(
 
 
 def array2json(
-        values: Union[pd.Series, np.ndarray, pd.DataFrame],
-        na_vals: Union[pd.Series, np.ndarray, pd.DataFrame, bool, None] = None
+    values: Union[pd.Series, np.ndarray, pd.DataFrame],
+    na_vals: Union[pd.Series, np.ndarray, pd.DataFrame, bool, None] = None
 ) -> list:
     """
     Convert `values` to a JSON serializable list, basically converting
@@ -185,8 +187,7 @@ def array2json(
 
 
 def datetime2str(
-        values: Union[np.ndarray, pd.Series],
-        dformat='%Y-%m-%dT%H:%M:%S'
+    values: Union[np.ndarray, pd.Series], dformat='%Y-%m-%dT%H:%M:%S'
 ) -> np.ndarray:
     """
     Convert `values` to a numpy array of date-time strings

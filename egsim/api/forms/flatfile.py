@@ -57,9 +57,7 @@ class FlatfileForm(EgsimBaseForm):
         required=False,
         help_text="The flatfile (pre- or user-defined) containing observed ground "
                   "motion properties and intensity measures, in CSV or HDF format"
-    )  # Note: with a ModelChoiceField the benefits of handling validation are outweighed
-    # by the fixes needed here and there to make values JSON serializable, so we opt for
-    # a CharField + custom validation in `clean`
+    )  # Note: CharField + custom validation in `clean` is better than ModelChoiceField
     selexpr = CharField(
         required=False,
         help_text='Filter flatfile records (rows) matching query expressions applied '
@@ -67,14 +65,15 @@ class FlatfileForm(EgsimBaseForm):
     )
 
     def __init__(self, data, files=None, **kwargs):
-        # set now `self._u_ff`, in case `self.clean` is called in `super.__init__` below:
-        self._u_ff = None if files is None else _UploadedFlatfile(files=files)
+        self._uploaded_flatfile_form = None
+        if files is not None:
+            self._uploaded_flatfile_form = _UploadedFlatfile(files=files)
         super().__init__(data=data, **kwargs)
 
     def clean(self):
         """Call `super.clean()` and handle the flatfile"""
 
-        u_form = self._u_ff
+        u_form = self._uploaded_flatfile_form
 
         # Handle flatfiles conflicts first. Note: with no selection from the web GUI we
         # have data['flatfile'] = None
@@ -140,7 +139,9 @@ class FlatfileForm(EgsimBaseForm):
                 # (https://stackoverflow.com/a/10758350):
                 dataframe = read_flatfile(u_flatfile)
             except IncompatibleColumnError as ice:
-                self.add_error('flatfile', f'column names conflict {str(ice)}')
+                self.add_error(
+                    'flatfile', f'column names conflict {str(ice)}'
+                )
                 return cleaned_data
             except FlatfileError as err:
                 self.add_error("flatfile", str(err))
@@ -184,8 +185,9 @@ class FlatfileValidationForm(APIForm, FlatfileForm):
 
 
 class FlatfileMetadataInfoForm(GsimForm, APIForm):
-    """Form for querying the necessary metadata columns from a given selection of models"""
-
+    """
+    Form for querying the necessary metadata columns from a given selection of models
+    """
     def clean(self):
         cleaned_data = super().clean()
         unique_imts = column_names(type='intensity')
@@ -213,7 +215,9 @@ class FlatfileMetadataInfoForm(GsimForm, APIForm):
                 cleaned_data['sa_period_limits'] = [min_p, max_p]
 
         if not unique_imts:
-            self.add_error('gsim', 'No intensity measure defined for all models')
+            self.add_error(
+                'gsim', 'No intensity measure defined for all models'
+            )
 
         cleaned_data['imt'] = sorted(unique_imts)
         return cleaned_data

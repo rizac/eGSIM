@@ -69,10 +69,14 @@ class Command(BaseCommand):
                 self.print_table(tables[res].objects)  # noqa
                 return tables[res], res
 
-    def parse_field_and_value(self, db_model: Model, input_result, *,
-                              allow_pkey=False, allow_editable=False,
-                              allow_fkey=False) -> \
-            tuple[Optional[Field], Optional[Any], str]:
+    def parse_field_and_value(
+            self,
+            db_model: Model,
+            input_result, *,
+            allow_pkey=False,
+            allow_editable=False,
+            allow_fkey=False
+    ) -> tuple[Optional[Field], Optional[Any], str]:
         """Return (Field, user_input)"""
 
         fields = {
@@ -200,8 +204,9 @@ class Command(BaseCommand):
         PositiveIntegerField: lambda v: int(v),
         SmallIntegerField: lambda v: int(v),
         FloatField: lambda v: float(v),
-        BooleanField: lambda v: {'0': False, 'false': False, 'toggle': 'toggle',
-                                 '1': True, 'true': True}[str(v).lower()],  # noqa
+        BooleanField: lambda v: {
+            '0': False, 'false': False, 'toggle': 'toggle', '1': True, 'true': True
+        }[str(v).lower()],
         DateField: lambda v: datetime.strptime(str(v), '%Y-%m-%d').date(),
         DateTimeField: lambda v: datetime.strptime(str(v), '%Y-%m-%d %H:%M:%S')
     }
@@ -216,11 +221,11 @@ class Command(BaseCommand):
 
         :param queryset: the QuerySet denoting a table rows collection,
             e.g. `db_model.objects.all()`
-        :param fields: the column names to show. If None (the default), show all columns.
-            The order dictates the priority of the columns when there is extra space
-            available
-        :param order_by: a list of field names whereby the rows will be sorted ascending.
-            Default: ['name']
+        :param fields: the column names to show. If None (the default), show all
+            columns. The order dictates the priority of the columns when there is
+            extra space available
+        :param order_by: a list of field names whereby the rows will be sorted
+            ascending. Default: ['name']
         :param max_width: the max table width, in characters
         :param max_rows: the maximum rows to show (default: 5)
         """

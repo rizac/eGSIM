@@ -173,10 +173,10 @@ class PredictionsHtmlTutorial(EgsimView):
     """View returning the HTML page(s) explaining predictions table structure"""
 
     def response(
-            self,
-            request: HttpRequest,
-            data: dict,
-            files: Optional[dict] = None
+        self,
+        request: HttpRequest,
+        data: dict,
+        files: Optional[dict] = None
     ) -> HttpResponseBase:
         """Process the response from a given request and the data / files extracted from it"""
 
@@ -201,10 +201,10 @@ class ResidualsHtmlTutorial(EgsimView):
     """View returning the HTML page(s) explaining residuals table structure"""
 
     def response(
-            self,
-            request: HttpRequest,
-            data: dict,
-            files: Optional[dict] = None
+        self,
+        request: HttpRequest,
+        data: dict,
+        files: Optional[dict] = None
     ) -> HttpResponseBase:
         """Process the response from a given request and the data / files extracted from it"""
 
@@ -231,9 +231,9 @@ class ResidualsHtmlTutorial(EgsimView):
 
 
 def get_init_data_json(
-        db_regionalizations: list[models.Regionalization],
-        db_flatfiles: list[models.Flatfile],
-        debug=False
+    db_regionalizations: list[models.Regionalization],
+    db_flatfiles: list[models.Flatfile],
+    debug=False
 ) -> dict:
     """
     Return the JSON data to be passed to the browser at startup to initialize
@@ -409,8 +409,8 @@ def get_init_data_json(
 
 
 def get_references(
-        db_regionalizations: list[models.Regionalization],
-        db_flatfiles: list[models.Flatfile]
+    db_regionalizations: list[models.Regionalization],
+    db_flatfiles: list[models.Flatfile]
 ):
     """Return the references of the data used by the program"""
 
@@ -425,11 +425,11 @@ def get_references(
 
 
 def get_api_doc_data(
-        db_regionalizations: list[models.Regionalization],
-        db_flatfiles: list[models.Flatfile],
-        url_host: str,
-        models_count:int,
-        imts: set[str]
+    db_regionalizations: list[models.Regionalization],
+    db_flatfiles: list[models.Flatfile],
+    url_host: str,
+    models_count:int,
+    imts: set[str]
 ):
     model_info_params = apiview2help(GsimInfoView)
     model_to_model_params = apiview2help(PredictionsView)
@@ -521,8 +521,7 @@ def get_api_doc_data(
 
 
 def get_hyperlink_text(
-        db_objs: list[Union[models.Flatfile, models.Regionalization]],
-        sep=', '
+    db_objs: list[Union[models.Flatfile, models.Regionalization]], sep=', '
 ):
     """
     Return all references URL from the given objects, in a string containing
@@ -542,8 +541,7 @@ def get_hyperlink_text(
 
 
 def get_display_name(
-        obj: Union[models.Flatfile, models.Regionalization],
-        extended=False
+    obj: Union[models.Flatfile, models.Regionalization], extended=False
 ) -> str:
     """
     Return the name from the given Database obj, assuring it is not empty (either
@@ -655,9 +653,7 @@ def form2dict(form: EgsimBaseForm, compact=False) -> dict:
 
 
 def get_html_tutorial_context(
-        key: str,
-        api_form: APIForm,
-        api_client_function
+    key: str, api_form: APIForm, api_client_function
 ) -> dict:
     """Return the context (dict) for the Django rendering of the HTML tutorial page"""
 

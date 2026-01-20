@@ -97,14 +97,14 @@ def axis_range(values: Union[np.ndarray, pd.Series]) -> Union[list, None]:
 
 
 def scatter_trace(
-        *,
-        color: str,
-        size=10,
-        symbol='circle',
-        line_color=None,
-        line_width=0,
-        # line_dash='solid',
-        **kwargs
+    *,
+    color: str,
+    size=10,
+    symbol='circle',
+    line_color=None,
+    line_width=0,
+    # line_dash='solid',
+    **kwargs
 ) -> dict:
     """Return the properties and style for a trace of type scatter"""
 
@@ -147,12 +147,12 @@ def line_trace(*, color: str, width=2, dash='solid', **kwargs) -> dict:
 
 
 def bar_trace(
-        *,
-        color: str,
-        line_width=2,
-        line_dash='solid',
-        line_color=None,
-        **kwargs
+    *,
+    color: str,
+    line_width=2,
+    line_dash='solid',
+    line_color=None,
+    **kwargs
 ) -> dict:
     """Return the properties and style for a trace of type bar"""
 
@@ -162,12 +162,12 @@ def bar_trace(
 
 
 def histogram_trace(
-        *,
-        color: str,
-        line_width=2,
-        line_dash='solid',
-        line_color=None,
-        **kwargs
+    *,
+    color: str,
+    line_width=2,
+    line_dash='solid',
+    line_color=None,
+    **kwargs
 ) -> dict:
     """Return the properties and style for a trace of type histogram"""
 
@@ -177,12 +177,12 @@ def histogram_trace(
 
 
 def _bar_like_trace(
-        color: str,
-        typ: str,
-        width: float,
-        dash: str,
-        line_color=None,
-        **kwargs
+    color: str,
+    typ: str,
+    width: float,
+    dash: str,
+    line_color=None,
+    **kwargs
 ) -> dict:
     if 'x' in kwargs:
         kwargs['x'] = values2json(kwargs['x'])

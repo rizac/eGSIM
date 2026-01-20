@@ -1,4 +1,6 @@
-"""Validation functions for the strong motion modeller toolkit (smtk) package of eGSIM"""
+"""
+Validation functions for the strong motion modeller toolkit (smtk) package of eGSIM
+"""
 
 from __future__ import annotations
 
@@ -137,10 +139,10 @@ def validate_imt_sa_limits(model: GMPE, imts: dict[str, IMT]) -> dict[str, IMT]:
 
 
 def init_context_maker(
-        gsims: dict[str, GMPE],
-        imts: Iterable[Union[str, IMT]],
-        magnitudes: Iterable[float],
-        tectonic_region=''
+    gsims: dict[str, GMPE],
+    imts: Iterable[Union[str, IMT]],
+    magnitudes: Iterable[float],
+    tectonic_region=''
 ) -> ContextMaker:
     """Initialize a ContextMaker. Raise `InvalidModel`"""
 
@@ -200,8 +202,8 @@ def get_ground_motion_values(
         start = 0
         for mag in np.unique(ctx.mag):
             idxs = np.where(ctx.mag == mag)[0]
-            # Note: `idxs` might not be contiguous. To assure that `model.compute` writes
-            # onto the passed array (and not a copy) we will need to use slices:
+            # Note: `idxs` might not be contiguous. To assure that `model.compute`
+            # writes onto the passed array (and not a copy) we will need to use slices:
             end = start + len(idxs)
             try:
                 model.compute(
@@ -242,7 +244,8 @@ def _format_model_error(model: Union[GMPE, str], exception: Exception) -> ModelE
             suffix = f"OpenQuake {suffix} @{fname[fname.rfind('/') + 1:]}:{lineno}"
 
     return ModelError(
-        f'{model if isinstance(model, str) else gsim_name(model)}: {str(exception)} ({suffix})'
+        f'{model if isinstance(model, str) else gsim_name(model)}: '
+        f'{str(exception)} ({suffix})'
     )
 
 

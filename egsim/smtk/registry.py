@@ -84,9 +84,8 @@ _gsim_aliases = {v: k for k, v in gsim_aliases.items()}
 
 
 def gsim_name(model: GMPE) -> str:
-    """
-    Returns the name of the GMPE given an instance of the class
-    """
+    """Return the name of the GMPE given an instance of the class"""
+
     name = str(model)
     # if name is the gsim class name within square brackets, return the class name:
     if name == f"[{model.__class__.__name__}]":
@@ -145,8 +144,10 @@ def intensity_measures_defined_for(model: Union[str, GMPE]) -> frozenset[str]:
     if isinstance(model, str):
         # try loading the class first from registry (faster), otherwise the instance
         # if the class does not hold the info we need:
-        model = registry[model] if registry[model].DEFINED_FOR_INTENSITY_MEASURE_TYPES \
-            else gsim(model)
+        if registry[model].DEFINED_FOR_INTENSITY_MEASURE_TYPES:
+            model = registry[model]
+        else:
+            model = gsim(model)
     return frozenset(_.__name__ for _ in model.DEFINED_FOR_INTENSITY_MEASURE_TYPES)
 
 

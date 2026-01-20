@@ -13,10 +13,11 @@ from django.forms.forms import DeclarativeFieldsMetaclass  # noqa
 from django.forms.fields import Field, FloatField
 
 from egsim.api import models
-from egsim.smtk import (validate_inputs, harmonize_input_gsims, harmonize_input_imts)
+from egsim.smtk import validate_inputs, harmonize_input_gsims, harmonize_input_imts
 from egsim.smtk.flatfile import column_help
 from egsim.smtk.registry import gsim_info
 from egsim.smtk.validation import IncompatibleModelImtError, ImtError, ModelError
+
 
 _base_singleton_renderer = BaseRenderer()  # singleton no-op renderer, see below
 
@@ -84,9 +85,10 @@ class EgsimBaseForm(Form):
             input_param_names = tuple(p for p in param_names if p in self.data)
             if len(input_param_names) > 1:  # names conflict, store error:
                 for p in input_param_names:
-                    self.init_errors[p] = \
-                        f"this parameter conflicts with " \
+                    self.init_errors[p] = (
+                        f"this parameter conflicts with "
                         f"{' and '.join(_ for _ in input_param_names if _ != p)}"
+                    )
                 # assure has_error(field_name) returns True ("" will not print any
                 # msg related to the field in errors_json_data):
                 self.init_errors.setdefault(field_name, "")
@@ -238,8 +240,8 @@ class GsimForm(EgsimBaseForm):
     regionalization = Field(
         required=False,
         help_text='The regionalization(s) (mappings from region to model) to be used '
-                  'for searching the models applicable on the given geographic location '
-                  '(parameters latitude and longitude). '
+                  'for searching the models applicable on the given geographic '
+                  'location (parameters latitude and longitude). '
                   'If no geographic location is provided, this parameter is ignored. '
                   'If missing, all implemented regionalizations will be used'
     )
@@ -381,8 +383,10 @@ class GsimImtForm(GsimForm):
         return ret
 
     def clean(self):
-        """Perform a final validation checking models and intensity measures compatibility"""
-
+        """
+        Perform a final validation checking models and intensity measures
+        compatibility
+        """
         gsim_field, imt_field = 'gsim', 'imt'
         cleaned_data = super().clean()
         # If both fields were ok (no error), check that their values match:
@@ -425,9 +429,10 @@ class GsimInfoForm(GsimForm, APIForm):
     # override the superclass gsim field help_text (cumbersome, but necessary):
     gsim = GsimForm.base_fields['gsim'].__class__(
         required=False,
-        help_text=f"{GsimForm.base_fields['gsim'].help_text}. For any input value, "
-                  f"any model whose name contains the value is used (case-insensitive search). "
-                  f"The model names are usually formatted as [AuthorYearAdditionalInformation]"
+        help_text=f"{GsimForm.base_fields['gsim'].help_text}. "
+                  f"For any input value, any model whose name contains the value "
+                  f"is used (case-insensitive search). The model names are usually "
+                  f"formatted as [AuthorYearAdditionalInformation]"
     )
 
     _field2params: dict[str, list[str]] = {'gsim': ('name', 'model')}

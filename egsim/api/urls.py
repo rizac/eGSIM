@@ -16,9 +16,15 @@ RESIDUALS_URL_PATH = f'{API_PATH}residuals'
 MODEL_INFO_URL_PATH = f'{API_PATH}models'
 
 urlpatterns = [
-    re_path(fr'^{PREDICTIONS_URL_PATH}/?$', csrf_exempt(PredictionsView.as_view())),
-    re_path(fr'^{RESIDUALS_URL_PATH}/?$', csrf_exempt(ResidualsView.as_view())),
-    re_path(fr'^{MODEL_INFO_URL_PATH}/?$', csrf_exempt(GsimInfoView.as_view())),
+    re_path(
+        fr'^{PREDICTIONS_URL_PATH}/?$', csrf_exempt(PredictionsView.as_view())
+    ),
+    re_path(
+        fr'^{RESIDUALS_URL_PATH}/?$', csrf_exempt(ResidualsView.as_view())
+    ),
+    re_path(
+        fr'^{MODEL_INFO_URL_PATH}/?$', csrf_exempt(GsimInfoView.as_view())
+    ),
     # Fallback: return a 404 not-found HttpResponse (unlike Django, with empty content):
     re_path(fr"^{API_PATH}.*$", csrf_exempt(NotFound.as_view()))
 ]

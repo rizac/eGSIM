@@ -59,13 +59,13 @@ class SiteProperties:
 
 
 def get_ground_motion_from_scenarios(
-        gsims: Iterable[Union[str, GMPE]],
-        imts: Iterable[Union[str, IMT]],
-        magnitudes: Union[float, Collection[float]],
-        distances: Union[float, Collection[float]],
-        rupture_properties: Optional[RuptureProperties] = None,
-        site_properties: Optional[SiteProperties] = None,
-        header_sep: Union[str, None] = Clabel.sep
+    gsims: Iterable[Union[str, GMPE]],
+    imts: Iterable[Union[str, IMT]],
+    magnitudes: Union[float, Collection[float]],
+    distances: Union[float, Collection[float]],
+    rupture_properties: Optional[RuptureProperties] = None,
+    site_properties: Optional[SiteProperties] = None,
+    header_sep: Union[str, None] = Clabel.sep
 ) -> pd.DataFrame:
     """
     Calculate the ground motion values from different scenarios to be used, e.g.
@@ -150,12 +150,12 @@ def get_ground_motion_from_scenarios(
 
 
 def build_contexts(
-        gsims: dict[str, GMPE],
-        imts: dict[str, IMT],
-        magnitudes: Collection[float],
-        distances: Collection[float],
-        r_props: RuptureProperties,
-        s_props: SiteProperties
+    gsims: dict[str, GMPE],
+    imts: dict[str, IMT],
+    magnitudes: Collection[float],
+    distances: Collection[float],
+    r_props: RuptureProperties,
+    s_props: SiteProperties
 ) -> np.recarray:
     """
     Build the context objects from the set of magnitudes and distances and
@@ -211,7 +211,7 @@ def build_contexts(
 
 
 def create_rupture(
-        id: int, magnitude, rake, tectonic_region, hypocenter, surface  # noqa
+    id: int, magnitude, rake, tectonic_region, hypocenter, surface  # noqa
 ) -> BaseRupture:
     rupture = BaseRupture(
         magnitude, rake, tectonic_region, hypocenter, surface, PointSource
@@ -221,12 +221,12 @@ def create_rupture(
 
 
 def create_planar_surface(
-        top_centroid: Point,
-        strike: float,
-        dip: float,
-        area: float,
-        aspect: float,
-        ztor: float
+    top_centroid: Point,
+    strike: float,
+    dip: float,
+    area: float,
+    aspect: float,
+    ztor: float
 ) -> PlanarSurface:
     """
     Given a central location, create a simple planar rupture
@@ -271,14 +271,14 @@ def create_planar_surface(
 
 
 def get_target_sites(
-        hypocenter: Point,
-        surface: PlanarSurface,
-        distances: Iterable[float],
-        vs30: float,
-        line_azimuth=90.0,
-        origin_point=(0.5, 0.0),
-        distance_type="rrup",
-        z1pt0=None, z2pt5=None, **extras
+    hypocenter: Point,
+    surface: PlanarSurface,
+    distances: Iterable[float],
+    vs30: float,
+    line_azimuth=90.0,
+    origin_point=(0.5, 0.0),
+    distance_type="rrup",
+    z1pt0=None, z2pt5=None, **extras
 ):
     """Return a :class:`SiteCollection` from the given arguments"""
 
@@ -299,12 +299,12 @@ def get_target_sites(
 
 
 def sites_at_distance(
-        hypocenter: Point,
-        surface: PlanarSurface,
-        distances: Iterable[float],
-        azimuth: float,
-        origin_point: tuple[float, float],
-        dist_type: str = "rrup"
+    hypocenter: Point,
+    surface: PlanarSurface,
+    distances: Iterable[float],
+    azimuth: float,
+    origin_point: tuple[float, float],
+    dist_type: str = "rrup"
 ) -> list[Point]:
     """
     Determine the locations of the target sites according to their specified
@@ -344,8 +344,7 @@ def sites_at_distance(
 
 
 def get_hypocentre_on_planar_surface(
-        plane: PlanarSurface,
-        hypo_loc: Optional[tuple[float, float]] = None
+    plane: PlanarSurface, hypo_loc: Optional[tuple[float, float]] = None
 ) -> Point:
     """
     Determine the location of the hypocentre within the plane
@@ -390,13 +389,13 @@ def get_hypocentre_on_planar_surface(
 
 
 def _rup_to_point(
-        distance: float,
-        surface: PlanarSurface,
-        origin: Point,
-        azimuth: float,
-        distance_type: str = 'rjb',
-        iter_stop: float = 1E-3,
-        maxiter: int = 1000
+    distance: float,
+    surface: PlanarSurface,
+    origin: Point,
+    azimuth: float,
+    distance_type: str = 'rjb',
+    iter_stop: float = 1E-3,
+    maxiter: int = 1000
 ) -> Point:
     """Place a point at a given distance from a rupture along a specified azimuth"""
 
