@@ -46,7 +46,7 @@ def vs30_to_z2pt5_cb14(vs30: Union[float, np.ndarray], japan=False):
 
 
 def convert_accel_units(
-        acceleration: Union[Collection[float], float], from_: str, to_: str
+    acceleration: Union[Collection[float], float], from_: str, to_: str
 ) -> Union[Collection[float], float]:
     """
     Convert units of number or numeric array representing acceleration
@@ -86,7 +86,7 @@ def convert_accel_units(
             return acceleration
 
     raise ValueError(
-        "Unrecognised time history units. "
+        "Unrecognised acceleration units. "
         "Should take either ''g'', ''m/s/s'' or ''cm/s/s''"
     )
 

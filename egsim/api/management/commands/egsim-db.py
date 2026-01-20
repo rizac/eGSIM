@@ -1,3 +1,5 @@
+"""eGSIM management command to edit the DB"""
+
 from datetime import datetime
 from typing import Optional, Callable, Any
 import shlex

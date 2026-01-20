@@ -231,8 +231,9 @@ class FlatfileMetadataInfoForm(GsimForm, APIForm):
         cleaned_data = self.cleaned_data
         gsims = list(cleaned_data['gsim'])
 
-        required_columns = (ground_motion_properties_required_by(*gsims) |
-                            {EVENT_ID_COLUMN_NAME})  # <- event id always required
+        required_columns = (  # event id always required
+            ground_motion_properties_required_by(*gsims) | {EVENT_ID_COLUMN_NAME}
+        )
         ff_columns = {column_aliases(c)[0] for c in required_columns}
 
         imts = cleaned_data['imt']
@@ -278,8 +279,10 @@ def get_hr_flatfile_column_meta(name: str, values: Optional[pd.Series] = None) -
         c_aliases = column_aliases(name)
         if len(c_aliases) > 1:
             c_aliases = [n for n in c_aliases if n != name]
-            c_aliases = (f"Alternative valid name{'s' if len(c_aliases) != 1 else ''}: "
-                         f"{', '.join(c_aliases)}")
+            c_aliases = (
+                f"Alternative valid name{'s' if len(c_aliases) != 1 else ''}: "
+                f"{', '.join(c_aliases)}"
+            )
             if c_help:
                 c_help += f". {c_aliases}"
             else:
@@ -298,8 +301,10 @@ def get_hr_flatfile_column_meta(name: str, values: Optional[pd.Series] = None) -
             if values is not None:  # custom values, compact categories info:
                 c_dtype += f", categorical, {len(c_categories)} values"
             else:
-                c_dtype += (f", categorical, to be chosen from "
-                            f"{', '.join(str(c) for c in c_categories)}")
+                c_dtype += (
+                    f", categorical, to be chosen from "
+                    f"{', '.join(str(c) for c in c_categories)}"
+                )
     else:
         c_dtype = ""
 

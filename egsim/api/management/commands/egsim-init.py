@@ -1,4 +1,4 @@
-"""eGSIM management command. See `Command.help` for details"""
+"""eGSIM management command to initialize the DB"""
 
 import warnings
 from os.path import join, expanduser, abspath, isfile, dirname, basename

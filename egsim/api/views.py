@@ -421,8 +421,9 @@ def read_df_from_csv_stream(stream: Union[bytes, IO], **kwargs) -> pd.DataFrame:
     kwargs.setdefault('index_col', 0)
     dframe = pd.read_csv(content, **kwargs)
     if header and len(header) > 1:  # multi-index, in case of "Unnamed:" column, replace:
-        dframe.rename(columns=lambda c: "" if c.startswith("Unnamed:") else c,
-                      inplace=True)
+        dframe.rename(
+            columns=lambda c: "" if c.startswith("Unnamed:") else c, inplace=True
+        )
     return dframe
 
 

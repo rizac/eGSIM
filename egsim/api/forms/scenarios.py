@@ -76,9 +76,7 @@ class PredictionsForm(GsimImtForm, APIForm):
         'vs30measured': ('vs30measured', 'vs30_measured'),
         'z1pt0': ('z1pt0', 'z1'),
         'initial_point': ('initial-point', 'initial_point'),
-        'hypocenter_location': ('hypocenter-location',
-                                'hypocentre-location',
-                                'hypocentre_location'),
+        'hypocenter_location': ('hypocenter-location', 'hypocenter_location',),
         'line_azimuth': ('line-azimuth', 'line_azimuth'),
     }
 
