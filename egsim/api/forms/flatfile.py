@@ -17,7 +17,6 @@ from egsim.smtk.flatfile import (
     get_dtype_of,
     column_exists,
     column_type,
-    column_categorical_dtype,
     column_aliases,
     column_dtype,
     column_help,
@@ -271,11 +270,9 @@ def get_hr_flatfile_column_meta(name: str, values: Optional[pd.Series] = None) -
 
     if column_exists(name):
         c_dtype = column_dtype(name)
-        cat_dtype = column_categorical_dtype(name)
-        if cat_dtype is not None:
-            # c_categories is a pandas CategoricalStype. So:
-            c_dtype = get_dtype_of(cat_dtype.categories)
-            c_categories = cat_dtype.categories.tolist()
+        if isinstance(c_dtype, pd.CategoricalDtype):
+            c_categories = c_dtype.categories.tolist()
+            c_dtype = get_dtype_of(c_dtype.categories)
         c_type = getattr(column_type(name), 'value', "")
         c_help = column_help(name) or ""
         c_aliases = column_aliases(name)

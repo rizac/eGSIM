@@ -221,8 +221,6 @@ def validate_flatfile_dataframe(
             xp_dtype = extra_dtypes[col]
         else:
             xp_dtype = column_dtype(col)
-            if xp_dtype == ColumnDtype.category:
-                xp_dtype = column_categorical_dtype(col)
 
         if xp_dtype is None:
             continue
@@ -510,30 +508,15 @@ def column_help(column: str) -> str:
     return _load_flatfile_columns_properties()[column].get('help', "")
 
 
-def column_dtype(column: str) -> Union[ColumnDtype, None]:
+def column_dtype(column: str) -> Union[ColumnDtype, pd.CategoricalDtype, None]:
     """
-    Return the data type of the given column name, as `ColumnDtype` Enum item,
-    or None if the column has no known data type. If the return value is
-    `ColumnDtype.category`, get more info via `get_categorical_dtype(column)`.
+    Return the data type of the given column name, as None (no data type set),
+    `ColumnDtype` Enum item, or pands `CategoricalDtype` object (in this case
+    `column_dtype(...).categories` will list the possible values that the column can
+    take). As such `ColumnDtype.category` is never returned.
     If `column` is 'SA(<period>)', it will default to 'SA'
     """
-    dtype = _column_dtype(column)
-    if isinstance(dtype, pd.CategoricalDtype):
-        return ColumnDtype.category
-    return dtype
-
-
-def column_categorical_dtype(column: str) -> Union[pd.CategoricalDtype, None]:
-    """
-    Return the pandas CategoricalDtype, a data type for categorical data, for
-    the given column. To get the possible categories, use the `.categories` attribute
-    of the returned object. Return None if the column data type is not categorical.
-    If `column` is 'SA(<period>)', it will default to 'SA'
-    """
-    dtype = _column_dtype(column)
-    if isinstance(dtype, pd.CategoricalDtype):
-        return dtype
-    return None
+    return _load_flatfile_columns_properties()[column].get('dtype', None)
 
 
 def _column_dtype(column: str) -> Union[pd.CategoricalDtype, ColumnDtype, None]:
@@ -759,8 +742,10 @@ def valid_expr_sequence(tok_num1: int, tok_val1: str, tok_num2: int, tok_val2: s
     elif tok_num2 == NEWLINE:
         return tok_num1 in {NUMBER, NAME, STRING} or tok_val1 == ')'
     elif (tok_num1, tok_num2) == (OP, OP):
-        return (tok_val1 + tok_val2 in
-                {'(~', '~(', '((', '~~', '))', '&(', '|(', ')|', ')&'})
+        return (
+            tok_val1 + tok_val2 in
+            {'(~', '~(', '((', '~~', '))', '&(', '|(', ')|', ')&'}
+        )
     elif (tok_num1, tok_num2) == (NAME, OP):
         return tok_val2 in {'==', '!=', '<', '<=', '>', '>=', ')', '+', '-', '*', '/'}
     elif (tok_num1, tok_num2) == (OP, NAME):
