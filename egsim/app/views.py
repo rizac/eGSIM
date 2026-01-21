@@ -180,8 +180,9 @@ class PredictionsHtmlTutorial(EgsimView):
     ) -> HttpResponseBase:
         """Process the response from a given request and the data / files extracted from it"""
 
-        from egsim.api.client.snippets.get_egsim_predictions import \
+        from egsim.api.client.snippets.get_egsim_predictions import (
             get_egsim_predictions
+        )
         api_form = PredictionsForm({
             'gsim': ['CauzziEtAl2014', 'BindiEtAl2014Rjb'],
             'imt': ['PGA', 'SA(0.1)'],
@@ -208,8 +209,9 @@ class ResidualsHtmlTutorial(EgsimView):
     ) -> HttpResponseBase:
         """Process the response from a given request and the data / files extracted from it"""
 
-        from egsim.api.client.snippets.get_egsim_residuals import \
+        from egsim.api.client.snippets.get_egsim_residuals import (
             get_egsim_residuals
+        )
         api_form = ResidualsForm({
             'gsim': ['CauzziEtAl2014', 'BindiEtAl2014Rjb'],
             'imt': ['PGA'],
@@ -446,8 +448,9 @@ def get_api_doc_data(
     # Post process:
 
     # Fix docstrings common to all APIs params:
-    regionalizations_help_suffix = \
+    regionalizations_help_suffix = (
         f'. {multiselect_from} {", ".join(_.name for _ in db_regionalizations)}'
+    )
     refs = get_hyperlink_text(db_regionalizations)
     if refs:
         regionalizations_help_suffix += f'. References: {refs}'
@@ -480,12 +483,14 @@ def get_api_doc_data(
     # Fix docstrings of Model2Model params
     model_to_model_params['z1pt0']['default_value'] = '(inferred)'
     model_to_model_params['z2pt5']['default_value'] = '(inferred)'
-    model_to_model_params['magnitude']['help'] += \
-        f'. See also {", ".join(PredictionsForm.rupture_fieldnames)} ' \
+    model_to_model_params['magnitude']['help'] += (
+        f'. See also {", ".join(PredictionsForm.rupture_fieldnames)} ' 
         f'(Rupture configuration parameters, applied to all created Ruptures)'
-    model_to_model_params['distance']['help'] += \
-        f'. See also {", ".join(PredictionsForm.site_fieldnames)} ' \
+    )
+    model_to_model_params['distance']['help'] += (
+        f'. See also {", ".join(PredictionsForm.site_fieldnames)} ' 
         f'(Site configuration parameters, applied to all created Sites)'
+    )
 
     # Fix docstrings of Model2Data params:
     flatfile_help_suffix = (
@@ -689,11 +694,13 @@ def get_html_tutorial_context(
             f'dframe[[c for c in dframe.columns if c.startswith("{Clabel.input} ")]]',
     }
     if key == 'residuals':
-        py_select_exprs['Select by metric type (Total residuals)'] = \
+        py_select_exprs['Select by metric type (Total residuals)'] = (
             f'dframe[[c for c in dframe.columns if " {Clabel.total_res} " in c]]'
+        )
     else:
-        py_select_exprs['Select by metric type (Medians)'] = \
+        py_select_exprs['Select by metric type (Medians)'] = (
             f'dframe[[c for c in dframe.columns if " {Clabel.median} " in c]]'
+        )
 
     py_select_snippets = []
     for title, expr in py_select_exprs.items():

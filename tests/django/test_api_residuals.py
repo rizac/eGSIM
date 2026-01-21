@@ -110,41 +110,48 @@ class Test:
         # test wrong flatfile:
         resp2 = client.post(self.url, data=inputdic2)
         assert resp2.status_code == 400
-        assert self.error_message(resp2) == \
-               ("flatfile: missing column(s) SA(period_in_s) (columns found: 0, "
-                f'at least two are required)')
+        assert self.error_message(resp2) == (
+            "flatfile: missing column(s) SA(period_in_s) (columns found: 0, "
+            f'at least two are required)'
+        )
 
         # 1d missing ground motion properties (2):
-        csv = SimpleUploadedFile("file.csv", b"PGA,PGV,SA(0.2),vs30,mag,b,c,d\n1.1,,,",
-                                 content_type="text/csv")
+        csv = SimpleUploadedFile(
+            "file.csv",
+            b"PGA,PGV,SA(0.2),vs30,mag,b,c,d\n1.1,,,",
+            content_type="text/csv"
+        )
         inputdic2 = dict(inputdic, flatfile=csv)
         inputdic2.pop('data-query')  # to avoid adata-query errors (already checked)
         # test wrong flatfile:
         resp2 = client.post(self.url, data=inputdic2)
         assert resp2.status_code == 400
-        assert self.error_message(resp2) == \
-               "flatfile: missing column(s) rake, rjb"
+        assert self.error_message(resp2) == "flatfile: missing column(s) rake, rjb"
 
         # 3 dupes:
-        csv = SimpleUploadedFile("file.csv", b"CAV,hypo_lat,evt_lat,d\n1.1,,,",
-                                 content_type="text/csv")
+        csv = SimpleUploadedFile(
+            "file.csv", b"CAV,hypo_lat,evt_lat,d\n1.1,,,", content_type="text/csv"
+        )
         inputdic2 = dict(inputdic, flatfile=csv)
         # test wrong flatfile:
         resp2 = client.post(self.url, data=inputdic2)
         assert resp2.status_code == 400
         # account for different ordering in error columns:
-        assert self.error_message(resp2) in \
-               ("flatfile: column names conflict evt_lat+hypo_lat",
-                "flatfile: column names conflict hypo_lat+evt_lat")
+        assert self.error_message(resp2) in (
+            "flatfile: column names conflict evt_lat+hypo_lat",
+            "flatfile: column names conflict hypo_lat+evt_lat"
+        )
 
         def fake_post(self, request):  # noqa
             # Django testing class `client` expects every data in the `data` argument
             # whereas Django expects two different arguments, `data` and `files`
             # this method simply bypasses the files renaming (from the user provided
             # flatfile into 'uploaded_flatfile' in the Form) and calls directly :
-            return ResidualsView().response(request,
-                                            data=dict(inputdic2, flatfile='esm2018'),
-                                            files=MultiValueDict({'flatfile': csv}))
+            return ResidualsView().response(
+                request,
+                data=dict(inputdic2, flatfile='esm2018'),
+                files=MultiValueDict({'flatfile': csv})
+            )
 
         with patch.object(APIFormView, 'post', fake_post):
             resp2 = client.post(self.url, data=inputdic2)
@@ -152,9 +159,11 @@ class Test:
             assert 'flatfile' in self.error_message(resp2)
 
         # 4 missing column error (PGV):
-        csv = SimpleUploadedFile("file.csv", (b"PGA;rake;rjb;vs30;hypo_lat;mag\n"
-                                              b"1.1;1;1;1;1;1;1"),
-                                 content_type="text/csv")
+        csv = SimpleUploadedFile(
+            "file.csv",
+            b"PGA;rake;rjb;vs30;hypo_lat;mag\n1.1;1;1;1;1;1;1",
+            content_type="text/csv"
+        )
         inputdic2 = dict(inputdic, flatfile=csv)
         inputdic2.pop('data-query')
         # test wrong flatfile:
@@ -164,10 +173,11 @@ class Test:
         assert self.error_message(resp2) == 'flatfile: missing column(s) PGV'
 
         # 5 missing column error (event id):
-        csv = SimpleUploadedFile("file.csv",
-                                 (b"PGA;PGV;SA(0.2);rake;rjb;vs30;hypo_lat;mag\n"
-                                  b"1.1;1;1;1;1;1;1;1;0"),
-                                 content_type="text/csv")
+        csv = SimpleUploadedFile(
+            "file.csv",
+            b"PGA;PGV;SA(0.2);rake;rjb;vs30;hypo_lat;mag\n1.1;1;1;1;1;1;1;1;0",
+            content_type="text/csv"
+        )
         inputdic2 = dict(inputdic, flatfile=csv)
         inputdic2.pop('data-query')
         # test wrong flatfile:
@@ -351,9 +361,10 @@ class Test:
             if format is None:  # format defaults to JSON
                 resp_json = resp1.json()
                 continue
-            dfr2 = read_df_from_csv_stream(content, header=[0, 1, 2]) \
-                if format == 'csv' \
-                else read_df_from_hdf_stream(content)
+            if format == 'csv':
+                dfr2 = read_df_from_csv_stream(content, header=[0, 1, 2])
+            else:
+                dfr2 = read_df_from_hdf_stream(content)
             new_json = dataframe2dict(dfr2)
             assert np.allclose(
                 resp_json['SA(0.2)'][Clabel.total_res]['BindiEtAl2011'],
@@ -498,9 +509,10 @@ class Test:
             #     prev_content = content
             # else:
             #     assert prev_content == content
-            dfr2 = read_df_from_csv_stream(BytesIO(content), header=0) \
-                if format == 'csv' \
-                else read_df_from_hdf_stream(BytesIO(content))
+            if format == 'csv':
+                dfr2 = read_df_from_csv_stream(BytesIO(content), header=0)
+            else:
+                dfr2 = read_df_from_hdf_stream(BytesIO(content))
 
             assert sorted(dfr2.columns) == sorted(resp_json.keys())
             for k in resp_json.keys():

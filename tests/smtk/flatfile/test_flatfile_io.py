@@ -19,13 +19,13 @@ from egsim.smtk.flatfile import (read_flatfile,
                                  column_type,
                                  get_dtype_of, optimize_flatfile_dataframe, ColumnDtype,
                                  FlatfileQueryError)
-from egsim.smtk.flatfile import _load_flatfile_columns_properties, column_names
+from egsim.smtk.flatfile import ColumnPropertyRegistry, column_names
 from egsim.smtk.validation import ConflictError
 
 
 def test_read_flatifle_yaml():
 
-    dic = _load_flatfile_columns_properties(False)
+    dic = ColumnPropertyRegistry.load_from_yaml(cache=False)
     params = column_names(type='rupture')
     assert len({'rup_width', 'mag', 'magnitude', 'width'} & params) == 4
     params = {c for c in dic if column_type(c) == ColumnType.distance}

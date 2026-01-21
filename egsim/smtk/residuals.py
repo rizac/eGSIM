@@ -552,8 +552,10 @@ def get_required_ground_motion_properties(
 
     # REQUIRES_DISTANCES is empty when gsims = [FromFile]: in this case, add a
     # default 'rrup' (see openquake,hazardlib.contexts.ContextMaker.__init__):
-    if 'rrup' not in required_props and \
-            any(len(g.REQUIRES_DISTANCES) == 0 for g in gsims):
+    if (
+        'rrup' not in required_props and
+        any(len(g.REQUIRES_DISTANCES) == 0 for g in gsims)
+    ):
         required_props |= {'rrup'}
 
     missing_flatfile_columns = set()
@@ -564,8 +566,9 @@ def get_required_ground_motion_properties(
             # Adding a Series to it might result in NaNs where the Series index
             # does not match the DataFrame index. As such, assign the series.values to
             # the DataFrame (see test_residuals.test_assign_series to assure this is ok)
-            required_props_flatfile[p] = \
+            required_props_flatfile[p] = (
                 get_ground_motion_property_values(flatfile, p).values
+            )
         except MissingColumnError:
             missing_flatfile_columns.add(p)
     if missing_flatfile_columns:

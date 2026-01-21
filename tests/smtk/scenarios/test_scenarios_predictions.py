@@ -251,11 +251,14 @@ def test_magnitude_distance_spectra_trellis():
     )
     # (no need to convert medians to np.exp(medians for the test below)
     # test that some gsim are not supported for all periods:
-    assert (dfr.columns.get_level_values(0) == 'SA(3.0)').sum() > \
-           (dfr.columns.get_level_values(0) == 'SA(4.001)').sum()
-    assert (dfr.columns.get_level_values(0) == 'SA(4.001)').sum() > \
-           (dfr.columns.get_level_values(0) == 'SA(10.0)').sum()
-
+    assert (
+        (dfr.columns.get_level_values(0) == 'SA(3.0)').sum() >
+        (dfr.columns.get_level_values(0) == 'SA(4.001)').sum()
+    )
+    assert (
+        (dfr.columns.get_level_values(0) == 'SA(4.001)').sum() >
+        (dfr.columns.get_level_values(0) == 'SA(10.0)').sum()
+    )
     # normal test (comparison with old data):
     dfr = get_scenarios_predictions(
         gsims,

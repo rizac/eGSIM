@@ -18,13 +18,12 @@ from egsim.smtk import gsim, registered_imts, registered_gsims
 from egsim.smtk.flatfile import (
     ColumnType,
     ColumnDtype,
-    _flatfile_columns_path,
     cast_to_dtype,
     column_type, column_aliases,
-    _load_flatfile_columns_properties,
     get_dtype_of,
     validate_flatfile_dataframe,
-    ColumnDataError
+    ColumnDataError,
+    ColumnPropertyRegistry
 )
 
 
@@ -34,7 +33,7 @@ def test_flatfile_extract_from_yaml():
     # read directly from columns registry and asure aliases are well-formed.
     # Do not use _load_column_registry because it is assumed to rely on the following
     # test passing (no duplicates, no single alias equal to column name, and so on):
-    with open(_flatfile_columns_path) as _:
+    with open(ColumnPropertyRegistry._flatfile_columns_path) as _:
         dic = yaml.safe_load(_)
         all_names = set(dic)
         all_aliases = set()
@@ -60,7 +59,7 @@ def test_flatfile_extract_from_yaml():
                 raise ValueError(f"alias(es) {dupes} already defined as name")
 
     # Check column properties within itself (no info on other columns required):
-    for c, props in _load_flatfile_columns_properties(False).items():
+    for c, props in ColumnPropertyRegistry.load_from_yaml(cache=False).items():
         check_column_metadata(name=c, props=dict(props))
 
     # Check that the columns we defined as rupture param, sites param,  distance

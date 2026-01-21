@@ -451,7 +451,7 @@ def column_exists(column: str) -> bool:
     Return whether the given argument is a registered flatfile column name
     (including aliases. 'SA(<period>)' is valid and will default to 'SA')
     """
-    return column in _load_flatfile_columns_properties()
+    return column in ColumnPropertyRegistry.load_from_yaml()
 
 
 
@@ -468,7 +468,7 @@ def column_names(*, type: Union[str, ColumnType]='all') -> set[str]:  # noqa
     if isinstance(type, str) and type != 'all':
         type = ColumnType[type]  # noqa
     return {
-        n for n, props in _load_flatfile_columns_properties().items()
+        n for n, props in ColumnPropertyRegistry.load_from_yaml().items()
         if type == 'all' or props.get('type', None) == type
     }
 
@@ -478,7 +478,7 @@ def column_type(column: str) -> Union[ColumnType, None]:
     Return the `ColumnType` enum item of the given column, or None.
     if `column` is 'SA(<period>)', it will default to 'SA'
     """
-    return _load_flatfile_columns_properties()[column].get('type', None)
+    return ColumnPropertyRegistry.get_properties(column).get('type', None)
 
 
 def column_default(column: str) -> Union[None, Any]:
@@ -486,7 +486,7 @@ def column_default(column: str) -> Union[None, Any]:
     Return the default of the given column name (used to fill missing data), or
     None if no default is set. if `column` is 'SA(<period>)', it will default to 'SA'
     """
-    return _load_flatfile_columns_properties()[column].get('default', None)
+    return ColumnPropertyRegistry.get_properties(column).get('default', None)
 
 
 def column_aliases(column: str) -> tuple[str]:
@@ -497,7 +497,7 @@ def column_aliases(column: str) -> tuple[str]:
     of `column` alone if `column` does not have registered aliases.
     if `column` is 'SA(<period>)', it will default to 'SA'
     """
-    return _load_flatfile_columns_properties()[column].get('alias', (column,))
+    return ColumnPropertyRegistry.get_properties(column).get('alias', (column,))
 
 
 def column_help(column: str) -> str:
@@ -505,7 +505,7 @@ def column_help(column: str) -> str:
     Return the help (description) of the given column name, or ''.
     If `column` is 'SA(<period>)', it will default to 'SA'
     """
-    return _load_flatfile_columns_properties()[column].get('help', "")
+    return ColumnPropertyRegistry.get_properties(column).get('help', "")
 
 
 def column_dtype(column: str) -> Union[ColumnDtype, pd.CategoricalDtype, None]:
@@ -516,71 +516,61 @@ def column_dtype(column: str) -> Union[ColumnDtype, pd.CategoricalDtype, None]:
     take). As such `ColumnDtype.category` is never returned.
     If `column` is 'SA(<period>)', it will default to 'SA'
     """
-    return _load_flatfile_columns_properties()[column].get('dtype', None)
+    return ColumnPropertyRegistry.get_properties(column).get('dtype', None)
 
 
-# YAML file path:
-_flatfile_columns_path = join(dirname(__file__), 'flatfile_columns.yaml')
 
-class ColumnsPropertyDict(dict[str, dict[str, Any]]):
+class ColumnPropertyRegistry:
+    """Column property registry (loaded from underlying YAML file)"""
 
-    def __missing__(self, column):
-        """Handle SA(period) returning values for 'SA'"""
+    # cache storage of the data in the YAML:
+    _flatfile_columns_props: dict = None  # noqa
 
-        if sa_period(column) is not None and 'SA' in self:
-            # return the value you want for this "special" key
-            return self['SA']
-        # fallback if the condition is not matched
-        return {}
+    # YAML file path:
+    _flatfile_columns_path = join(dirname(__file__), 'flatfile_columns.yaml')
 
-# cache storage of the data in the YAML:
-_flatfile_columns_props: ColumnsPropertyDict = None  # noqa
+    @classmethod
+    def get_properties(cls, column:str) -> dict:
+        props = cls.load_from_yaml()
+        if column not in props:
+            if sa_period(column) is not None:
+                column = 'SA'
+        return props.get(column, {})
 
+    @classmethod
+    def load_from_yaml(cls, cache=True) -> dict:
+        """
+        Load the flatfile metadata from the associated YAML file into a Python dict
+        """
+        if cache and cls._flatfile_columns_props is not None:
+            return cls._flatfile_columns_props
+        _cols = {}
+        with open(cls._flatfile_columns_path) as fpt:
+            for col_name, props in yaml_load(fpt, SafeLoader).items():
+                # harmonize props:
+                aliases = props.get('alias', [])
+                if isinstance(aliases, str):
+                    aliases = [aliases]
+                props['alias'] = (col_name,) + tuple(aliases)
+                if props.get('type') is not None:
+                    props['type'] = ColumnType[props['type']]
+                if isinstance(props.get('dtype'), str):
+                    props['dtype'] = ColumnDtype[props['dtype']]
+                elif props.get('dtype') is not None:
+                    props['dtype'] = pd.CategoricalDtype(props['dtype'])
+                if 'default' in props:
+                    props['default'] = cast_to_dtype(props['default'], props['dtype'])
+                # limits are not implemented. Uncomment in case:
+                # for k in ("<", "<=", ">", ">="):
+                #     if k in props:
+                #         props[k] = cast_to_dtype(props[k], props['dtype'])
 
-def _load_flatfile_columns_properties(cache=True) -> ColumnsPropertyDict:
-    """
-    Load the flatfile metadata from the associated YAML file into a Python dict
-
-    :param cache: if True, a cache version will be returned (faster, but remember
-        that any change to the cached version will persist permanently!). Otherwise,
-        a new dict loaded from file (slower) will be returned
-    """
-    global _flatfile_columns_props
-    if cache and _flatfile_columns_props:
-        return _flatfile_columns_props
-    _cols = ColumnsPropertyDict()
-    with open(_flatfile_columns_path) as fpt:
-        for col_name, props in yaml_load(fpt, SafeLoader).items():
-            props = _harmonize_col_props(col_name, props)
-            # add all aliases mapped to the relative properties:
-            for c_name in props['alias']:
-                _cols[c_name] = props
-    if cache:
-        _flatfile_columns_props = _cols
-    return _cols
-
-
-def _harmonize_col_props(name: str, props: dict):
-    """Harmonize the values of a column property dict"""
-
-    aliases = props.get('alias', [])
-    if isinstance(aliases, str):
-        aliases = [aliases]
-    props['alias'] = (name,) + tuple(aliases)
-    if 'type' in props:
-        props['type'] = ColumnType[props['type']]
-    dtype: Union[None, ColumnDtype, pd.CategoricalDtype] = None
-    if 'dtype' in props:
-        if isinstance(props['dtype'], str):
-            props['dtype'] = dtype = ColumnDtype[props['dtype']]
-        else:
-            props['dtype'] = dtype = pd.CategoricalDtype(props['dtype'])
-    if 'default' in props:
-        props['default'] = cast_to_dtype(props['default'], dtype)
-    for k in ("<", "<=", ">", ">="):
-        if k in props:
-            props[k] = cast_to_dtype(props[k], dtype)
-    return props
+                # add all aliases mapped to the relative properties:
+                for c_name in props['alias']:
+                    _cols[c_name] = props
+        if cache and cls._flatfile_columns_props is None:
+            cls._flatfile_columns_props = _cols
+        return _cols
 
 
 # Exceptions:
@@ -617,8 +607,9 @@ class FlatfileQueryError(FlatfileError):
 
 # flatfile query expression
 
-def query(flatfile: pd.DataFrame, query_expression: str, raise_no_rows=True) \
-        -> pd.DataFrame:
+def query(
+    flatfile: pd.DataFrame, query_expression: str, raise_no_rows=True
+) -> pd.DataFrame:
     """
     Call `flatfile.query` with some utilities:
      - ISO-861 strings (e.g. "2006-01-31") will be converted to datetime objects

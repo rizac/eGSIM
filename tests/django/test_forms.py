@@ -41,19 +41,21 @@ class Test:
         # We could provide ignore case fields, but we need to think about it
         # (only for model(s)?)
         assert not form.is_valid()
-        assert form.errors_json_data()['message'] == \
-               'model: invalid model(s) BindiEtAl2011t, BindiEtAl2014RJb'
+        assert form.errors_json_data()['message'] == (
+            'model: invalid model(s) BindiEtAl2011t, BindiEtAl2014RJb'
+        )
 
         form = GsimImtForm({GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb']})
         assert not form.is_valid()
-        assert form.errors_json_data()['message'] == \
-               'imt: missing parameter is required'
+        assert form.errors_json_data()['message'] == (
+            'imt: missing parameter is required'
+        )
 
         form = GsimImtForm({GSIM: ['abcde', 'BindiEtAl2014Rjb']})
         assert not form.is_valid()
-        assert form.errors_json_data()['message'] == \
-               'gsim: invalid model(s) abcde; ' \
-               'imt: missing parameter is required'
+        assert form.errors_json_data()['message'] == (
+            'gsim: invalid model(s) abcde; imt: missing parameter is required'
+        )
 
         form = GsimImtForm({IMT: ['abcde', 'BindiEtAl2014Rjb']})
         assert not form.is_valid()

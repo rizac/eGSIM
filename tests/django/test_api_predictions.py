@@ -312,8 +312,10 @@ class Test:
                                 content_type='application/json')
             assert resp1.status_code == 400
             assert self.error_message(resp1) == self.error_message(resp2)
-            assert 'gsim' in self.error_message(resp1) and \
-                   'imt' in self.error_message(resp1)
+            assert (
+                'gsim' in self.error_message(resp1) and
+                'imt' in self.error_message(resp1)
+            )
 
     def test_trellis_error_ngaeast(
             self,

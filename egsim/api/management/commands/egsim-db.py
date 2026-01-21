@@ -28,9 +28,11 @@ class Command(BaseCommand):
         for key in dir(models):
             try:
                 cls = getattr(models, key)
-                if models.__name__ == cls.__module__ and \
-                        issubclass(cls, models.EgsimDbModel) and \
-                        not cls._meta.abstract:
+                if (
+                    models.__name__ == cls.__module__ and
+                    issubclass(cls, models.EgsimDbModel) and
+                    not cls._meta.abstract
+                ):
                     tables[key.lower()] = cls
             except Exception:  # noqa
                 pass
@@ -130,8 +132,10 @@ class Command(BaseCommand):
         """Return (QuerySet, user_input)"""
 
         while True:
-            msg = f'WHERE [COLUMN] [VALUE] ' \
-                  f'({self.suffix["h"]}, {self.suffix["q"]}, {self.suffix["b"]}): '
+            msg = (
+                f'WHERE [COLUMN] [VALUE] ' 
+                f'({self.suffix["h"]}, {self.suffix["q"]}, {self.suffix["b"]}): '
+            )
             field, val, resp = self.parse_field_and_value(db_model, input(msg))
             if resp == self.help:
                 self.stdout.write('type a column and a value (space separated) '
@@ -161,8 +165,10 @@ class Command(BaseCommand):
         """Return user_input"""
 
         while True:
-            msg = f'SET [COLUMN] [NEW VALUE] ' \
-                  f'({self.suffix["h"]}, {self.suffix["q"]}, {self.suffix["b"]}): '
+            msg = (
+                f'SET [COLUMN] [NEW VALUE] ' 
+                f'({self.suffix["h"]}, {self.suffix["q"]}, {self.suffix["b"]}): '
+            )
             field, val, resp = self.parse_field_and_value(queryset.model,
                                                           input(msg))
             if resp == self.help:
@@ -184,8 +190,7 @@ class Command(BaseCommand):
                     queryset.filter(id__in=true_ids).update(**{field.name: False})
                     queryset.exclude(id__in=true_ids).update(**{field.name: True})
                     # update res to display as message below:
-                    val = 'true if the value was false, and false ' \
-                          'if it was true'
+                    val = 'true if the value was false, and false if it was true'
                 else:
                     queryset.update(**{field.name: val})
                 self.stdout.write(
@@ -259,8 +264,10 @@ class Command(BaseCommand):
                     extra_space -= extra_col_space
 
             def format(string:str, length:int):  # noqa
-                return string[:max(0, length - 1)] + '…' if len(string) > length \
-                    else string.ljust(length)
+                if len(string) > length:
+                    return string[:max(0, length - 1)] + '…'
+                else:
+                    return string.ljust(length)
 
             tbl_header = [format(n, l) for n, l in field_lengths.items()]
             tbl_body = [
@@ -268,9 +275,11 @@ class Command(BaseCommand):
                 for obj in objs
             ]
 
-            table = [" " + "  ".join(tbl_header)] + \
-                    ["-" + "--".join(len(x) * "-" for x in tbl_header) + '-'] + \
-                    [" " + "  ".join(x) for x in tbl_body] + \
-                    [msg]
+            table = (
+                [" " + "  ".join(tbl_header)] +
+                ["-" + "--".join(len(x) * "-" for x in tbl_header) + '-'] +
+                [" " + "  ".join(x) for x in tbl_body] +
+                [msg]
+            )
 
         self.stdout.write(self.style.WARNING("\n".join(table)))

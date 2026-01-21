@@ -271,8 +271,7 @@ def _get_edr_kappa(
     """
     mu_a = np.mean(obs)
     mu_y = np.mean(expected)
-    b_1 = np.sum((obs - mu_a) * (expected - mu_y)) /\
-        np.sum((obs - mu_a) ** 2.)
+    b_1 = np.sum((obs - mu_a) * (expected - mu_y)) / np.sum((obs - mu_a) ** 2.)
     b_0 = mu_y - b_1 * mu_a
     y_c = expected - ((b_0 + b_1 * obs) - obs)
     de_orig = np.sum((obs - expected) ** 2.)

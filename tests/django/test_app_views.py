@@ -138,8 +138,9 @@ class Test:
                 {'data-query': 'mag > 7'}
             )
         ]
-        for (url, yaml_filepath, form, additional_data), file_ext in \
-                product(tests, ['hdf', 'csv']):
+        for (url, yaml_filepath, form, additional_data), file_ext in (
+            product(tests, ['hdf', 'csv'])
+        ):
             with open(yaml_filepath) as _:
                 data = yaml.safe_load(_)
             data |= additional_data
@@ -373,8 +374,10 @@ class Test:
         # first plot has 6 traces (3 Sgobba, 3 Abrhamson)
         # second plot has 3 tracs (3 Abrhamson, Sgobba non-implemented for SA)
         # the 3 plots per model is because we also have std (upper and lower bound)
-        assert (len(plots[0]['data']) == 6 and len(plots[1]['data']) == 3) or \
+        assert (
+            (len(plots[0]['data']) == 6 and len(plots[1]['data']) == 3) or
             (len(plots[1]['data']) == 6 and len(plots[0]['data']) == 3)
+        )
 
     def test_predictions_visualize_missing_periods_no_exc(self):
         """
@@ -565,8 +568,9 @@ class Test:
 
         # if the test above fails, also change this:!!!
         from egsim.app.views import oq_gmm_refs_page
-        assert oq_gmm_refs_page == \
-               "https://docs.openquake.org/oq-engine/3.15/reference/"
+        assert oq_gmm_refs_page == (
+            "https://docs.openquake.org/oq-engine/3.15/reference/"
+        )
 
     def test_select_models_from_region(self):
         """

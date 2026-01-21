@@ -28,8 +28,9 @@ class ArrayField(Field):
         :param base_fields: the base field(s). 1-element means that
             this field accept a variable length array of values
         """
-        assert len(set(type(_) for _ in base_fields)) == 1, \
-            'base_fields must be of the same type'
+        assert (
+            len(set(type(_) for _ in base_fields)) == 1
+        ), 'base_fields must be of the same type'
         kwargs.setdefault("widget", base_fields[0].widget)
         if all(b.initial is not None for b in base_fields):
             kwargs.setdefault('initial', [b.initial for b in base_fields])
