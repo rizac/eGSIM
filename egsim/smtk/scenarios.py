@@ -196,12 +196,20 @@ def build_contexts(
         rupture = create_rupture(
             i, magnitude, r_props.rake, r_props.tectonic_region, hypocenter, surface
         )
-        ctx = cmaker.get_ctx(
-            rupture,
-            target_sites,
-            distances=distances if s_props.distance_type == 'rrup' else None
-        )
-        rec_array = cmaker.recarray([ctx])
+
+        # oqp = {'imtls': {k: [] for k in [str(imt)]}, 'mags': mag_str}
+        # ctxm = ContextMaker(rup.tectonic_region_type, [gmpe], oqp)
+        ctxs = list(cmaker.get_ctx_iter([rupture], target_sites))
+        rec_array = cmaker.recarray(ctxs)
+
+        if s_props.distance_type == 'rrup':
+            rec_array.rrup = distances.copy()
+        # ctx = cmaker.get_ctx(
+        #     rupture,
+        #     target_sites,
+        #     distances=distances if s_props.distance_type == 'rrup' else None
+        # )
+        # rec_array = cmaker.recarray([ctx])
         rec_array["occurrence_rate"] = 0.0  # only needed in PSHA calculation
         ctxts.append(rec_array)
 

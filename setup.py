@@ -20,7 +20,7 @@ setup(
     # Minimal requirements for the library (egsim.smtk package).
     # FOR DEV/TESTS, add: `pip install pytest`
     install_requires=[
-        'openquake.engine==3.15.0',  # 1st tested version was >3.5.0
+        'openquake.engine==3.24.1',  # 1st tested version was >3.5.0
         'pandas>=2.2.2',
         'pyyaml>=6.0',
         'tables>=3.8.0',

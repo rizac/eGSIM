@@ -66,7 +66,7 @@ def test_query():
     assert 'bool' in str(d.b.dtype)
     assert 'int' in str(d.i.dtype)
     assert 'datetime' in str(d.d.dtype)
-    assert 'object' in str(d.s.dtype)
+    assert 'object' in str(d.s.dtype) or 'str' in str(d.s.dtype)  # str in pandas 3.0
     assert 'float' in str(d.f.dtype)
 
     # test errors in no rows. Remove last row and test with values not in d:

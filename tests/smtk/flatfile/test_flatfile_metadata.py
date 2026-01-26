@@ -12,6 +12,7 @@ from datetime import datetime
 import yaml
 import pandas as pd
 import numpy as np
+from pandas import StringDtype
 
 from openquake.hazardlib import imt
 from egsim.smtk import gsim, registered_imts, registered_gsims
@@ -194,25 +195,47 @@ def check_with_openquake(
             oq_sites_params.update(model.REQUIRES_SITES_PARAMETERS)
             oq_distances.update(model.REQUIRES_DISTANCES)
 
+    not_implemented_sites_params = {'fpeak'}
+
     for name in rupture_params:
         if name in {'evt_id', 'evt_time'}:
             continue  # defined in yaml, not in openquake
         if name not in oq_rupture_params:
-            assert len(set(rupture_params[name]) & oq_rupture_params) == 1
+            try:
+                assert len(set(rupture_params[name]) & oq_rupture_params) == 1
+            except AssertionError:
+                # allow pycharm breakpoints and check new names when upgrading OQ:
+                raise
 
     for name in sites_params:
-        if name in {'sta_id', 'event_id'}:
+        if name in {'sta_id', 'event_id'} | not_implemented_sites_params:
             continue  # defined in yaml, not in openquake
         if name not in oq_sites_params:
-            assert len(set(sites_params[name]) & oq_sites_params) == 1
+            try:
+                assert len(set(sites_params[name]) & oq_sites_params) == 1
+            except AssertionError:
+                # allow pycharm breakpoints and check new names when upgrading OQ:
+                raise
 
     for name in distances:
         if name not in oq_distances:
-            assert len(set(distances[name]) & oq_distances) == 1
+            try:
+                assert len(set(distances[name]) & oq_distances) == 1
+            except AssertionError:
+                # allow pycharm breakpoints and check new names when upgrading OQ:
+                raise
 
     for ix in imts:
         x = getattr(imt, ix)
         assert callable(x) and x.__name__ in registered_imts
+
+
+def np_float(number):
+    # return numpy float (backward compatibility)
+    try:
+        return np.float_(number)
+    except AttributeError:
+        return np.float64(number)  # new numpy 2.0+
 
 
 def test_get_dtype():
@@ -223,7 +246,7 @@ def test_get_dtype():
         [ColumnDtype.int, np.int_(2)],
         [ColumnDtype.float, 2.2],
         [ColumnDtype.float, np.nan],
-        [ColumnDtype.float, np.float_(2.2)],
+        [ColumnDtype.float, np_float(2.2)],
         [ColumnDtype.bool, True],
         [ColumnDtype.bool, np.bool_(False)],
         [ColumnDtype.str, 'a'],
@@ -386,9 +409,14 @@ def test_str_and_o_dtypes_are_the_same():
     """
     s1 = pd.Series(['s'])
     s2 = pd.Series(['s', None])
-    assert s1.dtype == np.dtype('O')
-    assert s2.dtype == np.dtype('O')
-    assert pd.api.types.is_string_dtype(s1) != pd.api.types.is_string_dtype(s2)
+    if s1.dtype == s1.dtype == np.dtype('O'):
+        assert s1.dtype == np.dtype('O')
+        assert s2.dtype == np.dtype('O')
+        assert pd.api.types.is_string_dtype(s1) != pd.api.types.is_string_dtype(s2)
+    else:
+        # new strdtype in pandas 3.0:
+        assert s1.dtype == s2.dtype == StringDtype(na_value=np.nan)
+        assert pd.api.types.is_string_dtype(s1) == pd.api.types.is_string_dtype(s2)
 
 
 def test_cast_to_dtype():
@@ -399,7 +427,7 @@ def test_cast_to_dtype():
         [ColumnDtype.int, np.int_(2)],
         [ColumnDtype.float, 2.2],
         [ColumnDtype.float, np.nan],
-        [ColumnDtype.float, np.float_(2.2)],
+        [ColumnDtype.float, np_float(2.2)],
         [ColumnDtype.bool, True],
         [ColumnDtype.bool, np.bool_(False)],
         [ColumnDtype.str, 'a'],

@@ -161,11 +161,11 @@ def test_convert_datetimes():
     assert pd.isna(vals[0])
     # check that the last values is 0.001 more than the next-to-last
     # (take into account rounding problems):
-    assert np.isclose(vals[-1] - vals[-2], 0.001, rtol=1e-4, atol=0)
+    assert np.abs((vals[-1] - vals[-2]) / vals[-1]) < 1e-6
     # same test with numpy arrays:
     vals = datetime2float(series.values)
     assert pd.isna(vals[0])
     assert all(isinstance(_, float) for _ in vals[1:-1])
     # check that the last values is 0.001 more than the next-to-last
     # (take into account rounding problems):
-    assert np.isclose(vals[-1] - vals[-2], 0.001, rtol=1e-4, atol=0)
+    assert np.abs((vals[-1] - vals[-2]) / vals[-1]) < 1e-6

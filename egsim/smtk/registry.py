@@ -81,7 +81,7 @@ registered_imts: dict[str, Callable] = dict(_registered_imts())
 
 
 # invert `gsim_aliases` (see `gsim_name` below)
-_gsim_aliases = {v: k for k, v in gsim_aliases.items()}
+_gsim_aliases = {v.strip(): k for k, v in gsim_aliases.items()}
 
 
 def gsim_name(model: GMPE) -> str:
@@ -92,7 +92,7 @@ def gsim_name(model: GMPE) -> str:
     if name == f"[{model.__class__.__name__}]":
         return model.__class__.__name__
     # name is the TOML representation of gsim. Use _gsim_aliases to return the name:
-    return _gsim_aliases[name]
+    return _gsim_aliases[name.strip()]
 
 
 def imt_name(imtx: Union[Callable, IMT]) -> str:
