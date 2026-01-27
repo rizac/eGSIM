@@ -5,8 +5,8 @@ from .residuals import get_residuals
 from .ranking import get_measures_of_fit
 from .flatfile import read_flatfile, FlatfileError
 from .registry import (
-    registered_gsims,
-    registered_imts,
+    gsim_names,
+    imt_names,
     gsim,
     imt,
     intensity_measures_defined_for,

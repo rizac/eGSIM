@@ -26,412 +26,432 @@ flatfile_tk_path = abspath(join(dirname(dirname(__file__)), 'data',
                                 'test_flatfile.csv'))
 
 
+
 @pytest.mark.django_db
-class Test:
+def test_gsimimt_form_invalid():
+    """
+    Tests the gsimimt form invalid case. The form is the base class for all
+    forms using imt and gsim as input"""
+    # test by providing the 'model' parameter (not gsim, still valid byt 'hidden',
+    # see below)
+    form = GsimImtForm({'model': ['BindiEtAl2011t', 'BindiEtAl2014RJb'],
+                        'imt': ['PGA']})
+    # Note: both models are invalid, as the latter has the last J capitalized
+    # We could provide ignore case fields, but we need to think about it
+    # (only for model(s)?)
+    assert not form.is_valid()
+    assert form.errors_json_data()['message'] == (
+        'model: invalid model(s) BindiEtAl2011t, BindiEtAl2014RJb'
+    )
 
-    def test_gsimimt_form_invalid(self):
-        """
-        Tests the gsimimt form invalid case. The form is the base class for all
-        forms using imt and gsim as input"""
-        # test by providing the 'model' parameter (not gsim, still valid byt 'hidden',
-        # see below)
-        form = GsimImtForm({'model': ['BindiEtAl2011t', 'BindiEtAl2014RJb'],
-                            'imt': ['PGA']})
-        # Note: both models are invalid, as the latter has the last J capitalized
-        # We could provide ignore case fields, but we need to think about it
-        # (only for model(s)?)
-        assert not form.is_valid()
-        assert form.errors_json_data()['message'] == (
-            'model: invalid model(s) BindiEtAl2011t, BindiEtAl2014RJb'
-        )
+    form = GsimImtForm({GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb']})
+    assert not form.is_valid()
+    assert form.errors_json_data()['message'] == (
+        'imt: missing parameter is required'
+    )
 
-        form = GsimImtForm({GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb']})
-        assert not form.is_valid()
-        assert form.errors_json_data()['message'] == (
-            'imt: missing parameter is required'
-        )
+    form = GsimImtForm({GSIM: ['abcde', 'BindiEtAl2014Rjb']})
+    assert not form.is_valid()
+    assert form.errors_json_data()['message'] == (
+        'gsim: invalid model(s) abcde; imt: missing parameter is required'
+    )
 
-        form = GsimImtForm({GSIM: ['abcde', 'BindiEtAl2014Rjb']})
-        assert not form.is_valid()
-        assert form.errors_json_data()['message'] == (
-            'gsim: invalid model(s) abcde; imt: missing parameter is required'
-        )
+    form = GsimImtForm({IMT: ['abcde', 'BindiEtAl2014Rjb']})
+    assert not form.is_valid()
+    assert form.errors_json_data()['message'] == \
+           'imt: invalid intensity measure(s) BindiEtAl2014Rjb, abcde; ' \
+           'model: missing parameter is required. ' \
+           'It can be omitted only if both latitude ' \
+           'and longitude parameters are provided'
 
-        form = GsimImtForm({IMT: ['abcde', 'BindiEtAl2014Rjb']})
-        assert not form.is_valid()
-        assert form.errors_json_data()['message'] == \
-               'imt: invalid intensity measure(s) BindiEtAl2014Rjb, abcde; ' \
-               'model: missing parameter is required. ' \
-               'It can be omitted only if both latitude ' \
-               'and longitude parameters are provided'
 
-    def test_imt_invalid(self):
-        data = {
-            GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
-            IMT: ['SA(r)', 'SA(0.2)', 'PGA', 'PGV']
-        }
-        form = GsimImtForm(data)
-        assert not form.is_valid()
-        assert form.errors_json_data()['message'] == \
-               'imt: invalid intensity measure(s) SA(r)'
+@pytest.mark.django_db
+def test_imt_invalid():
+    data = {
+        GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
+        IMT: ['SA(r)', 'SA(0.2)', 'PGA', 'PGV']
+    }
+    form = GsimImtForm(data)
+    assert not form.is_valid()
+    assert form.errors_json_data()['message'] == \
+           'imt: invalid intensity measure(s) SA(r)'
 
-        form = GsimImtForm({GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
-                            IMT: ['SA', '0.t', 'MMI']})
-        assert not form.is_valid()
-        assert form.errors_json_data()['message'] == \
-               'imt: invalid intensity measure(s) 0.t, SA'
+    form = GsimImtForm({GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
+                        IMT: ['SA', '0.t', 'MMI']})
+    assert not form.is_valid()
+    assert form.errors_json_data()['message'] == \
+           'imt: invalid intensity measure(s) 0.t, SA'
 
-        form = GsimImtForm({GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
-                            IMT: ['MMI', '_T_', 'SA(r)']})
-        assert not form.is_valid()
-        assert form.errors_json_data()['message'] == \
-               'imt: invalid intensity measure(s) SA(r), _T_'
+    form = GsimImtForm({GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
+                        IMT: ['MMI', '_T_', 'SA(r)']})
+    assert not form.is_valid()
+    assert form.errors_json_data()['message'] == \
+           'imt: invalid intensity measure(s) SA(r), _T_'
 
-    def test_flatfile_form(self):
-        # double flatfile provided (this should NOT be possible from the API,
-        # but we test the correct message anyway):
-        csv = SimpleUploadedFile("file.csv", b"a,b,c,d", content_type="text/csv")
-        form = FlatfileForm({'flatfile': 'esm2018'}, {'flatfile': csv})
-        assert not form.is_valid()
-        assert form.errors_json_data()['message'] == \
-               'flatfile: select a flatfile by name or upload one, not both'
 
-        # malformed uploaded flatfile:
-        csv = SimpleUploadedFile("file.csv", b"", content_type="text/csv")
-        form = FlatfileForm({}, {'flatfile': csv})
-        assert not form.is_valid()
-        assert form.errors_json_data()['message'] == \
-               'flatfile: the submitted file is empty'
+@pytest.mark.django_db
+def test_flatfile_form():
+    # double flatfile provided (this should NOT be possible from the API,
+    # but we test the correct message anyway):
+    csv = SimpleUploadedFile("file.csv", b"a,b,c,d", content_type="text/csv")
+    form = FlatfileForm({'flatfile': 'esm2018'}, {'flatfile': csv})
+    assert not form.is_valid()
+    assert form.errors_json_data()['message'] == \
+           'flatfile: select a flatfile by name or upload one, not both'
 
-        # no imt:
-        csv = SimpleUploadedFile("file.csv", b"a,b,c,d", content_type="text/csv")
-        form = FlatfileForm({}, {'flatfile': csv})
-        assert not form.is_valid()
+    # malformed uploaded flatfile:
+    csv = SimpleUploadedFile("file.csv", b"", content_type="text/csv")
+    form = FlatfileForm({}, {'flatfile': csv})
+    assert not form.is_valid()
+    assert form.errors_json_data()['message'] == \
+           'flatfile: the submitted file is empty'
 
-        # PGA provided but empty works as the cast to float succeeds:
-        csv = SimpleUploadedFile("file.csv", b"PGA,b,c,d", content_type="text/csv")
-        form = FlatfileForm({}, {'flatfile': csv})
+    # no imt:
+    csv = SimpleUploadedFile("file.csv", b"a,b,c,d", content_type="text/csv")
+    form = FlatfileForm({}, {'flatfile': csv})
+    assert not form.is_valid()
+
+    # PGA provided but empty works as the cast to float succeeds:
+    csv = SimpleUploadedFile("file.csv", b"PGA,b,c,d", content_type="text/csv")
+    form = FlatfileForm({}, {'flatfile': csv})
+    assert form.is_valid()
+
+    # ok?:
+    csv = SimpleUploadedFile(
+        "file.csv",
+        b"PGA,b,c,d\n1.1,,,",
+        content_type="text/csv"
+    )
+    form = FlatfileForm({}, {'flatfile': csv})
+    assert form.is_valid()
+
+
+@pytest.mark.django_db
+def test_provide_unknown_params():
+    """Test that unknown and conflicting parameters"""
+
+    form = GsimImtForm({
+        '_r567_': 5,
+        GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
+        IMT: ['SA(0.1)', 'SA(0.2)', 'PGA', 'PGV']
+    })
+    assert not form.is_valid()
+    assert form.errors_json_data()['message'] == '_r567_: unknown parameter'
+
+    # test another unknown parameter, but this time provide a name of an existing
+    # Form Field ('plot_type'):
+
+    data = {
+        GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
+        IMT: ['PGA'],
+        'mag': '9', 'distance': '0', 'aspect': '1', 'dip': '60', 'plot_type': 'm'
+    }
+    form = PredictionsForm(data)
+    assert not form.is_valid()
+    assert form.errors_json_data()['message'] == 'plot_type: unknown parameter'
+
+    # conflicting names:
+    form = GsimImtForm({
+        'model': ['BindiEtAl2011'],
+        'gmm': ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
+        IMT: ['SA(0.1)', 'SA(0.2)', 'PGA', 'PGV']
+    })
+    assert not form.is_valid()
+    assert form.errors_json_data()['message'] == \
+           'gmm: this parameter conflicts with model; ' \
+           'model: this parameter conflicts with gmm'
+
+
+@pytest.mark.parametrize('data',
+                         [({GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
+                            IMT: ['SA(0.1)', 'SA(0.2)', 'PGA', 'PGV']}),
+                          ({GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
+                            IMT: ['0.1', '0.2', 'PGA', 'PGV']}),
+                          # Do not support anymore wildcards in models:
+                          # ({GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
+                          #   IMT: ['0.1', '0.2', 'PG[AV]']})
+                          ])
+@pytest.mark.django_db
+def test_gsimimt_form_valid(data):
+    form = GsimImtForm(data)
+    assert form.is_valid()
+    dic = form.cleaned_data
+    assert sorted(dic['gsim']) == sorted(data['gsim'])
+    imts = dic['imt']
+    assert 'PGA' in imts
+    assert 'PGV' in imts
+    # to test SA's it's complicated, they should be 'SA(0.1)', 'SA(0.2)'
+    # IN PRINCIPLE but due to rounding errors they might be slightly different.
+    # So do not test for string equality but create imts and test for
+    # 'period' equality:
+    imts = sorted([imt.from_string(i) for i in imts if i not in
+                   ('PGA', 'PGV')], key=lambda imt_: imt_.period)
+    assert imts[0].period == 0.1
+    assert imts[1].period == 0.2
+
+
+@pytest.mark.skip('MMI is implemented in egsim3.0')
+@pytest.mark.django_db
+def test_gsim_not_available():
+    data = {
+        'gmm': ['AllenEtAl2012'],  # defined for MMI (IMT n/a in egsim2.0)
+        IMT: ['SA(0.1)', 'SA(0.2)', 'PG*']
+    }
+    form = GsimImtForm(data)
+    assert not form.is_valid()
+    assert form.errors_json_data()['message'] == \
+           'Invalid request. Problems found in: gmm'
+
+
+@pytest.mark.django_db
+def test_gsimimt_form_not_defined_for_skip_invalid_periods():
+    """
+    test that mismatching gsim <-> imt has the priority over bad
+    SA periods
+    """
+    data = {
+        GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],  # not defined for PGD
+        IMT: ['SA(0.1)', 'SA(0.2)', 'PGA', 'PGV', 'PGD']
+    }
+    form = GsimImtForm(data)
+    assert not form.is_valid()
+    msg = form.errors_json_data()['message']
+    assert msg == (
+        'gsim, imt: incompatible model(s) and intensity measure(s) '
+        'BindiEtAl2011+PGD, BindiEtAl2014Rjb+PGD'
+    )
+
+
+@pytest.mark.django_db
+def test_arrayfields_all_valid_input_types():
+    """
+    Tests some valid inputs in the egsim Fields accepting array of values
+    (MultipleChoiceWildcardField and NArrayField) using the trellis form
+    because it's the most heterogeneous. What we want to check is:
+    1. a MultipleChoiceWildcardField can be input as string S and will be
+        returned as the 1-element list [S] (param GSIM)
+    2. NArrayField can be input as string with space- or comma-separated
+        string chunks (or matlab range notation), but also:
+        2a. As python number (param magnitude)
+        2b. As string parsable to float (param distance)
+        2c. As list of the above types (param vs30)
+    3. A MultipleChoiceWildcardField expands wildcards not only if
+        the input is a string, but also, if the input is a list of strings,
+        for all list sub-elements (param imt)
+    """
+    data = {
+        'model': 'BindiEtAl2011',
+        IMT: ['PGA', 'PGV'],  # ['SA(0.1)', 'PGA', 'PGV'],
+        'mag': 0.5,
+        'dist': '0.1',
+        'dip': 60,
+        'vs30': 60,
+        # 'plot': 'm',
+        'aspect': 1
+    }
+    form = PredictionsForm(data)
+    assert form.is_valid()
+    assert list(form.cleaned_data[GSIM]) == ['BindiEtAl2011']  # testing 1)
+    assert form.cleaned_data['magnitude'] == [0.5]  # testing 2a)
+    assert form.cleaned_data['distance'] == [0.1]  # testing 2b)
+    assert form.cleaned_data['vs30'] == 60  # testing 2c)
+    assert sorted(form.cleaned_data['imt']) == ['PGA', 'PGV']  # testing 3)
+
+
+
+@pytest.mark.django_db
+def test_trellisform_invalid():
+    """Test trellis form invalid"""
+
+    data = {GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
+            IMT: ['SA', 'PGA', 'PGV'],
+            'distance': [1, 'x', ''],
+            'msr': 'x',
+            'mag': 'a'}
+
+    form = PredictionsForm(data)
+    assert not form.is_valid()
+    assert form.errors_json_data()['message'] == (
+        'distance: 2 values are invalid; '
+        'imt: invalid intensity measure(s) SA; '
+        'mag: 1 value is invalid; '
+        'msr: value not found or misspelled'
+    )
+
+
+@pytest.mark.django_db
+def test_flatfile_validation():
+    flatfile_df = read_flatfile(flatfile_tk_path)
+
+    # Normal case (form valid)
+    flatfile = flatfile_df[['rake', 'station_id',
+                            'magnitude', 'rrup', 'vs30', 'event_id', 'PGA']].copy()
+    bio = BytesIO()
+    flatfile.to_csv(bio, sep=',', index=False)
+    files = {'esm2019': SimpleUploadedFile('cover', bio.getvalue())}
+    # mvd = MultiValueDict({'flatfile': fp})
+    form = FlatfileValidationForm({}, files=files)
+    is_valid = form.is_valid()
+    assert is_valid
+    data = form.output()
+    assert isinstance(data['columns'], list) and data['columns']
+
+    # Test removing event_id (form still valid. Previously, had event_id
+    # was required and the form was invalid. Now we removed the mandatory
+    # property for columns because hard to maintain with inference rules):
+    flatfile = flatfile_df[
+        ['rake', 'magnitude', 'rrup', 'vs30', 'PGA']].copy()
+    bio = BytesIO()
+    flatfile.to_csv(bio, sep=',')
+    files = {'esm2019': SimpleUploadedFile('cover', bio.getvalue())}
+    # mvd = MultiValueDict({'flatfile': fp})
+    form = FlatfileValidationForm({}, files=files)
+    is_valid = form.is_valid()
+    assert is_valid
+
+    # Test PGA lower case
+    flatfile = flatfile_df[['rake', 'station_id',
+                            'magnitude', 'rrup', 'vs30', 'event_id', 'PGA']].copy()
+    flatfile = flatfile.rename(columns={'PGA': 'pga'})
+    bio = BytesIO()
+    flatfile.to_csv(bio, sep=',')
+    files = {'esm2019': SimpleUploadedFile('cover', bio.getvalue())}
+    # mvd = MultiValueDict({'flatfile': fp})
+    form = FlatfileValidationForm({}, files=files)
+    is_valid = form.is_valid()
+    assert not is_valid
+    assert form.errors.as_json()
+
+    # Test removing all IMTs
+    flatfile = flatfile_df[
+        ['rake', 'magnitude', 'rrup', 'vs30', 'event_id']].copy()
+    bio = BytesIO()
+    flatfile.to_csv(bio, sep=',')
+    files = {'esm2019': SimpleUploadedFile('cover', bio.getvalue())}
+    # mvd = MultiValueDict({'flatfile': fp})
+    form = FlatfileValidationForm({}, files=files)
+    is_valid = form.is_valid()
+    assert not is_valid
+
+    # Test changing a column data type (magnitude becomes string):
+    flatfile = (
+        flatfile_df[[c for c in flatfile_df.columns if c != 'magnitude']].copy())
+    flatfile['magnitude'] = 'A'
+    bio = BytesIO()
+    flatfile.to_csv(bio, sep=',')
+    files = {'esm2019': SimpleUploadedFile('cover', bio.getvalue())}
+    # mvd = MultiValueDict({'flatfile': fp})
+    form = FlatfileValidationForm({}, files=files)
+    is_valid = form.is_valid()
+    assert not is_valid
+
+
+@pytest.mark.django_db
+def test_get_gsim_from_region():
+
+    # test misspelled regionalization:
+    form = GsimForm({'lat': 48.5, 'lon': 6, 'regionalization': ['.\n..???.u6asd']})
+    assert not form.is_valid()
+
+    regs = ['share', 'eshm20', ['share', 'eshm20'], None]
+    # run several tsts (note: we use str and 1itemlist to test they both work
+    share_models = [
+        "AkkarBommer2010",
+        "CauzziFaccioli2008",
+        "ChiouYoungs2008",
+        "ESHM20Craton",
+        "ZhaoEtAl2006Asc"
+    ]
+    eshm20_models = [
+        "ESHM20Craton",
+        "KothaEtAl2020ESHM20"
+    ]
+    lat, lon = 30, 30
+    expected_models = []
+    for reg in regs:
+        input = {'lat': lat, 'lon': lon}
+        if reg is not None:
+            input['regionalization'] = reg
+        form = GsimForm(input)
         assert form.is_valid()
+        models = form.cleaned_data['regionalization']
+        assert sorted(models) == expected_models
 
-        # ok?:
-        csv = SimpleUploadedFile(
-            "file.csv",
-            b"PGA,b,c,d\n1.1,,,",
-            content_type="text/csv"
-        )
-        form = FlatfileForm({}, {'flatfile': csv})
+        # test that supplying a str is the same as 1-item list with that string:
+        if isinstance(reg, str):
+            input['regionalization'] = [input['regionalization']]
+            form2 = GsimForm(input)
+            assert form2.is_valid()
+            models2 = form2.cleaned_data['regionalization']
+            assert models == models2
+
+    # only share models coordinates:
+    lat, lon = 48.5, 20
+    for reg in regs:
+        input = {'lat': lat, 'lon': lon}
+        if reg is not None:
+            input['regionalization'] = reg
+        form = GsimForm(input)
         assert form.is_valid()
+        models = form.cleaned_data['regionalization']
+        if reg == 'eshm20':
+            assert sorted(models) == []
+        else:
+            assert sorted(models) == share_models
 
-    def test_provide_unknown_params(self):
-        """Test that unknown and conflicting parameters"""
+        # test that supplying a str is the same as 1-item list with that string:
+        if isinstance(reg, str):
+            input['regionalization'] = [input['regionalization']]
+            form2 = GsimForm(input)
+            assert form2.is_valid()
+            models2 = form2.cleaned_data['regionalization']
+            assert models == models2
 
-        form = GsimImtForm({
-            '_r567_': 5,
-            GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
-            IMT: ['SA(0.1)', 'SA(0.2)', 'PGA', 'PGV']
-        })
-        assert not form.is_valid()
-        assert form.errors_json_data()['message'] == '_r567_: unknown parameter'
-
-        # test another unknown parameter, but this time provide a name of an existing
-        # Form Field ('plot_type'):
-
-        data = {
-            GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
-            IMT: ['PGA'],
-            'mag': '9', 'distance': '0', 'aspect': '1', 'dip': '60', 'plot_type': 'm'
-        }
-        form = PredictionsForm(data)
-        assert not form.is_valid()
-        assert form.errors_json_data()['message'] == 'plot_type: unknown parameter'
-
-        # conflicting names:
-        form = GsimImtForm({
-            'model': ['BindiEtAl2011'],
-            'gmm': ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
-            IMT: ['SA(0.1)', 'SA(0.2)', 'PGA', 'PGV']
-        })
-        assert not form.is_valid()
-        assert form.errors_json_data()['message'] == \
-               'gmm: this parameter conflicts with model; ' \
-               'model: this parameter conflicts with gmm'
-
-    @pytest.mark.parametrize('data',
-                             [({GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
-                                IMT: ['SA(0.1)', 'SA(0.2)', 'PGA', 'PGV']}),
-                              ({GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
-                                IMT: ['0.1', '0.2', 'PGA', 'PGV']}),
-                              # Do not support anymore wildcards in models:
-                              # ({GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
-                              #   IMT: ['0.1', '0.2', 'PG[AV]']})
-                              ])
-    def test_gsimimt_form_valid(self, data):
-        form = GsimImtForm(data)
+    # only eshm20 models coordinates:
+    lat, lon = 48.5, 2
+    for reg in regs:
+        input = {'lat': lat, 'lon': lon}
+        if reg is not None:
+            input['regionalization'] = reg
+        form = GsimForm(input)
         assert form.is_valid()
-        dic = form.cleaned_data
-        assert sorted(dic['gsim']) == sorted(data['gsim'])
-        imts = dic['imt']
-        assert 'PGA' in imts
-        assert 'PGV' in imts
-        # to test SA's it's complicated, they should be 'SA(0.1)', 'SA(0.2)'
-        # IN PRINCIPLE but due to rounding errors they might be slightly different.
-        # So do not test for string equality but create imts and test for
-        # 'period' equality:
-        imts = sorted([imt.from_string(i) for i in imts if i not in
-                       ('PGA', 'PGV')], key=lambda imt_: imt_.period)
-        assert imts[0].period == 0.1
-        assert imts[1].period == 0.2
+        models = form.cleaned_data['regionalization']
+        if reg == 'share':
+            assert sorted(models) == []
+        else:
+            assert sorted(models) == eshm20_models
 
-    @pytest.mark.skip('MMI is implemented in egsim3.0')
-    def test_gsim_not_available(self):
-        data = {
-            'gmm': ['AllenEtAl2012'],  # defined for MMI (IMT n/a in egsim2.0)
-            IMT: ['SA(0.1)', 'SA(0.2)', 'PG*']
-        }
-        form = GsimImtForm(data)
-        assert not form.is_valid()
-        assert form.errors_json_data()['message'] == \
-               'Invalid request. Problems found in: gmm'
+        # test that supplying a str is the same as 1-item list with that string:
+        if isinstance(reg, str):
+            input['regionalization'] = [input['regionalization']]
+            form2 = GsimForm(input)
+            assert form2.is_valid()
+            models2 = form2.cleaned_data['regionalization']
+            assert models == models2
 
-    def test_gsimimt_form_not_defined_for_skip_invalid_periods(self):
-        """
-        test that mismatching gsim <-> imt has the priority over bad
-        SA periods
-        """
-        data = {
-            GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],  # not defined for PGD
-            IMT: ['SA(0.1)', 'SA(0.2)', 'PGA', 'PGV', 'PGD']
-        }
-        form = GsimImtForm(data)
-        assert not form.is_valid()
-        msg = form.errors_json_data()['message']
-        assert msg == (
-            'gsim, imt: incompatible model(s) and intensity measure(s) '
-            'BindiEtAl2011+PGD, BindiEtAl2014Rjb+PGD'
-        )
-
-    def test_arrayfields_all_valid_input_types(self):
-        """
-        Tests some valid inputs in the egsim Fields accepting array of values
-        (MultipleChoiceWildcardField and NArrayField) using the trellis form
-        because it's the most heterogeneous. What we want to check is:
-        1. a MultipleChoiceWildcardField can be input as string S and will be
-            returned as the 1-element list [S] (param GSIM)
-        2. NArrayField can be input as string with space- or comma-separated
-            string chunks (or matlab range notation), but also:
-            2a. As python number (param magnitude)
-            2b. As string parsable to float (param distance)
-            2c. As list of the above types (param vs30)
-        3. A MultipleChoiceWildcardField expands wildcards not only if
-            the input is a string, but also, if the input is a list of strings,
-            for all list sub-elements (param imt)
-        """
-        data = {
-            'model': 'BindiEtAl2011',
-            IMT: ['PGA', 'PGV'],  # ['SA(0.1)', 'PGA', 'PGV'],
-            'mag': 0.5,
-            'dist': '0.1',
-            'dip': 60,
-            'vs30': 60,
-            # 'plot': 'm',
-            'aspect': 1
-        }
-        form = PredictionsForm(data)
+    # share + eshm20 models coordinates:
+    lat, lon = 48.5, 10
+    for reg in regs:
+        input = {'lat': lat, 'lon': lon}
+        if reg is not None:
+            input['regionalization'] = reg
+        form = GsimForm(input)
         assert form.is_valid()
-        assert list(form.cleaned_data[GSIM]) == ['BindiEtAl2011']  # testing 1)
-        assert form.cleaned_data['magnitude'] == [0.5]  # testing 2a)
-        assert form.cleaned_data['distance'] == [0.1]  # testing 2b)
-        assert form.cleaned_data['vs30'] == 60  # testing 2c)
-        assert sorted(form.cleaned_data['imt']) == ['PGA', 'PGV']  # testing 3)
+        models = form.cleaned_data['regionalization']
+        if reg == 'share':
+            assert sorted(models) == share_models
+        elif reg == 'eshm20':
+            assert sorted(models) == eshm20_models
+        else:
+            assert sorted(models) == sorted(set(eshm20_models) | set(share_models))
 
-    def test_trellisform_invalid(self):
-        """Test trellis form invalid"""
-
-        data = {GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
-                IMT: ['SA', 'PGA', 'PGV'],
-                'distance': [1, 'x', ''],
-                'msr': 'x',
-                'mag': 'a'}
-
-        form = PredictionsForm(data)
-        assert not form.is_valid()
-        assert form.errors_json_data()['message'] == (
-            'distance: 2 values are invalid; '
-            'imt: invalid intensity measure(s) SA; '
-            'mag: 1 value is invalid; '
-            'msr: value not found or misspelled'
-        )
-
-    def test_flatfile_validation(self):
-        flatfile_df = read_flatfile(flatfile_tk_path)
-
-        # Normal case (form valid)
-        flatfile = flatfile_df[['rake', 'station_id',
-                                'magnitude', 'rrup', 'vs30', 'event_id', 'PGA']].copy()
-        bio = BytesIO()
-        flatfile.to_csv(bio, sep=',', index=False)
-        files = {'esm2019': SimpleUploadedFile('cover', bio.getvalue())}
-        # mvd = MultiValueDict({'flatfile': fp})
-        form = FlatfileValidationForm({}, files=files)
-        is_valid = form.is_valid()
-        assert is_valid
-        data = form.output()
-        assert isinstance(data['columns'], list) and data['columns']
-
-        # Test removing event_id (form still valid. Previously, had event_id
-        # was required and the form was invalid. Now we removed the mandatory
-        # property for columns because hard to maintain with inference rules):
-        flatfile = flatfile_df[
-            ['rake', 'magnitude', 'rrup', 'vs30', 'PGA']].copy()
-        bio = BytesIO()
-        flatfile.to_csv(bio, sep=',')
-        files = {'esm2019': SimpleUploadedFile('cover', bio.getvalue())}
-        # mvd = MultiValueDict({'flatfile': fp})
-        form = FlatfileValidationForm({}, files=files)
-        is_valid = form.is_valid()
-        assert is_valid
-
-        # Test PGA lower case
-        flatfile = flatfile_df[['rake', 'station_id',
-                                'magnitude', 'rrup', 'vs30', 'event_id', 'PGA']].copy()
-        flatfile = flatfile.rename(columns={'PGA': 'pga'})
-        bio = BytesIO()
-        flatfile.to_csv(bio, sep=',')
-        files = {'esm2019': SimpleUploadedFile('cover', bio.getvalue())}
-        # mvd = MultiValueDict({'flatfile': fp})
-        form = FlatfileValidationForm({}, files=files)
-        is_valid = form.is_valid()
-        assert not is_valid
-        assert form.errors.as_json()
-
-        # Test removing all IMTs
-        flatfile = flatfile_df[
-            ['rake', 'magnitude', 'rrup', 'vs30', 'event_id']].copy()
-        bio = BytesIO()
-        flatfile.to_csv(bio, sep=',')
-        files = {'esm2019': SimpleUploadedFile('cover', bio.getvalue())}
-        # mvd = MultiValueDict({'flatfile': fp})
-        form = FlatfileValidationForm({}, files=files)
-        is_valid = form.is_valid()
-        assert not is_valid
-
-        # Test changing a column data type (magnitude becomes string):
-        flatfile = (
-            flatfile_df[[c for c in flatfile_df.columns if c != 'magnitude']].copy())
-        flatfile['magnitude'] = 'A'
-        bio = BytesIO()
-        flatfile.to_csv(bio, sep=',')
-        files = {'esm2019': SimpleUploadedFile('cover', bio.getvalue())}
-        # mvd = MultiValueDict({'flatfile': fp})
-        form = FlatfileValidationForm({}, files=files)
-        is_valid = form.is_valid()
-        assert not is_valid
-
-    def test_get_gsim_from_region(self):
-
-        # test misspelled regionalization:
-        form = GsimForm({'lat': 48.5, 'lon': 6, 'regionalization': ['.\n..???.u6asd']})
-        assert not form.is_valid()
-
-        regs = ['share', 'eshm20', ['share', 'eshm20'], None]
-        # run several tsts (note: we use str and 1itemlist to test they both work
-        share_models = [
-            "AkkarBommer2010",
-            "CauzziFaccioli2008",
-            "ChiouYoungs2008",
-            "ESHM20Craton",
-            "ZhaoEtAl2006Asc"
-        ]
-        eshm20_models = [
-            "ESHM20Craton",
-            "KothaEtAl2020ESHM20"
-        ]
-        lat, lon = 30, 30
-        expected_models = []
-        for reg in regs:
-            input = {'lat': lat, 'lon': lon}
-            if reg is not None:
-                input['regionalization'] = reg
-            form = GsimForm(input)
-            assert form.is_valid()
-            models = form.cleaned_data['regionalization']
-            assert sorted(models) == expected_models
-
-            # test that supplying a str is the same as 1-item list with that string:
-            if isinstance(reg, str):
-                input['regionalization'] = [input['regionalization']]
-                form2 = GsimForm(input)
-                assert form2.is_valid()
-                models2 = form2.cleaned_data['regionalization']
-                assert models == models2
-
-        # only share models coordinates:
-        lat, lon = 48.5, 20
-        for reg in regs:
-            input = {'lat': lat, 'lon': lon}
-            if reg is not None:
-                input['regionalization'] = reg
-            form = GsimForm(input)
-            assert form.is_valid()
-            models = form.cleaned_data['regionalization']
-            if reg == 'eshm20':
-                assert sorted(models) == []
-            else:
-                assert sorted(models) == share_models
-
-            # test that supplying a str is the same as 1-item list with that string:
-            if isinstance(reg, str):
-                input['regionalization'] = [input['regionalization']]
-                form2 = GsimForm(input)
-                assert form2.is_valid()
-                models2 = form2.cleaned_data['regionalization']
-                assert models == models2
-
-        # only eshm20 models coordinates:
-        lat, lon = 48.5, 2
-        for reg in regs:
-            input = {'lat': lat, 'lon': lon}
-            if reg is not None:
-                input['regionalization'] = reg
-            form = GsimForm(input)
-            assert form.is_valid()
-            models = form.cleaned_data['regionalization']
-            if reg == 'share':
-                assert sorted(models) == []
-            else:
-                assert sorted(models) == eshm20_models
-
-            # test that supplying a str is the same as 1-item list with that string:
-            if isinstance(reg, str):
-                input['regionalization'] = [input['regionalization']]
-                form2 = GsimForm(input)
-                assert form2.is_valid()
-                models2 = form2.cleaned_data['regionalization']
-                assert models == models2
-
-        # share + eshm20 models coordinates:
-        lat, lon = 48.5, 10
-        for reg in regs:
-            input = {'lat': lat, 'lon': lon}
-            if reg is not None:
-                input['regionalization'] = reg
-            form = GsimForm(input)
-            assert form.is_valid()
-            models = form.cleaned_data['regionalization']
-            if reg == 'share':
-                assert sorted(models) == share_models
-            elif reg == 'eshm20':
-                assert sorted(models) == eshm20_models
-            else:
-                assert sorted(models) == sorted(set(eshm20_models) | set(share_models))
-
-            # test that supplying a str is the same as 1-item list with that string:
-            if isinstance(reg, str):
-                input['regionalization'] = [input['regionalization']]
-                form2 = GsimForm(input)
-                assert form2.is_valid()
-                models2 = form2.cleaned_data['regionalization']
-                assert models == models2
+        # test that supplying a str is the same as 1-item list with that string:
+        if isinstance(reg, str):
+            input['regionalization'] = [input['regionalization']]
+            form2 = GsimForm(input)
+            assert form2.is_valid()
+            models2 = form2.cleaned_data['regionalization']
+            assert models == models2
 
 
 def test_field2params_in_forms():

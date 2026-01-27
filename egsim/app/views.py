@@ -31,13 +31,11 @@ from ..api.views import (
     error_response
 )
 from .forms import PredictionsVisualizeForm, FlatfileVisualizeForm
-from ..smtk import registered_imts
-from ..smtk.registry import Clabel
+from ..smtk.registry import Clabel, imt_module
 
 img_ext = ('png', 'pdf', 'svg')
 data_ext = ('hdf', 'csv')
-oq_version = '3.15.0'
-oq_gmm_refs_page = "https://docs.openquake.org/oq-engine/3.15/reference/"
+oq_version = '3.24.1'
 
 
 class URLS:  # noqa
@@ -106,7 +104,6 @@ def main(request, page=''):
             'debug': settings.DEBUG,
             'init_data': init_data,
             'oq_version': oq_version,
-            'oq_gmm_refs_page': oq_gmm_refs_page,
             'references': get_references(regionalizations, flatfiles),
             'api_doc': get_api_doc_data(
                 regionalizations, flatfiles, f'{request.scheme}://{request.get_host()}',
@@ -398,7 +395,11 @@ def get_init_data_json(
         },
         'gsims': gsims,
         'imtsHelp': {
-            i: re.sub("\\s+", " ", registered_imts[i].__doc__.strip())
+            i: re.sub(
+                "\\s+",
+                " ",
+                (getattr(imt_module, i).__doc__ or  "No doc. available").strip()
+            )
             for imts in imt_groups for i in imts
         },
         # return the list of imts (imt_groups keys) in the right order:

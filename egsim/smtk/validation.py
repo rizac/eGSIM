@@ -54,6 +54,7 @@ def harmonize_input_gsims(gsims: Iterable[Union[str, GMPE]]) -> dict[str, GMPE]:
                 ValueError,
                 IndexError,
                 KeyError,
+                NameError,
                 FileNotFoundError,
                 OSError,
                 AttributeError,

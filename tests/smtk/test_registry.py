@@ -12,7 +12,7 @@ from openquake.hazardlib.gsim.base import gsim_aliases, GMPE
 from openquake.hazardlib.gsim.base import registry
 from toml.decoder import TomlDecodeError
 
-from egsim.smtk.registry import (registered_gsims, gsim, imt,
+from egsim.smtk.registry import (gsim_names, gsim, imt,
                                  intensity_measures_defined_for,
                                  gsim_name, get_sa_limits)
 
@@ -67,21 +67,21 @@ def test_gsim_name_1to1_relation():
             FileNotFoundError, OSError, AttributeError)
     with warnings.catch_warnings(record=False) as w:
         warnings.simplefilter('ignore')
-        for model in registered_gsims:
+        for model_name in gsim_names():
             try:
-                gsim_ = gsim(model, raise_deprecated=False)
+                model = gsim(model_name, raise_deprecated=False)
             except excs as exc:
                 continue
-            model_name_back = gsim_name(gsim_)
+            model_name_back = gsim_name(model)
             try:
-                assert model == model_name_back
+                assert model_name == model_name_back
             except AssertionError:
                 # FIXME: see with Graeme how to deal with this:
                 #  inputting an instance of `ESHM20CratonShallowMidStressMidAtten`
                 #  in smtlk methods will reutnrn 'KothaEtAl2020ESHM20' as model name
                 #  This is because the former is an alias to the latter without args
                 #  (set alias with default args would work)
-                assert model, model_name_back in {
+                assert model_name, model_name_back in {
                     ('ESHM20CratonShallowMidStressMidAtten', 'KothaEtAl2020ESHM20')
                 }
 

@@ -1,6 +1,6 @@
 """Registry with helper functions to access OpenQuake entities and properties"""
 
-from typing import Union, Iterable, Callable
+from typing import Union, Iterable, Callable, Optional
 import re
 import numpy as np
 
@@ -12,7 +12,9 @@ from openquake.hazardlib.valid import gsim as valid_gsim
 
 
 # added for compatibility with registered_imts (see below)
-registered_gsims: dict[str, type[GMPE]] = registry
+def gsim_names() -> Iterable[str]:
+    """Return an iterable of all model names registered in OpenQuake"""
+    return registry.keys()
 
 
 def gsim(model: Union[str, GMPE], raise_deprecated=True) -> GMPE:
@@ -59,29 +61,39 @@ def imt(arg: Union[float, str, IMT]) -> IMT:
 
 
 # OpenQuake lacks a registry of IMTs, so we need to inspect the imt module:
-def _registered_imts() -> Iterable[tuple[str, Callable]]:
+def imt_names() -> Iterable[str]:
     """Return all IMT names registered in OpenQuake"""
+    import inspect
+    empty = inspect._empty
 
     for name in dir(imt_module):
         if not ('A' <= name[:1] <= 'Z'):  # only upper-case module elements
             continue
         func = getattr(imt_module, name)
-        if not callable(func):  # only callable
+        # only callable(s) and with documentation implemented:
+        if not callable(func):
             continue
-        # call the function with the required arguments, assuming all floats
+        # call func with default args (if an arg has no default use 1.0) and see if IMT
+        sig = inspect.signature(func)
+        args = [
+            1.0 if p.default is empty else p.default for p in sig.parameters.values()
+            if p.kind in (
+                inspect.Parameter.POSITIONAL_ONLY,
+                inspect.Parameter.POSITIONAL_OR_KEYWORD,
+            )
+        ]
+        kwargs = {
+            n: 1.0 if p.default is empty else p.default
+            for n, p in sig.parameters.items()
+            if p.kind==inspect.Parameter.KEYWORD_ONLY
+        }
+        # if IMT is returned, then it is a IMT implemented in the module:
         try:
-            imt_obj = func(*[1. for _ in range(func.__code__.co_argcount)])  # noqa
+            imt_obj = func(*args, **kwargs)
             if isinstance(imt_obj, IMT):
-                yield name, func
+                yield name
         except (ValueError, TypeError, AttributeError):
             pass
-
-
-registered_imts: dict[str, Callable] = dict(_registered_imts())
-
-
-# invert `gsim_aliases` (see `gsim_name` below)
-_gsim_aliases = {v.strip(): k for k, v in gsim_aliases.items()}
 
 
 def gsim_name(model: GMPE) -> str:
@@ -91,8 +103,14 @@ def gsim_name(model: GMPE) -> str:
     # if name is the gsim class name within square brackets, return the class name:
     if name == f"[{model.__class__.__name__}]":
         return model.__class__.__name__
-    # name is the TOML representation of gsim. Use _gsim_aliases to return the name:
-    return _gsim_aliases[name.strip()]
+    global _toml2class
+    if _toml2class is None:
+        _toml2class = {v.strip(): k for k, v in gsim_aliases.items()}
+    # name is the TOML representation of gsim. Use _toml2class to return the name:
+    return _toml2class[name.strip()]
+
+
+_toml2class: Optional[dict[str, str]] = None  #toml repr -> class name
 
 
 def imt_name(imtx: Union[Callable, IMT]) -> str:

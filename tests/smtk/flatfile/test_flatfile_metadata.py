@@ -15,7 +15,7 @@ import numpy as np
 from pandas import StringDtype
 
 from openquake.hazardlib import imt
-from egsim.smtk import gsim, registered_imts, registered_gsims
+from egsim.smtk import gsim, gsim_names, imt_names
 from egsim.smtk.flatfile import (
     ColumnType,
     ColumnDtype,
@@ -185,7 +185,7 @@ def check_with_openquake(
 
     with warnings.catch_warnings(record=False) as w:
         warnings.simplefilter('ignore')
-        for name in registered_gsims:
+        for name in gsim_names():
             try:
                 model = gsim(name)
             except (TypeError, ValueError, FileNotFoundError, OSError, AttributeError,
@@ -225,6 +225,7 @@ def check_with_openquake(
                 # allow pycharm breakpoints and check new names when upgrading OQ:
                 raise
 
+    registered_imts = list(imt_names())
     for ix in imts:
         x = getattr(imt, ix)
         assert callable(x) and x.__name__ in registered_imts

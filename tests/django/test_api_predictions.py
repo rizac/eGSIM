@@ -24,9 +24,8 @@ from egsim.api.forms.scenarios import PredictionsForm
 
 from unittest.mock import patch  # ok in py3.8  # noqa
 
-from egsim.smtk import registered_imts
 from egsim.smtk.flatfile import ColumnType
-from egsim.smtk.registry import imt_name, Clabel
+from egsim.smtk.registry import imt_name, Clabel, imt_names
 
 
 @pytest.mark.django_db
@@ -60,6 +59,8 @@ class Test:
             data=inputdic | {'format': 'json'},
             content_type=MimeType.json
         )
+        # print(resp1.content)
+        # print(resp2.content)
         assert resp1.status_code == resp2.status_code == 200
         result = resp1.json()
         assert result == resp2.json()
@@ -283,7 +284,7 @@ class Test:
         imtz = {
             imt_name(i) for i in AkkarEtAlRjb2014.DEFINED_FOR_INTENSITY_MEASURE_TYPES
         }
-        undefined_imt = [_ for _ in registered_imts.keys() if _ not in imtz]
+        undefined_imt = [_ for _ in imt_names() if _ not in imtz]
 
         for imtx in undefined_imt:
             inputdic = {

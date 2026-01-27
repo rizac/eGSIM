@@ -124,9 +124,11 @@ class EgsimView(View):
         server error (HttpResponse 500) with the exception string representation
         as response body / content
         """
+        # import traceback;
+        # traceback.print_exc()
         return error_response(
             f'Server error ({exc.__class__.__name__}): {str(exc).strip()}. '
-            f'. Please contact the server administrator '
+            f'Please contact the server administrator '
             f'if you think this error is due to a code bug',
             status=500
         )

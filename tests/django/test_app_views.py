@@ -566,12 +566,6 @@ class Test:
         from egsim.app.views import oq_version as egsim_claimed_oq_version
         assert real_oq_version == egsim_claimed_oq_version
 
-        # if the test above fails, also change this:!!!
-        from egsim.app.views import oq_gmm_refs_page
-        assert oq_gmm_refs_page == (
-            "https://docs.openquake.org/oq-engine/3.15/reference/"
-        )
-
     def test_select_models_from_region(self):
         """
         Test the models selection via map clicks. Use US because more borderline case

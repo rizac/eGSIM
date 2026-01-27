@@ -5,8 +5,10 @@ from os.path import join, expanduser, abspath, isfile, dirname, basename
 
 import yaml
 from django.core.management import BaseCommand, CommandError
-from egsim.smtk import (registered_gsims, gsim, intensity_measures_defined_for,
-                        ground_motion_properties_required_by, get_sa_limits)
+from egsim.smtk.registry import gsim_names, gsim
+from egsim.smtk import (
+    intensity_measures_defined_for, ground_motion_properties_required_by, get_sa_limits
+)
 from egsim.smtk.flatfile import column_exists
 from ... import models
 from django.conf import settings
@@ -87,37 +89,29 @@ class Command(BaseCommand):
         empty_table(db_model)
         ok = 0
         with warnings.catch_warnings():
-            for name, model_cls in registered_gsims.items():
-                if model_cls.superseded_by:
-                    continue
-                if (
-                    model_cls.experimental or
-                    model_cls.non_verified or
-                    model_cls.adapted
-                ):
-                    warnings.simplefilter('ignore')
-                else:
-                    warnings.simplefilter('error')
-
+            warnings.simplefilter('ignore')
+            for name in gsim_names():
                 # try to see if we can initialize it:
-                ok += self.write_model(name, model_cls)
+                ok += self.write_model(name)
 
-        discarded = len(registered_gsims) - ok
+        discarded = sum(1 for _ in gsim_names()) - ok
         self.stdout.write(self.style.SUCCESS(
             f'Models saved: {ok}, discarded: {discarded}'
         ))
 
-    def write_model(self, name, cls):
+    def write_model(self, name):
         """Write a GMM entry to DB"""
 
         prefix = 'Discarding'
         try:
-            _ = gsim(name)  # check we can initialize the model
-            imtz = intensity_measures_defined_for(_)
+            gm_model = gsim(name)  # check we can initialize the model
+            if gm_model.superseded_by:
+                return False
+            imtz = intensity_measures_defined_for(gm_model)
             if not imtz:
                 self.stdout.write(f"  {prefix} {name}. No intensity measure defined")
                 return False
-            gmp = ground_motion_properties_required_by(_)
+            gmp = ground_motion_properties_required_by(gm_model)
             if not gmp:
                 self.stdout.write(
                     f"  {prefix} {name}. No ground motion property defined"
@@ -130,17 +124,25 @@ class Command(BaseCommand):
                     f"{invalid}"
                 )
                 return False
-            sa_lim = get_sa_limits(_)
+            sa_lim = get_sa_limits(gm_model)
             models.Gsim.objects.create(
                 name=name,
                 imts=" ".join(sorted(imtz)),
                 min_sa_period=None if sa_lim is None else sa_lim[0],
                 max_sa_period=None if sa_lim is None else sa_lim[1],
-                unverified=cls.non_verified,
-                adapted=cls.adapted,
-                experimental=cls.experimental)
-        except (TypeError, KeyError, IndexError, ValueError, AttributeError) as exc:
-            self.stdout.write(f"  {prefix} {name}. Initialization error: {str(exc)}")
+                unverified=gm_model.non_verified,
+                adapted=gm_model.adapted,
+                experimental=gm_model.experimental)
+        except (
+            TypeError,
+            KeyError,
+            IndexError,
+            ValueError,
+            AttributeError,
+            IsADirectoryError,
+            DeprecationWarning
+        ) as exc:
+            self.stdout.write(f"  {prefix} {name}: {str(exc)}")
             return False
         return True
 

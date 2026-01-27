@@ -13,8 +13,6 @@ from egsim.smtk import get_ground_motion_from_scenarios
 from egsim.smtk.scenarios import RuptureProperties, SiteProperties, Clabel
 
 
-_mag_scalerel = get_available_magnitude_scalerel()
-
 
 class ArrayField(Field):
     """
@@ -118,9 +116,14 @@ class PredictionsForm(GsimImtForm, APIForm):
     ztor = FloatField(
         min_value=0., initial=0., help_text='Top of Rupture Depth (km) ≥ 0'
     )
+
+    _avail_mag_scalerel = {
+        m.__class__.__name__: m for m in get_available_magnitude_scalerel()
+    }
+
     # WARNING IF RENAMING FIELD BELOW: RENAME+MODIFY also `clean_msr`
     msr = ChoiceField(
-        choices=[(_, _) for _ in _mag_scalerel],
+        choices=[(n, n) for n in sorted(_avail_mag_scalerel)],
         initial="WC1994",
         help_text='Magnitude-Area Scaling Relationship'
     )
@@ -200,7 +203,7 @@ class PredictionsForm(GsimImtForm, APIForm):
         object of type :class:`openquake.hazardlib.scalerel.base.BaseMSR`.
         """
         try:
-            return _mag_scalerel[self.cleaned_data['msr']]()
+            return self._avail_mag_scalerel[self.cleaned_data['msr']]
         except Exception as exc:  # noqa
             raise ValidationError(self.ErrMsg.invalid)
 
