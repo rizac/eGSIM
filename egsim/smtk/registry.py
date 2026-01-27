@@ -11,7 +11,6 @@ from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.hazardlib.valid import gsim as valid_gsim
 
 
-# added for compatibility with registered_imts (see below)
 def gsim_names() -> Iterable[str]:
     """Return an iterable of all model names registered in OpenQuake"""
     return registry.keys()
@@ -60,7 +59,6 @@ def imt(arg: Union[float, str, IMT]) -> IMT:
     return imt_from_string(str(arg))
 
 
-# OpenQuake lacks a registry of IMTs, so we need to inspect the imt module:
 def imt_names() -> Iterable[str]:
     """Return all IMT names registered in OpenQuake"""
     import inspect
@@ -159,12 +157,7 @@ def intensity_measures_defined_for(model: Union[str, GMPE]) -> frozenset[str]:
     """Return the intensity measures defined for the given model"""
 
     if isinstance(model, str):
-        # try loading the class first from registry (faster), otherwise the instance
-        # if the class does not hold the info we need:
-        if registry[model].DEFINED_FOR_INTENSITY_MEASURE_TYPES:
-            model = registry[model]
-        else:
-            model = gsim(model)
+        model = gsim(model)
     return frozenset(_.__name__ for _ in model.DEFINED_FOR_INTENSITY_MEASURE_TYPES)
 
 
@@ -179,16 +172,7 @@ def ground_motion_properties_required_by(*models: Union[str, GMPE]) -> frozenset
     ret = []
     for model in models:
         if isinstance(model, str):
-            # try loading the class first from registry (faster), otherwise the instance
-            # if the class does not hold the info we need:
-            cls = registry[model]
-            model = cls if any(
-                (
-                    cls.REQUIRES_DISTANCES,
-                    cls.REQUIRES_SITES_PARAMETERS,
-                    cls.REQUIRES_RUPTURE_PARAMETERS
-                )
-            ) else gsim(model)
+            model = gsim(model)
         ret.extend(model.REQUIRES_DISTANCES or [])
         ret.extend(model.REQUIRES_SITES_PARAMETERS or [])
         ret.extend(model.REQUIRES_RUPTURE_PARAMETERS or [])
