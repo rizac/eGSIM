@@ -61,9 +61,6 @@ def imt(arg: Union[float, str, IMT]) -> IMT:
 
 def imt_names() -> Iterable[str]:
     """Return all IMT names registered in OpenQuake"""
-    import inspect
-    empty = inspect._empty
-
     for name in dir(imt_module):
         if not ('A' <= name[:1] <= 'Z'):  # only upper-case module elements
             continue
@@ -71,27 +68,19 @@ def imt_names() -> Iterable[str]:
         # only callable(s) and with documentation implemented:
         if not callable(func):
             continue
-        # call func with default args (if an arg has no default use 1.0) and see if IMT
-        sig = inspect.signature(func)
-        args = [
-            1.0 if p.default is empty else p.default for p in sig.parameters.values()
-            if p.kind in (
-                inspect.Parameter.POSITIONAL_ONLY,
-                inspect.Parameter.POSITIONAL_OR_KEYWORD,
-            )
-        ]
-        kwargs = {
-            n: 1.0 if p.default is empty else p.default
-            for n, p in sig.parameters.items()
-            if p.kind==inspect.Parameter.KEYWORD_ONLY
-        }
-        # if IMT is returned, then it is a IMT implemented in the module:
-        try:
-            imt_obj = func(*args, **kwargs)
-            if isinstance(imt_obj, IMT):
-                yield name
-        except (ValueError, TypeError, AttributeError):
-            pass
+        # Let's call func with defaults 1.0s and None's and see if returns IMT
+        # (quite hacky, but it works for main IMTs such as SA):
+        for args in [
+            [1.] * func.__code__.co_argcount,
+            [None] * func.__code__.co_argcount,
+        ]:
+            try:
+                imt_obj = func(*args)
+                if isinstance(imt_obj, IMT):
+                    yield name
+                    break
+            except (ValueError, TypeError, AttributeError):
+                pass
 
 
 def gsim_name(model: GMPE) -> str:
