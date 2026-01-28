@@ -91,7 +91,7 @@ run / debug it normally
 Set variables (change it in your case!!):
 ```
 export PY_VERSION="3.11.14"; export OQ_VERSION="3.24.1";
-
+```
 
 - Create a new virtual env, decide which Python version you want
   to use for the server, and install it if needed.
@@ -115,7 +115,10 @@ export PY_VERSION="3.11.14"; export OQ_VERSION="3.24.1";
   pip install --upgrade pip && (cd ../oq-engine${OQ_VERSION} && pip install -r ${REQUIREMENTS_FILE} && pip install -e .) 
   ```
 
-- Go to eGSIM setup.py and CHANGE opequake version to ${OQ_VERSION} AND eGSIM version. Now install eGSIM (library only):
+- Go to eGSIM setup.py and set:
+  `__VERSION_=${OQ_VERSION}` (e.g., `__VERSION__="3.24.1"`. We keep eGSIM version
+  in synchro with OpenQuake for simplicity and because they were almost aligned).
+  Now install eGSIM (library only):
   ```
   pip install -U -e .
   pip freeze > ./${REQUIREMENTS_FILE}
