@@ -104,7 +104,6 @@ export PY_VERSION="3.11.14"; export OQ_VERSION="3.24.1";
 - clone a specific openquake version, usually on the same level of eGSIM:
   ```
   (cd .. && git clone --branch v${OQ_VERSION} https://github.com/gem/oq-engine.git ./oq-engine${OQ_VERSION})
-
   ```
 
 - Look at the openquake directory and search your installation file ${REQUIREMENTS_FILE}. E.g.:
