@@ -66,7 +66,7 @@ def imt_names() -> Iterable[str]:
             continue
         func = getattr(imt_module, name)
         # only callable(s) and with documentation implemented:
-        if not callable(func):
+        if not callable(func) or not hasattr(func, "__code__"):
             continue
         # Let's call func with defaults 1.0s and None's and see if returns IMT
         # (quite hacky, but it works for main IMTs such as SA):

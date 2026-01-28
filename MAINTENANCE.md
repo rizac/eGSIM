@@ -88,35 +88,63 @@ run / debug it normally
 
 **WHEN:** OpenQuake upgrade (e.g., new models to be made available)
 
+Set variables (change it in your case!!):
+```
+export PY_VERSION="3.11.14"; export OQ_VERSION="3.24.1";
+
+
 - Create a new virtual env, decide which Python version you want
   to use for the server, and install it if needed.
 
-- Look at the workflows run, and follow installation from creating 
-  a virtual env up to installing the desired OpenQuake version.
-  **STOP after installing OpenQuake** and type:
-  ```console
-  pip freeze >./requirements.lib.txt && pip install pytest
+  ```
+  python -m venv .venv .venv/py${PY_VERSION}-oq${OQ_VERSION}
+  source .venv/py${PY_VERSION}-oq${OQ_VERSION}/bin/activate
   ```
 
-- Run tests for smtk (see above). Fix ecode as needed
-
-- Install eGSIM web app, upgrading its dependencies:
-  ```console
-  pip install -U --upgrade-strategy eager ".[web]"
-  pip freeze > ./requirements.txt
+- clone a specific openquake version, usually on the same level of eGSIM:
   ```
-  the upgrade strategy tries to upgrade stuff to the latest 
-  version (needed for e.g., Django), there might be conflicts 
-  though, fix conflicts in case
+  (cd .. && git clone --branch v${OQ_VERSION} https://github.com/gem/oq-engine.git ./oq-engine${OQ_VERSION})
 
-- Run tests for web app (see above). Fix ecode as needed
+  ```
 
-- Change `setup.py` and set the current OpenQuake version in 
-  `install_requires` (uncomment it if commented). Optionally,
-  remove egsim from requirements.txt 
-  (it might interfere with Django web?*).
+- Look at the openquake directory and search your installation file ${REQUIREMENTS_FILE}. E.g.:
+  ```
+  export REQUIREMENTS_FILE="requirements-py311-linux64.txt"
+  ```
+  ```
+  pip install --upgrade pip && (cd ../oq-engine${OQ_VERSION} && pip install -r ${REQUIREMENTS_FILE} && pip install -e .) 
+  ```
 
-- Eventually, **commit and push**
+- Go to eGSIM setup.py and CHANGE opequake version to ${OQ_VERSION} AND eGSIM version. Now install eGSIM (library only):
+  ```
+  pip install -U -e .
+  pip freeze > ./${REQUIREMENTS_FILE}
+  ```
+
+
+- Run tests (smtk only):
+  ```
+  pip install -U pytest
+  ```
+  ```
+  pytest -xvvv ./tests/smtk
+  ```
+  Fix if needed
+
+- Install web app (force upgrade :
+  ```
+  pip install -U ".[web]"
+  pip install -U --no-deps django
+  pip freeze > ./${REQUIREMENTS_FILE}.web
+  ```
+  Open ${REQUIREMENTS_FILE}.web, and add " --no-deps" at the end of the where Django is installed
+
+- Run tests:
+  ```
+  export DJANGO_SETTINGS_MODULE="egsim.settings.test" && pytest -xvvv ./tests/django
+  ```
+  Fix code as needed, commit push and so on
+
 
 
 ## New data

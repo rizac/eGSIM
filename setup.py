@@ -5,9 +5,11 @@ Python and OpenQuake-based web service for selecting, comparing and testing
 Ground Shaking Intensity Models.
 """
 
+__VERSION__ == "3.24.1"  # KEEP ALIGNED WITH OPENQUAKE!
+
 setup(
     name='egsim',
-    version='2.1.0',
+    version=__VERSION__,
     description=_README,
     url='https://github.com/rizac/eGSIM',
     packages=find_packages(exclude=['tests', 'tests.*']),
@@ -20,7 +22,7 @@ setup(
     # Minimal requirements for the library (egsim.smtk package).
     # FOR DEV/TESTS, add: `pip install pytest`
     install_requires=[
-        'openquake.engine==3.24.1',  # 1st tested version was >3.5.0
+        f'openquake.engine=={__VERSION__}',  # 1st tested version was >3.5.0
         'pandas>=2.2.2',
         'pyyaml>=6.0',
         'tables>=3.8.0',
@@ -36,7 +38,6 @@ setup(
             'kaleido>=0.2.1',  # required by plotly to save images
             # test packages:
             'pytest',
-            'pylint>=2.3.1',
             'pytest-django>=3.4.8',
             'pytest-cov>=2.6.1'
         ]
