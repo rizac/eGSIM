@@ -2,8 +2,19 @@
 
 ## Install for development
 
-Follow installation on GitHub workflow, remember to add -e editable
-in the last command: `pip install -e ...`
+Choose your requirements file and then run installation 
+(`-e` is optional. If you do not know what it is, simply remove it)
+
+- New macos (before 2023. Check by typing `uname -m` on terminal, 
+  you should **not** get `arm64`):
+  
+  `pip install -r requirements-py311-macos_x86_64.txt && pip install [-e] .`
+
+- Old macos (`uname -m` on terminal gives `arm64`)
+  
+  `pip install -r requirements-py311-macos_arm64.txt && pip install [-e] .`
+
+- Linux (To be done)
 
 ## Run tests (smtk lib only)
 ```bash
@@ -93,59 +104,56 @@ Set variables (change it in your case!!):
 export PY_VERSION="3.11.14"; export OQ_VERSION="3.24.1";
 ```
 
-- Create a new virtual env, decide which Python version you want
-  to use for the server, and install it if needed.
+Create a new virtual env, decide which Python version you want 
+to use for the server, and install it if needed.
 
-  ```
-  python -m venv .venv .venv/py${PY_VERSION}-oq${OQ_VERSION}
-  source .venv/py${PY_VERSION}-oq${OQ_VERSION}/bin/activate
-  ```
+```
+python -m venv .venv .venv/py${PY_VERSION}-oq${OQ_VERSION}
+source .venv/py${PY_VERSION}-oq${OQ_VERSION}/bin/activate
+```
 
-- clone a specific openquake version, usually on the same level of eGSIM:
-  ```
-  (cd .. && git clone --branch v${OQ_VERSION} https://github.com/gem/oq-engine.git ./oq-engine${OQ_VERSION})
-  ```
+Clone a specific openquake version, usually on the same level of eGSIM:
+```
+(cd .. && git clone --branch v${OQ_VERSION} https://github.com/gem/oq-engine.git ./oq-engine${OQ_VERSION})
+```
 
-- Look at the openquake directory and search your installation file ${REQUIREMENTS_FILE}. E.g.:
-  ```
-  export REQUIREMENTS_FILE="requirements-py311-linux64.txt"
-  ```
-  ```
-  pip install --upgrade pip && (cd ../oq-engine${OQ_VERSION} && pip install -r ${REQUIREMENTS_FILE} && pip install -e .) 
-  ```
+Look at the openquake directory and search your installation file ${REQUIREMENTS_FILE}. E.g.:
+```
+export REQUIREMENTS_FILE=../oq-engine${OQ_VERSION}/requirements-py311-linux64.txt
+```
+```
+pip install --upgrade pip && pip install -r "$REQUIREMENTS_FILE" && pip install openquake.engine==${OQ_VERSION} && pip freeze > "$(basename "$REQUIREMENTS_FILE")"
+```
 
-- Go to eGSIM setup.py and set:
-  `__VERSION_=${OQ_VERSION}` (e.g., `__VERSION__="3.24.1"`. We keep eGSIM version
-  in synchro with OpenQuake for simplicity and because they were almost aligned).
-  Now install eGSIM (library only):
-  ```
-  pip install -U -e .
-  pip freeze > ./${REQUIREMENTS_FILE}
-  ```
+Go to eGSIM setup.py and set:
+`__VERSION_=${OQ_VERSION}` (e.g., `__VERSION__="3.24.1"`. We keep eGSIM version 
+in synchro with OpenQuake):
+```
+pip install -U -e . && pip freeze > "$(basename "$REQUIREMENTS_FILE")"
+```
+Open requirements file and **remove** egsim line.
 
+Run tests (smtk only):
+```
+pip install -U pytest
+```
+```
+pytest -xvvv ./tests/smtk
+```
+Fix if needed
 
-- Run tests (smtk only):
-  ```
-  pip install -U pytest
-  ```
-  ```
-  pytest -xvvv ./tests/smtk
-  ```
-  Fix if needed
+Install web app (force upgrade :
+```
+pip install -U --ignore-installed django && pip install -U -e ".[web]"
+```
 
-- Install web app (force upgrade :
-  ```
-  pip install -U ".[web]"
-  pip install -U --no-deps django
-  pip freeze > ./${REQUIREMENTS_FILE}.web
-  ```
-  Open ${REQUIREMENTS_FILE}.web, and add " --no-deps" at the end of the where Django is installed
-
-- Run tests:
-  ```
-  export DJANGO_SETTINGS_MODULE="egsim.settings.test" && pytest -xvvv ./tests/django
-  ```
-  Fix code as needed, commit push and so on
+(you might still see old django version in requirements file. To check Django version, run:)
+`python -c 'import django;print(django.__version__)'`
+Run tests:
+```
+export DJANGO_SETTINGS_MODULE="egsim.settings.test" && pytest -xvvv ./tests/django
+```
+Fix code as needed, commit push and so on
 
 
 

@@ -18,7 +18,6 @@ django-cookie-consent @ https://wheelhouse.openquake.org/v3/py/django_cookie_con
 django-cors-headers @ https://wheelhouse.openquake.org/v3/py/django_cors_headers-4.3.1-py3-none-any.whl#sha256=0b1fd19297e37417fc9f835d39e45c8c642938ddba1acce0c1753d3edef04f36
 django-pam @ https://wheelhouse.openquake.org/v3/py/django_pam-2.1.2-py2.py3-none-any.whl#sha256=b7884f8210df49c5f48e4372c50db3fd91b16768aa77535201e1a7578240ba80
 docutils @ https://wheelhouse.openquake.org/v3/py/docutils-0.20.1-py3-none-any.whl#sha256=96f387a2c5562db4476f09f13bbab2192e764cac08ebbf3a34a95d9b1e4a59d6
--e git+https://github.com/rizac/eGSIM.git@1925a60b3ef350972995afb2f0912aba04720010#egg=egsim
 fiona @ https://wheelhouse.openquake.org/v3/macos/py311/fiona-1.9.5-cp311-cp311-macosx_10_15_x86_64.whl#sha256=3cdabb5909591820835b97be419b17a4fdf7d1e5ccd22d764f011ed23e71a982
 flake8 @ https://wheelhouse.openquake.org/v3/py/flake8-6.1.0-py2.py3-none-any.whl#sha256=ffdfce58ea94c6580c77888a86506937f9a1a227dfcd15f245d694ae20a6b6e5
 flatbuffers @ https://wheelhouse.openquake.org/v3/py/flatbuffers-23.5.26-py2.py3-none-any.whl#sha256=c0ff356da363087b915fde4b8b45bdda73432fc17cddb3c8157472eab1422ad1

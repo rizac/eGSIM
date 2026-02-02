@@ -5,7 +5,7 @@ Python and OpenQuake-based web service for selecting, comparing and testing
 Ground Shaking Intensity Models.
 """
 
-__VERSION__ == "3.24.1"  # KEEP ALIGNED WITH OPENQUAKE!
+__VERSION__ = "3.24.1"  # KEEP ALIGNED WITH OPENQUAKE!
 
 setup(
     name='egsim',

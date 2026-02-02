@@ -174,7 +174,11 @@ def build_contexts(
         len(magnitudes) * len(distances)
     """
     cmaker = init_context_maker(
-        gsims, imts, magnitudes, tectonic_region=r_props.tectonic_region
+        gsims,
+        imts,
+        magnitudes,
+        rrup_distances=distances if s_props.distance_type == 'rrup' else None,
+        tectonic_region=r_props.tectonic_region
     )
     ctxts = []
     for i, magnitude in enumerate(magnitudes):
