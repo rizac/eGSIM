@@ -177,7 +177,6 @@ def build_contexts(
         gsims,
         imts,
         magnitudes,
-        rrup_distances=distances if s_props.distance_type == 'rrup' else None,
         tectonic_region=r_props.tectonic_region
     )
     ctxts = []

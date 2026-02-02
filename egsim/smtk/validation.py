@@ -149,7 +149,8 @@ def init_context_maker(
 
     param = {
         "imtls": {i if isinstance(i, str) else imt_name(i): [] for i in imts},
-        "mags":  [f"{mag:.2f}" for mag in magnitudes]
+        "mags":  [f"{mag:.2f}" for mag in magnitudes],
+        'maximum_distance': lambda *a, **kw: 1000
     }
     oq_exceptions = (ValueError, KeyError)
     try:
