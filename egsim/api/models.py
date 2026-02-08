@@ -1,30 +1,17 @@
-"""
-Models for the django app
+"""DB Models for the web API and Django APP"""
 
-Created on 5 Apr 2019
-
-@author: riccardo
-"""
 from __future__ import annotations
 from typing import Any, Self
 
-from django.db.models import (Model as DjangoDbModel, TextField, BooleanField,
-                              Index, URLField, Manager, QuerySet, FloatField)
-from django.db.models.options import Options
+from django.db.models import (
+    Model as DbModel, TextField, BooleanField, Index, URLField, QuerySet, FloatField
+)
 
 
-# Notes: primary keys are auto added if not present ('id' of type BigInt or so).
-# All models here that are not abstract will be available prefixed with 'api_'
-# in the admin panel (https://<site_url>/admin)
+# Notes: primary keys are auto added if not present ('id' of type BigInt or so)
 
-
-class EgsimDbModel(DjangoDbModel):
+class EgsimDbModel(DbModel):
     """Abstract base class of Egsim Db models"""
-
-    # attrs dynamically set by Django. declared here just to silent lint warnings:
-    # (NOTE: `objects` SHOULD BE USED INTERNALLY, see `queryset` docstring for details)
-    objects: Manager  # https://docs.djangoproject.com/en/stable/topics/db/managers
-    _meta: Options  # https://docs.djangoproject.com/en/stable/ref/models/options/
 
     name = TextField(null=False, unique=True, help_text="Unique name")
     hidden = BooleanField(
@@ -60,7 +47,7 @@ class EgsimDbModel(DjangoDbModel):
         return queryset.filter(hidden=False)
 
     @classmethod
-    def names(cls) -> QuerySet[str]:
+    def names(cls) -> QuerySet[Self, str]:
         """Return a QuerySet yielding all instance unique names (`str`)"""
 
         return cls.queryset('name').values_list('name', flat=True)
@@ -100,7 +87,7 @@ class Gsim(EgsimDbModel):
     # Note: `superseded_by` is not used (we do not save deprecated Gsims)
 
 
-class Reference(DjangoDbModel):
+class Reference(DbModel):
     """
     Abstract class for Table rows representing a reference to some work
     (e.g. data, file, article)"""

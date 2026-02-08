@@ -17,7 +17,7 @@ from egsim.api import models
 class Command(BaseCommand):
     help = """Interactive Django command to modify eGSIM table content. 
     Particularly useful to 
-    quickly hide/show items in the API
+    quickly hide/show items in the web API
     """
 
     def handle(self, *args, **options):
@@ -74,12 +74,12 @@ class Command(BaseCommand):
                 return tables[res], res
 
     def parse_field_and_value(
-            self,
-            db_model: Model,
-            input_result, *,
-            allow_pkey=False,
-            allow_editable=False,
-            allow_fkey=False
+        self,
+        db_model: Model,
+        input_result, *,
+        allow_pkey=False,
+        allow_editable=False,
+        allow_fkey=False
     ) -> tuple[Optional[Field], Optional[Any], str]:
         """Return (Field, user_input)"""
 
@@ -218,11 +218,14 @@ class Command(BaseCommand):
         DateTimeField: lambda v: datetime.strptime(str(v), '%Y-%m-%d %H:%M:%S')
     }
 
-    def print_table(self, queryset: QuerySet,
-                    fields: Optional[list[str]] = None,
-                    order_by: Optional[tuple[str]] = ('name',),
-                    max_width: int = 120,
-                    max_rows=5):
+    def print_table(
+        self,
+        queryset: QuerySet,
+        fields: Optional[list[str]] = None,
+        order_by: Optional[tuple[str]] = ('name',),
+        max_width: int = 120,
+        max_rows=5
+    ):
         """
         Pretty print the given table rows.
 

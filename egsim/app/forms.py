@@ -162,11 +162,11 @@ class PredictionsVisualizeForm(PredictionsForm):
 
     @staticmethod
     def get_plot_traces_and_layout(
-            x: dict[str, np.ndarray],
-            y: dict[str, tuple[np.ndarray, np.ndarray]],
-            x_label,
-            y_label,
-            colors: dict[str, str]
+        x: dict[str, np.ndarray],
+        y: dict[str, tuple[np.ndarray, np.ndarray]],
+        x_label,
+        y_label,
+        colors: dict[str, str]
     ) -> tuple[list[dict], dict]:
         """
         Return the traces and layout of a prediction plot (to be displayed using the
@@ -373,8 +373,9 @@ class ResidualsVisualizeForm(ResidualsForm):
         return {'plots': [plots[key] for key in sorted(plots.keys())]}
 
     @staticmethod
-    def get_plot_traces_and_layout(model: str, imt: str, x, y, likelihood: bool,
-                                   xlabel: str, color: str) -> tuple[list[dict], dict]:
+    def get_plot_traces_and_layout(
+        model: str, imt: str, x, y, likelihood: bool, xlabel: str, color: str
+    ) -> tuple[list[dict], dict]:
         """
         Return the traces and layout of a residuals plot (to be displayed using the
         JavaScript library Plotly). Traces is a list, where each Trace is a dict
@@ -593,8 +594,9 @@ class FlatfileVisualizeForm(APIForm, FlatfileForm):
         return {'plots': [plot]}
 
     @staticmethod
-    def get_plot_traces_and_layout(x, y, x_label: str, y_label: str,
-                                   color: str) -> tuple[list[dict], dict]:
+    def get_plot_traces_and_layout(
+        x, y, x_label: str, y_label: str, color: str
+    ) -> tuple[list[dict], dict]:
         """
         Return the traces and layout of a flatfile plot (to be displayed using the
         JavaScript library Plotly). Traces is a list, where each Trace is a dict

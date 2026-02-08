@@ -37,7 +37,7 @@ def axis_type(values: Optional[Union[np.ndarray, pd.Series]]) -> str:
 
 
 def colors_cycle(hex_colors: Optional[Iterable[str]] = None) -> Iterator[str]:
-    """Endless iterator cycling through default colors in `rgba(...)` form """
+    """Endless iterator cycling through default colors in `rgba(...)` form"""
 
     values = []
     if hex_colors is None:

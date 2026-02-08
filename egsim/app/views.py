@@ -96,7 +96,6 @@ def main(request, page=''):
     flatfiles = list(models.Flatfile.queryset())
     init_data = get_init_data_json(regionalizations, flatfiles, settings.DEBUG)
     init_data['currentPage'] = page or URLS.WEBPAGE_HOME
-    mf = init_data['gsims']
     return render(
         request,
         template_name='egsim.html',

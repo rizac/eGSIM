@@ -154,7 +154,9 @@ class EgsimView(View):
         ret = {}
         for param_name, values in query_dict.lists():
             if param_name not in literal_comma and any(',' in v for v in values):
-                values = [v for val in values for v in re.split(r"\s*,\s*|\s+", val)]
+                values = [
+                    v for val in values for v in re.split(r"\s*,\s*|\s+", val)
+                ]
             for i in range(len(values)):
                 if values[i] in nulls:
                     values[i] = None
@@ -240,7 +242,7 @@ class APIFormView(EgsimView):
     ```
     """
     # The APIForm of this view, to be set in subclasses:
-    formclass: Type[APIForm] = None
+    formclass: Type[APIForm] = APIForm
 
     responses: dict[str, Callable[[APIForm], HttpResponseBase]] = {
         'json': lambda form: JsonResponse(form.output(), status=200)
@@ -422,7 +424,8 @@ def read_df_from_csv_stream(stream: Union[bytes, IO], **kwargs) -> pd.DataFrame:
     header = kwargs.setdefault('header', [0])
     kwargs.setdefault('index_col', 0)
     dframe = pd.read_csv(content, **kwargs)
-    if header and len(header) > 1:  # multi-index, in case of "Unnamed:" column, replace:
+    if header and len(header) > 1:
+        # multi-index, in case of "Unnamed:" column, replace:
         dframe.rename(
             columns=lambda c: "" if c.startswith("Unnamed:") else c, inplace=True
         )

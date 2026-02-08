@@ -162,8 +162,9 @@ class FlatfileForm(EgsimBaseForm):
 
 
 class FlatfileValidationForm(APIForm, FlatfileForm):
-    """Form for flatfile validation, on success return info from the uploaded flatfile"""
-
+    """
+    Form for flatfile validation, on success return info from the uploaded flatfile
+    """
     def output(self) -> Optional[dict]:
         """
         Compute and return the output from the input data (`self.cleaned_data`),
