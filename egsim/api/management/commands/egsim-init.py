@@ -5,9 +5,9 @@ from os.path import join, expanduser, abspath, isfile, dirname, basename
 
 import yaml
 from django.core.management import BaseCommand, CommandError
-from egsim.smtk.registry import gsim_names, gsim
+from egsim.smtk.registry import gsim_names, gsim, SmtkError
 from egsim.smtk import (
-    intensity_measures_defined_for, ground_motion_properties_required_by, get_sa_limits
+    intensity_measures_defined_for, ground_motion_properties_required_by, sa_limits
 )
 from egsim.smtk.flatfile import column_exists
 from ... import models
@@ -124,7 +124,7 @@ class Command(BaseCommand):
                     f"{invalid}"
                 )
                 return False
-            sa_lim = get_sa_limits(gm_model)
+            sa_lim = sa_limits(gm_model)
             models.Gsim.objects.create(
                 name=name,
                 imts=" ".join(sorted(imtz)),
@@ -133,15 +133,7 @@ class Command(BaseCommand):
                 unverified=gm_model.non_verified,
                 adapted=gm_model.adapted,
                 experimental=gm_model.experimental)
-        except (
-            TypeError,
-            KeyError,
-            IndexError,
-            ValueError,
-            AttributeError,
-            IsADirectoryError,
-            DeprecationWarning
-        ) as exc:
+        except SmtkError as exc:
             self.stdout.write(f"  {prefix} {name}: {str(exc)}")
             return False
         return True

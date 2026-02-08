@@ -10,7 +10,7 @@ from django.forms.fields import CharField, FileField
 from egsim.smtk import (
     ground_motion_properties_required_by,
     intensity_measures_defined_for,
-    get_sa_limits
+    sa_limits
 )
 from egsim.smtk.flatfile import (
     read_flatfile,
@@ -202,7 +202,7 @@ class FlatfileMetadataInfoForm(GsimForm, APIForm):
             inf = float('inf')
             min_p, max_p = -inf, inf
             for m_name, model in cleaned_data['gsim'].items():
-                p_bounds = get_sa_limits(model)
+                p_bounds = sa_limits(model)
                 if p_bounds is None:
                     # FIXME: we assume a model supporting SA with no period limits
                     #  is defined for all periods, but is it true?
@@ -230,7 +230,7 @@ class FlatfileMetadataInfoForm(GsimForm, APIForm):
         :return: any Python object (e.g., a JSON-serializable dict)
         """
         cleaned_data = self.cleaned_data
-        gsims = list(cleaned_data['gsim'])
+        gsims = list(cleaned_data['gsim'].values())
 
         required_columns = (  # event id always required
             ground_motion_properties_required_by(*gsims) | {EVENT_ID_COLUMN_NAME}

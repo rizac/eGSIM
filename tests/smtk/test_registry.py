@@ -12,12 +12,16 @@ from openquake.hazardlib.gsim.base import gsim_aliases, GMPE
 from openquake.hazardlib.gsim.base import registry
 from toml.decoder import TomlDecodeError
 
-from egsim.smtk.registry import (gsim_names, gsim, imt,
-                                 intensity_measures_defined_for,
-                                 gsim_name, get_sa_limits)
-
-
-_gsim_aliases_ = {v: k for k, v in gsim_aliases.items()}
+from egsim.smtk.registry import (
+    gsim_names,
+    gsim,
+    imt,
+    intensity_measures_defined_for,
+    ground_motion_properties_required_by,
+    gsim_name,
+    sa_limits,
+    SmtkError
+)
 
 
 def test_gsim_special_case():
@@ -28,7 +32,7 @@ def test_gsim_special_case():
     # assert gsim works:
     model_instance = gsim(model_name)
     # assert that calling gsim with the class name doesn't:
-    with pytest.raises((KeyError, TomlDecodeError)) as kerr:
+    with pytest.raises((SmtkError, TomlDecodeError)) as kerr:
         gsim(model_class.__name__)
 
 
@@ -46,16 +50,15 @@ def test_load_models():
 
 
 def test_load_model_with_deprecation_warnings():
-    excs = (DeprecationWarning,)
     model = 'AkkarEtAl2013'
     # gsim(model)
-    with pytest.raises(*excs) as exc:
+    with pytest.raises(SmtkError) as exc:
         gsim(model)
     gsim_ = gsim(model, raise_deprecated=False)
     assert isinstance(gsim_, GMPE)
     # now check that the behavior is the same if we set a warning filter beforehand:
     with warnings.catch_warnings(record=True) as w:
-        with pytest.raises(*excs) as exc:
+        with pytest.raises(SmtkError) as exc:
             gsim(model)
         gsim_ = gsim(model, raise_deprecated=False)
         assert isinstance(gsim_, GMPE)
@@ -63,14 +66,12 @@ def test_load_model_with_deprecation_warnings():
 
 
 def test_gsim_name_1to1_relation():
-    excs = (TypeError, IndexError, KeyError, ValueError,
-            FileNotFoundError, OSError, AttributeError)
     with warnings.catch_warnings(record=False) as w:
         warnings.simplefilter('ignore')
         for model_name in gsim_names():
             try:
                 model = gsim(model_name, raise_deprecated=False)
-            except excs as exc:
+            except SmtkError as exc:
                 continue
             model_name_back = gsim_name(model)
             try:
@@ -78,7 +79,7 @@ def test_gsim_name_1to1_relation():
             except AssertionError:
                 # FIXME: see with Graeme how to deal with this:
                 #  inputting an instance of `ESHM20CratonShallowMidStressMidAtten`
-                #  in smtlk methods will reutnrn 'KothaEtAl2020ESHM20' as model name
+                #  in smtlk methods will reutrn 'KothaEtAl2020ESHM20' as model name
                 #  This is because the former is an alias to the latter without args
                 #  (set alias with default args would work)
                 assert model_name, model_name_back in {
@@ -86,37 +87,28 @@ def test_gsim_name_1to1_relation():
                 }
 
 
-def read_gsims(raise_deprecated=True, catch_deprecated=True):
+def read_gsims(raise_deprecated=True):
     count, ok = 0, 0
-    excs = (TypeError, IndexError, KeyError, ValueError,
-            FileNotFoundError, OSError, AttributeError)
-    if raise_deprecated:
-        excs += (DeprecationWarning, )
-    # errors = [TypeError, KeyError, IndexError]
-    # if catch_deprecated:
-    #     errors.append(OQDeprecationWarning)
-    # errors = tuple(errors)
     for model in registry:
         count += 1
         try:
             gsim_ = gsim(model, raise_deprecated=raise_deprecated)
             ok += 1
-        except excs as exc:
+        except SmtkError as exc:
             continue
     return count, ok
 
 
 def test_requires():
-    for gsim_name, gsim_cls in registry.items():
-        if not isinstance(gsim_cls, type):
-            # openquake/hazardlib/gsim/base.py),
-            # def add_alias(...):
-            #   gsim_aliases[name] = toml.dumps({cls.__name__: kw})
-            #   registry[name] = lambda: cls(**kw)  # oq 3.24.1
-            #   registry[name] = cls                # oq 3.15.0
-            # So:
-            gsim_cls = gsim_cls()  # <- it's a lambda
-        res = intensity_measures_defined_for(gsim_cls)
+    for g_name in gsim_names():
+        try:
+            gsim_inst = gsim(g_name)
+        except SmtkError:
+            continue
+        res = intensity_measures_defined_for(gsim_inst)
+        assert isinstance(res, frozenset)
+        assert not res or all(isinstance(_, str) for _ in res)
+        res = ground_motion_properties_required_by(gsim_inst)
         assert isinstance(res, frozenset)
         assert not res or all(isinstance(_, str) for _ in res)
 
@@ -137,6 +129,10 @@ def test_imt_as_float_is_converted_to_sa():
 def test_sa_limits():
     with warnings.catch_warnings(record=False):
         warnings.simplefilter('ignore')
-        for g in read_gsims():
-            lims = get_sa_limits(g)
+        for model_name in gsim_names():
+            try:
+                model = gsim(model_name, raise_deprecated=False)
+            except SmtkError as exc:
+                continue
+            lims = sa_limits(model)
             assert lims is None or (len(lims) == 2 and lims[0] < lims[1])

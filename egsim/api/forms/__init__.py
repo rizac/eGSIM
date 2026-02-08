@@ -474,7 +474,7 @@ class GsimInfoForm(GsimForm, APIForm):
         hazard_source_models = self.cleaned_data['regionalization']
         ret = {}
         for gmm_name, gmm in self.cleaned_data['gsim'].items():
-            doc, imts, gm_props, sa_limits = gsim_info(gmm)
+            doc, imts, gm_props, sa_lim = gsim_info(gmm)
             # ground motion properties:
             gm_props = {p: column_help(p) for p in gm_props}
             # remove unnecessary flatfile-related info (everything after 1st paragraph)
@@ -499,7 +499,7 @@ class GsimInfoForm(GsimForm, APIForm):
                 'description': doc,
                 'defined_for': imts,
                 'requires': gm_props,
-                'sa_period_limits': sa_limits,
+                'sa_period_limits': sa_lim,
                 'hazard_source_models': hazard_source_models.get(gmm_name)
             }
         return ret

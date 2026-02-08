@@ -23,8 +23,8 @@ try:
 except ImportError:
     from yaml import SafeLoader  # same as using yaml.safe_load
 
-from egsim.smtk.registry import sa_period
-from egsim.smtk.validation import InputError, ConflictError
+from egsim.smtk.registry import sa_period, SmtkError
+from egsim.smtk.validation import ConflictError
 
 _csv_default_args = (
     ('na_values', ("", "null", "NULL", "None",
@@ -575,7 +575,7 @@ class ColumnPropertyRegistry:
 
 # Exceptions:
 
-class FlatfileError(InputError):
+class FlatfileError(SmtkError):
     """
     Subclass of :class:`smtk.validators.InputError` for describing flatfile
     errors (specifically, column errors). See subclasses for details. Remember

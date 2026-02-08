@@ -11,41 +11,61 @@ from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.hazardlib.valid import gsim as valid_gsim
 
 
-def gsim_names() -> Iterable[str]:
-    """Return an iterable of all model names registered in OpenQuake"""
-    return registry.keys()
-
-
 def gsim(model: Union[str, GMPE], raise_deprecated=True) -> GMPE:
     """
     Return a Gsim instance (Python object of class `GMPE`) from the given input
 
     :param model: a gsim name or Gsim instance. If str, it can also denote a
         GMPETable in the form "GMPETable(gmpe_table=filepath)"
-    :param raise_deprecated: if True (the default) OpenQuake `DeprecationWarning`s
-        will raise (as normal Python  `DeprecationWarning`)
-    :raise: a `(TypeError, ValueError, FileNotFoundError, OSError, AttributeError)`
-        if name starts with "GMPETable", otherwise a
-        `(TypeError, IndexError, KeyError, ValueError, DeprecationWarning)`
-        (the last one only if `raise_deprecated` is True, the default)
+    :param raise_deprecated: if True (the default) deprecated models will raise
+        an `SmtkError`, otherwise they will be returned as normal models
+
+    :raise: a `SmtkError` if for some reason the input is invalid
     """
-    if isinstance(model, str):
-        if model.startswith('GMPETable'):
-            # GMPETable. raises: TypeError, ValueError, FileNotFoundError, OSError,
-            # AttributeError
-            filepath = (
-                re.match(r'^GMPETable\(([^)]+?)\)$', model).group(1).split("=")[1]
-            )
-            return GMPETable(gmpe_table=filepath)
-        else:
-            # "normal" str case, calls valid_gsim which raises:
-            # TypeError, IndexError, KeyError, ValueError
+    # Note: we catch broad except because exceptions vary in different OQ releases
+    if isinstance(model, str) and model.startswith('GMPETable'):
+        try:
+            matcher = re.match(r'^GMPETable\(([^)]+?)\)$', model)
+            filepath = matcher.group(1).split("=")[1]
+            assert len(filepath.strip())
+        except (AttributeError, IndexError, AssertionError):
+            # AttributeError: matcher is None, IndexError: matcher.group has no "="
+            raise SmtkError(f'Invalid GMPETable "{model}"')
+        try:
+            model = GMPETable(gmpe_table=filepath)
+        except Exception as e:
+            raise SmtkError(str(e))
+    elif not isinstance(model, GMPE):
+        try:
             model = valid_gsim(model)
-    if isinstance(model, GMPE):
-        if raise_deprecated and model.superseded_by:
-            raise DeprecationWarning(f'Use {model.superseded_by} instead')
-        return model
-    raise TypeError(model)
+        except Exception as e:
+            raise SmtkError(str(e))
+
+    if raise_deprecated and model.superseded_by:
+        raise SmtkError(f'Use {model.superseded_by} instead')
+    return model
+
+
+def gsim_names() -> Iterable[str]:
+    """Return an iterable of all model names registered in OpenQuake"""
+    return registry.keys()
+
+
+def gsim_name(model: GMPE) -> str:
+    """Return the name of the GMPE given an instance of the class"""
+
+    name = str(model)
+    # if name is the gsim class name within square brackets, return the class name:
+    if name == f"[{model.__class__.__name__}]":
+        return model.__class__.__name__
+    global _toml2class
+    if _toml2class is None:
+        _toml2class = {v.strip(): k for k, v in gsim_aliases.items()}
+    # name is the TOML representation of gsim. Use _toml2class to return the name:
+    return _toml2class[name.strip()]
+
+
+_toml2class: Optional[dict[str, str]] = None  #toml repr -> class name
 
 
 def imt(arg: Union[float, str, IMT]) -> IMT:
@@ -83,23 +103,6 @@ def imt_names() -> Iterable[str]:
                 pass
 
 
-def gsim_name(model: GMPE) -> str:
-    """Return the name of the GMPE given an instance of the class"""
-
-    name = str(model)
-    # if name is the gsim class name within square brackets, return the class name:
-    if name == f"[{model.__class__.__name__}]":
-        return model.__class__.__name__
-    global _toml2class
-    if _toml2class is None:
-        _toml2class = {v.strip(): k for k, v in gsim_aliases.items()}
-    # name is the TOML representation of gsim. Use _toml2class to return the name:
-    return _toml2class[name.strip()]
-
-
-_toml2class: Optional[dict[str, str]] = None  #toml repr -> class name
-
-
 def imt_name(imtx: Union[Callable, IMT]) -> str:
     if isinstance(imtx, IMT):
         return repr(imtx)
@@ -128,29 +131,27 @@ def sa_period(obj: Union[float, str, IMT]) -> Union[float, None]:
     return float(period) if np.isfinite(period) else None
 
 
-def get_sa_limits(model: Union[str, GMPE]) -> Union[tuple[float, float], None]:
+def sa_limits(model: GMPE) -> Union[tuple[float, float], None]:
     """Return the SA period limits defined for the given gsim, or None"""
 
-    if isinstance(model, str):
-        model = gsim(model)
-    pers = None
+    periods = None
     for c in dir(model):
         if 'COEFFS' in c:
-            pers = [sa.period for sa in getattr(model, c).sa_coeffs] or None
-            if pers:  # might be an empty list, so break only if non-empty
+            sa_coeffs = getattr(getattr(model, c), 'sa_coeffs', None)
+            if sa_coeffs:
+                periods = [sa.period for sa in sa_coeffs]
+            if periods:  # might be an empty list, so break only if non-empty
                 break
-    return (min(pers), max(pers)) if pers is not None else None
+    return (min(periods), max(periods)) if periods is not None else None
 
 
-def intensity_measures_defined_for(model: Union[str, GMPE]) -> frozenset[str]:
+def intensity_measures_defined_for(model: GMPE) -> frozenset[str]:
     """Return the intensity measures defined for the given model"""
 
-    if isinstance(model, str):
-        model = gsim(model)
-    return frozenset(_.__name__ for _ in model.DEFINED_FOR_INTENSITY_MEASURE_TYPES)
+    return frozenset(imt_name(_) for _ in model.DEFINED_FOR_INTENSITY_MEASURE_TYPES)
 
 
-def ground_motion_properties_required_by(*models: Union[str, GMPE]) -> frozenset[str]:
+def ground_motion_properties_required_by(*models: GMPE) -> frozenset[str]:
     """
     Return the aggregated required ground motion properties (distance measures,
     rupture and site params all together) from all the passed models. Note: the
@@ -160,15 +161,13 @@ def ground_motion_properties_required_by(*models: Union[str, GMPE]) -> frozenset
     """
     ret = []
     for model in models:
-        if isinstance(model, str):
-            model = gsim(model)
         ret.extend(model.REQUIRES_DISTANCES or [])
         ret.extend(model.REQUIRES_SITES_PARAMETERS or [])
         ret.extend(model.REQUIRES_RUPTURE_PARAMETERS or [])
     return frozenset(ret)
 
 
-def gsim_info(model: Union[str, GMPE]) -> tuple[str, list, list, Union[list, None]]:
+def gsim_info(model: GMPE) -> tuple[str, list, list, Union[list, None]]:
     """
     Return the model info as a tuple with elements:
      - the source code documentation (Python docstring) of the model
@@ -178,13 +177,27 @@ def gsim_info(model: Union[str, GMPE]) -> tuple[str, list, list, Union[list, Non
      - the list of spectral acceleration period limits where the model
        is defined, or None if the model is not defined for SA
     """
-    model = gsim(model)
     return (
         (model.__doc__ or ""),
         list(intensity_measures_defined_for(model) or []),
         list(ground_motion_properties_required_by(model) or []),
-        get_sa_limits(model)
+        sa_limits(model)
     )
+
+
+class SmtkError(Exception):
+    """
+    Base exception for any input error (model, imt, flatfile).
+    str(SmtkError(arg1, arg2, ...)) = str(arg1) + self.separator + str(arg2) + ...
+    (self.separator = ', ' by default)
+    """
+
+    separator = ', '
+
+    def __str__(self):
+        """Reformat ``str(self)``"""
+
+        return self.separator.join(sorted(str(a) for a in self.args))
 
 
 class Clabel:

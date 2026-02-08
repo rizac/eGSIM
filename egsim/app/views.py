@@ -246,9 +246,9 @@ def get_init_data_json(
         # imt_names should be hashable and unique, so sort and make a tuple:
         imt_names = tuple(sorted(gsim.imts.split(" ")))
         imt_group_index = imt_groups.setdefault(imt_names, len(imt_groups))
-        sa_limits = [gsim.min_sa_period, gsim.max_sa_period]
-        if sa_limits[0] is None or sa_limits[1] is None:
-            sa_limits = []
+        sa_lim = [gsim.min_sa_period, gsim.max_sa_period]
+        if sa_lim[0] is None or sa_lim[1] is None:
+            sa_lim = []
         model_warnings = []
         if gsim.unverified:
             model_warnings.append(models.Gsim.unverified.field.help_text)
@@ -261,9 +261,9 @@ def get_init_data_json(
             warning_group_index = warning_groups.setdefault(
                 warning_text, len(warning_groups)
             )
-            gsims.append([gsim.name, imt_group_index, sa_limits, warning_group_index])
+            gsims.append([gsim.name, imt_group_index, sa_lim, warning_group_index])
         else:
-            gsims.append([gsim.name, imt_group_index, sa_limits])
+            gsims.append([gsim.name, imt_group_index, sa_lim])
 
     # get regionalization data (for selecting models on a map):
     regionalizations = []

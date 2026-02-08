@@ -5,17 +5,17 @@ from .residuals import get_residuals
 from .ranking import get_measures_of_fit
 from .flatfile import read_flatfile, FlatfileError
 from .registry import (
+    SmtkError,
     gsim_names,
     imt_names,
     gsim,
     imt,
     intensity_measures_defined_for,
-    get_sa_limits,
+    sa_limits,
     gsim_name,
     ground_motion_properties_required_by
 )
 from .validation import (
-    InputError,
     harmonize_input_gsims,
     get_ground_motion_values,
     harmonize_input_imts,

@@ -18,9 +18,10 @@ from .registry import (
     intensity_measures_defined_for,
     gsim,
     imt,
-    get_sa_limits,
+    sa_limits,
     imt_name,
-    sa_period
+    sa_period,
+    SmtkError
 )
 
 
@@ -49,17 +50,7 @@ def harmonize_input_gsims(gsims: Iterable[Union[str, GMPE]]) -> dict[str, GMPE]:
             if not isinstance(gs, str):
                 gs = gsim_name(gsim_inst)
             output_gsims[gs] = gsim_inst
-        except (
-                TypeError,
-                ValueError,
-                IndexError,
-                KeyError,
-                NameError,
-                FileNotFoundError,
-                OSError,
-                AttributeError,
-                DeprecationWarning
-        ) as _:
+        except SmtkError as _:
             errors.append(gs if isinstance(gs, str) else gsim_name(gs))
     if errors:
         raise ModelError(*errors)
@@ -130,7 +121,7 @@ def validate_imt_sa_limits(model: GMPE, imts: dict[str, IMT]) -> dict[str, IMT]:
     :return: a subset of the passed `imts` dict or `imts` unchanged if all its IMT
         are valid for the given model
     """
-    model_sa_p_lim = get_sa_limits(model)
+    model_sa_p_lim = sa_limits(model)
     return {
         i: v for i, v in imts.items()
         if model_sa_p_lim is None
@@ -254,31 +245,19 @@ def _format_model_error(model: Union[GMPE, str], exception: Exception) -> ModelE
 # Custom Exceptions ===========================================================
 
 
-class InputError(ValueError):
-    """
-    Base **abstract** exception for any input error (model, imt, flatfile).
-    Note that `str(InputError(arg1, arg2, ...)) = str(arg1) + ", " + str(arg2) + ...
-    """
-
-    def __str__(self):
-        """Reformat ``str(self)``"""
-
-        return ", ".join(sorted(str(a) for a in self.args))
-
-
-class ModelError(InputError):
+class ModelError(SmtkError):
     """Error for invalid models (e.g., misspelled, unable to compute predictions)"""
 
     pass
 
 
-class ImtError(InputError):
+class ImtError(SmtkError):
     """Error for invalid intensity measures (e.g., misspelled)"""
 
     pass
 
 
-class ConflictError(ValueError):
+class ConflictError(SmtkError):
     """
     Exception raised by conflicts among entities (model and imt, flatfile column names).
     Each argument to this class is a conflict, represented by a sequence of the

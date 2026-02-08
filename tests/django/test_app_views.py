@@ -29,7 +29,7 @@ from egsim.app.forms import (FlatfileVisualizeForm, PredictionsVisualizeForm,
 from egsim.app.views import URLS, img_ext, form2dict
 from django.test.client import Client
 
-from egsim.smtk import get_sa_limits
+from egsim.smtk import sa_limits
 from egsim.smtk.registry import Clabel
 
 GSIM, IMT = 'gsim', 'imt'
@@ -394,8 +394,8 @@ class Test:
             'magnitude': [4],
             'distance': [10]
         }
-        saLim1 = get_sa_limits('SgobbaEtAl2020')
-        salim2 = get_sa_limits('BindiEtAl2014Rjb')
+        saLim1 = sa_limits('SgobbaEtAl2020')
+        salim2 = sa_limits('BindiEtAl2014Rjb')
         response = client.post(f"/{URLS.SUBMIT_PREDICTIONS_VISUALIZATION}",
                                json.dumps(data | {'plot_type': 's'}),
                                content_type="application/json")
@@ -426,8 +426,8 @@ class Test:
             'flatfile': 'esm2018',
             'flatfile-query': 'mag > 7'
         }
-        saLim1 = get_sa_limits('SgobbaEtAl2020')
-        salim2 = get_sa_limits('AbrahamsonSilva1997')
+        saLim1 = sa_limits('SgobbaEtAl2020')
+        salim2 = sa_limits('AbrahamsonSilva1997')
         response1 = client.post(f"/{URLS.DOWNLOAD_RESIDUALS_DATA}.csv",
                                 json.dumps(data | {'format': 'csv'}),
                                 content_type="application/json")

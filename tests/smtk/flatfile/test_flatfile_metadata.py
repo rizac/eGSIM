@@ -15,6 +15,8 @@ import numpy as np
 from pandas import StringDtype
 
 from onnxruntime.capi.onnxruntime_pybind11_state import NoSuchFile
+
+from egsim.smtk.registry import SmtkError
 from openquake.hazardlib import imt
 from egsim.smtk import gsim, gsim_names, imt_names
 from egsim.smtk.flatfile import (
@@ -189,8 +191,7 @@ def check_with_openquake(
         for name in gsim_names():
             try:
                 model = gsim(name)
-            except (TypeError, ValueError, FileNotFoundError, OSError, AttributeError,
-                    IndexError, KeyError, DeprecationWarning, NoSuchFile) as _:
+            except SmtkError as _:
                 continue
             oq_rupture_params.update(model.REQUIRES_RUPTURE_PARAMETERS)
             oq_sites_params.update(model.REQUIRES_SITES_PARAMETERS)
