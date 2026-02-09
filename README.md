@@ -1,5 +1,4 @@
-eGSIM is a web service for selecting and testing  ground shaking models (GSIM) 
-in Europe, developed by the [GFZ](https://www.gfz.de/) 
+eGSIM is a web service and Python library for selecting and testing ground shaking intensity models (GSIM), developed by the [GFZ](https://www.gfz.de/) 
 in the framework of the Thematic Core Services for Seismology of 
 [EPOS](https://www.epos-eu.org/) under the umbrella of 
 [EFEHR](http://www.efehr.org/en/home/)
@@ -23,23 +22,20 @@ The web portal (and API documentation) is available at:
 
 > Zaccarelli, Riccardo; Weatherill, Graeme (2020): eGSIM - a Python library and web application to select and test Ground Motion models. GFZ Data Services. https://doi.org/10.5880/GFZ.2.6.2023.007
 
-### Research paper (in print)
+### Research paper
 
-> Zaccarelli, R.; G. Weatherill, D. Bindi, F. Cotton (2025): Ground-Motion Models at 
-  Your Fingertips: Easy, Rapid and Flexible Analysis with eGSIM, 
-  (accepted for publication in *Seismol. Res. Lett*), DOI:10.1785/0220250228
-
+> Riccardo Zaccarelli, Graeme Weatherill, Dino Bindi, Fabrice Cotton; Ground‐Motion Models at Your Fingertips: Easy, Rapid, and Flexible Analysis with eGSIM. Seismological Research Letters 2026; doi: https://doi.org/10.1785/0220250228
 
 ## Installation
 
 **DISCLAIMER** Because the web application is already installed and managed on a 
 server, this README focuses **exclusively on the Python library 
-(`smtk`)**.
+called strong motion modeller toolkit (`smtk`)**.
 
 If you need access to, or information about, the web application 
 installation, please contact the project authors.
 
-
+<!--
 ## Clone repository
 
 Select a `root directory` (e.g. `/root/path/to/egsim`), and clone egsim into the
@@ -48,8 +44,9 @@ so-called egsim directory:
 ```bash
 git clone https://github.com/rizac/eGSIM.git egsim
 ```
+-->
 
-## Create and activate Python virtual env
+### Create and activate Python virtual env
 
 Move to whatever directory you want (usually the egsim directory above) and then:
 
@@ -61,10 +58,15 @@ source .env/<ENVNAME>/bin/activate  # activate venv
 **NOTE: From now on, all following operations must have the virtualenv 
 activated FIRST**
 
+### Install
 
-```console
+Select your requirements file by typing `ls -l` on the repository, and check the `requirements*.txt` file
+that suits your OS (linux and macos supported). For instance, if using 
+`requirements-py311-macos_arm64.txt`:
+
+```zsh
 source .env/<ENVNAME>/bin/activate
-pip install -r ./requirements.lib.txt
+pip install -r ./requirements-py311-macos_arm64.txt  # remember: you might need to change the file name
 pip install .
 ```
 
@@ -72,8 +74,7 @@ From now on, you can use eGSIM
 strong motion toolkit package (`from egsim.smtk import ...`)
 in your code
 
-
-#### Run tests 
+### Run tests (optional) 
 
 (remember to `pip install pytest` first)
 ```bash
