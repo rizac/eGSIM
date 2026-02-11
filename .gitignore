@@ -8,6 +8,7 @@ tmp/
 media/
 .DS_Store
 .idea/
+# this is the settings file in production, so exlude it for safety:
 settings.py
 
 # C extensions

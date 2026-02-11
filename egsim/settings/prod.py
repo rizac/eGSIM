@@ -1,6 +1,9 @@
 """
-Django settings for eGSIM project (production). In principle, this is just a template,
-and you should inherit from base using this as example
+Django settings for eGSIM project TEMPLATE for production.
+On the production server, copy-paste the content of this file into
+<eGSIM_REPO>/settings.py
+and modify that file
+(Note: for safety, settings.py is git-ignored)
 """
 
 from egsim.settings.base import *
