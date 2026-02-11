@@ -26,14 +26,22 @@ The web portal (and API documentation) is available at:
 
 > Riccardo Zaccarelli, Graeme Weatherill, Dino Bindi, Fabrice Cotton; Ground‐Motion Models at Your Fingertips: Easy, Rapid, and Flexible Analysis with eGSIM. Seismological Research Letters 2026; doi: https://doi.org/10.1785/0220250228
 
-## Installation
+## Web Service
 
-**DISCLAIMER** Because the web application is already installed and managed on a 
-server (https://egsim.gfz.de), this README focuses **exclusively on the Python library 
-called strong motion modeler toolkit (`smtk`)**.
+- Web portal: https://egsim.gfz.de
+- API Documentation: https://egsim.gfz.de/api_doc
+- API Usage (Python): https://github.com/rizac/egsim-client.
+  - Jupyter notebook examples (Python): https://github.com/rizac/egsim-client/tree/main/notebook
 
-If you need access to, or information about, the web application 
-installation, please contact the project authors.
+## Python library
+
+eGSIM can also be installed and used as a Python package. This approach bypasses the web API and, 
+while requiring a steeper learning curve to directly call core functions, allows local 
+execution on the CPU with greater control over optimization.
+
+The core functionalities of eGSIM are in strong motion modeler toolkit (`smtk`) package, 
+which you can import in your code as any Python package (`from egsim.smtk import ...`).
+
 
 <!--
 ## Clone repository
@@ -46,59 +54,50 @@ git clone https://github.com/rizac/eGSIM.git egsim
 ```
 -->
 
-### Create and activate Python virtual env
+### Create and activate a Python virtual envvironment (virtualenv)
 
-Move to whatever directory you want (usually the egsim directory above) and then:
+Move to whatever directory you want (you can use the eGSIM repo directory, 
+as long as you create your virtualenv inside `.env` or `.venv` directories, 
+which are ignored by git), and then:
 
 ```bash
-python3 -m venv .venv/egsim  # replace .venv/egsim with your preferred path
+python3 -m venv .venv/egsim  # replace ".venv/egsim" with your path
 ```
 
 Activate virtualenv:
 ```bash
-source .venv/egsim/bin/activate  # activate venv
+source .venv/egsim/bin/activate  # replace ".venv/egsim" with your path
 ```
 
 Deactivate virtualeanv:
 
-```
+```bash
 deactivate
 ```
 
 ### Install
 
-**IMPORTANT: From now on, all following operations must have the virtualenv 
-activated FIRST**
+> **IMPORTANT: From now on, all following operations must have the virtualenv activated FIRST**
 
 
-Choose your requirements file and then run installation 
-(`-e` is optional. If you do not know what it is, simply remove it)
+Choose your requirements file and then run installation
 
 - Old macOS (before 2023. Check by typing `uname -m` on terminal, 
   you should **not** get `arm64`):
   
-  `pip install -r requirements-py311-macos_x86_64.txt && pip install [-e] .`
+  `pip install -r requirements-py311-macos_x86_64.txt && pip install .`
 
 - New macOS (`uname -m` on terminal gives `arm64`)
   
-  `pip install -r requirements-py311-macos_arm64.txt && pip install [-e] .`
+  `pip install -r requirements-py311-macos_arm64.txt && pip install .`
 
 - Linux (To be done)
 
 
-```zsh
-# activate virtualenv first!
-pip install -r ./requirements-py311-macos_arm64.txt  # remember: you might need to change the file name
-pip install .
-```
-
-From now on, you can use eGSIM 
-strong motion toolkit package (`from egsim.smtk import ...`)
-in your code
-
 ### Run tests (optional) 
 
 (remember to `pip install pytest` first)
+
 ```bash
 pytest -vvv ./tests/smtk
 ```
