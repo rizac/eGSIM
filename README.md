@@ -4,11 +4,11 @@ in the framework of the Thematic Core Services for Seismology of
 [EFEHR](http://www.efehr.org/en/home/)
 
 <p align="middle">
-    <a title='EFEHR' href='www.efehr.org'><img height='50' src='http://www.efehr.org/export/system/modules/ch.ethz.sed.bootstrap.efehr2021/resources/img/logos/efehr.png'></a>
+    <a title='EFEHR' href='https://www.efehr.org'><img height='50' alt='efehr' src='https://www.efehr.org/export/system/modules/ch.ethz.sed.bootstrap.efehr2021/resources/img/logos/efehr.png'></a>
     &nbsp;
-    <a title='GFZ' href='https://www.gfz.de/'><img height='50' src='https://media.gfz-potsdam.de/gfz/wv/media/pic/logo/2025_GFZ-Wortbildmarke-EN-Helmholtzdunkelblau-RGB.jpg'></a>
+    <a title='GFZ' href='https://www.gfz.de/'><img height='50' alt='gfz' src='https://media.gfz-potsdam.de/gfz/wv/media/pic/logo/2025_GFZ-Wortbildmarke-EN-Helmholtzdunkelblau-RGB.jpg'></a>
     &nbsp;
-    <a title='EPOS' href='https://www.epos-eu.org/'><img height='50' src='https://www.epos-eu.org/themes/epos/logo.svg'></a>
+    <a title='EPOS' href='https://www.epos-eu.org/'><img height='50' alt="eops" src='https://www.epos-eu.org/themes/epos/logo.svg'></a>
     <br>
 </p>
 
@@ -29,8 +29,8 @@ The web portal (and API documentation) is available at:
 ## Installation
 
 **DISCLAIMER** Because the web application is already installed and managed on a 
-server, this README focuses **exclusively on the Python library 
-called strong motion modeller toolkit (`smtk`)**.
+server (https://egsim.gfz.de), this README focuses **exclusively on the Python library 
+called strong motion modeler toolkit (`smtk`)**.
 
 If you need access to, or information about, the web application 
 installation, please contact the project authors.
@@ -51,21 +51,43 @@ git clone https://github.com/rizac/eGSIM.git egsim
 Move to whatever directory you want (usually the egsim directory above) and then:
 
 ```bash
-python3 -m venv .env/<ENVNAME>  # create python virtual environment (venv)
-source .env/<ENVNAME>/bin/activate  # activate venv
+python3 -m venv .venv/egsim  # replace .venv/egsim with your preferred path
 ```
 
-**NOTE: From now on, all following operations must have the virtualenv 
-activated FIRST**
+Activate virtualenv:
+```bash
+source .venv/egsim/bin/activate  # activate venv
+```
+
+Deactivate virtualeanv:
+
+```
+deactivate
+```
 
 ### Install
 
-Select your requirements file by typing `ls -l` on the repository, and check the `requirements*.txt` file
-that suits your OS (linux and macos supported). For instance, if using 
-`requirements-py311-macos_arm64.txt`:
+**IMPORTANT: From now on, all following operations must have the virtualenv 
+activated FIRST**
+
+
+Choose your requirements file and then run installation 
+(`-e` is optional. If you do not know what it is, simply remove it)
+
+- Old macOS (before 2023. Check by typing `uname -m` on terminal, 
+  you should **not** get `arm64`):
+  
+  `pip install -r requirements-py311-macos_x86_64.txt && pip install [-e] .`
+
+- New macOS (`uname -m` on terminal gives `arm64`)
+  
+  `pip install -r requirements-py311-macos_arm64.txt && pip install [-e] .`
+
+- Linux (To be done)
+
 
 ```zsh
-source .env/<ENVNAME>/bin/activate
+# activate virtualenv first!
 pip install -r ./requirements-py311-macos_arm64.txt  # remember: you might need to change the file name
 pip install .
 ```
@@ -80,3 +102,5 @@ in your code
 ```bash
 pytest -vvv ./tests/smtk
 ```
+
+<!-- END OF FIXED TEXT -->

@@ -1,21 +1,5 @@
 # eGSIM - Maintenance & Operations (web app)
 
-## Install for development
-
-Choose your requirements file and then run installation 
-(`-e` is optional. If you do not know what it is, simply remove it)
-
-- New macos (before 2023. Check by typing `uname -m` on terminal, 
-  you should **not** get `arm64`):
-  
-  `pip install -r requirements-py311-macos_x86_64.txt && pip install [-e] .`
-
-- Old macos (`uname -m` on terminal gives `arm64`)
-  
-  `pip install -r requirements-py311-macos_arm64.txt && pip install [-e] .`
-
-- Linux (To be done)
-
 ## Run tests (smtk lib only)
 ```bash
 pytest -vvv ./tests/smtk
@@ -62,7 +46,7 @@ And then under **Environment variables:** add:
 > Note: the value of `DJANGO_SETTINGS_MODULE` in the examples below 
 > must be changed in production
 
-> Note: the DB should have been created befoirehand(see dedicated section below)
+> Note: the DB should have been created beforehand (see dedicated section below)
 
 Type:
 

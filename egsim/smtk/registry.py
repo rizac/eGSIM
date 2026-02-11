@@ -72,11 +72,14 @@ def imt(arg: Union[float, str, IMT]) -> IMT:
     """
     Return an IMT object from the given argument
 
-    :raise: TypeError, ValueError, KeyError
+    :raise: `SmtkError` if argument cannot eb converted to a valid IMT
     """
     if isinstance(arg, IMT):
         return arg
-    return imt_from_string(str(arg))
+    try:
+        return imt_from_string(str(arg))
+    except (TypeError, ValueError, KeyError):
+        raise SmtkError(f'Invalid IMT "{arg}"')
 
 
 def imt_names() -> Iterable[str]:

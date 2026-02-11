@@ -8,7 +8,7 @@ import pytest
 
 import numpy as np
 from openquake.hazardlib.imt import IMT, SA
-from openquake.hazardlib.gsim.base import gsim_aliases, GMPE
+from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib.gsim.base import registry
 from toml.decoder import TomlDecodeError
 
@@ -30,9 +30,9 @@ def test_gsim_special_case():
     model_name = 'Idriss2014NSHMPUpper'
     model_class = registry[model_name]  # 'NSHMP2014'
     # assert gsim works:
-    model_instance = gsim(model_name)
+    gsim(model_name)
     # assert that calling gsim with the class name doesn't:
-    with pytest.raises((SmtkError, TomlDecodeError)) as kerr:
+    with pytest.raises((SmtkError, TomlDecodeError)) as kerr:  # noqa
         gsim(model_class.__name__)
 
 
@@ -62,7 +62,7 @@ def test_load_model_with_deprecation_warnings():
             gsim(model)
         gsim_ = gsim(model, raise_deprecated=False)
         assert isinstance(gsim_, GMPE)
-        assert len(w) == 0  # no warnings captures in oq 3.12.1 (previously len == 1)
+        assert len(w) == 0  # no warnings captured in oq 3.12.1 (previously len == 1)
 
 
 def test_gsim_name_1to1_relation():
