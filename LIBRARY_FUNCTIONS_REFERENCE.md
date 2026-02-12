@@ -273,7 +273,7 @@ def imt(arg) -> <class 'openquake.hazardlib.imt.IMT'>:
     """
     Return an IMT object from the given argument
 
-    :raise: `SmtkError` if argument cannot eb converted to a valid IMT
+    :raise: `SmtkError` if argument cannot be converted to a valid IMT
     """
 ```
 

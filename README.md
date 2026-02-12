@@ -41,7 +41,7 @@ while requiring a steeper learning curve to directly call core functions,
 allows local execution on the CPU with greater control over optimization.
 
 
-**For usage in your code after installation, , 
+**For usage in your code after installation, 
 see the [Library functions reference](LIBRARY_FUNCTIONS_REFERENCE.md)**
 
 
