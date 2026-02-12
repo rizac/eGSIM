@@ -1,4 +1,7 @@
 # eGSIM Library Functions Reference
+> Note: `smtk` stands for Strong Motion Toolkit, 
+> a legacy standalone project now integrated as a subpackage of eGSIM. 
+
 
 
 ### get_ground_motion_from_scenarios

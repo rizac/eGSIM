@@ -40,10 +40,6 @@ This approach bypasses the web API and,
 while requiring a steeper learning curve to directly call core functions, 
 allows local execution on the CPU with greater control over optimization.
 
-The core functionalities of eGSIM are in strong motion modeler toolkit (`smtk`) 
-package, which you can import in your code as any Python package 
-(`from egsim.smtk import ...`).
-
 
 **For usage in your code after installation, , 
 see the [Library functions reference](LIBRARY_FUNCTION_REFERENCE.md)**
@@ -59,7 +55,7 @@ git clone https://github.com/rizac/eGSIM.git egsim
 ```
 -->
 
-### Create and activate a Python virtual envvironment (virtualenv)
+### Create and activate a Python virtual environment (virtualenv)
 
 Move to whatever directory you want (you can use the eGSIM repo directory, 
 as long as you create your virtualenv inside `.env` or `.venv` directories, 
