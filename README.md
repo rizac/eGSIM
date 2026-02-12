@@ -35,13 +35,18 @@ The web portal (and API documentation) is available at:
 
 ## Python library
 
-eGSIM can also be installed and used as a Python package. This approach bypasses the web API and, 
-while requiring a steeper learning curve to directly call core functions, allows local 
-execution on the CPU with greater control over optimization.
+eGSIM can also be installed and used as a Python package. 
+This approach bypasses the web API and, 
+while requiring a steeper learning curve to directly call core functions, 
+allows local execution on the CPU with greater control over optimization.
 
-The core functionalities of eGSIM are in strong motion modeler toolkit (`smtk`) package, 
-which you can import in your code as any Python package (`from egsim.smtk import ...`).
+The core functionalities of eGSIM are in strong motion modeler toolkit (`smtk`) 
+package, which you can import in your code as any Python package 
+(`from egsim.smtk import ...`).
 
+
+**For usage in your code after installation, , 
+see the [Library functions reference](LIBRARY_FUNCTION_REFERENCE.md)**
 
 <!--
 ## Clone repository
@@ -101,5 +106,3 @@ Choose your requirements file and then run installation
 ```bash
 pytest -vvv ./tests/smtk
 ```
-
-<!-- END OF FIXED TEXT -->

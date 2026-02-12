@@ -32,6 +32,8 @@ from .validation import (
 
 @dataclass
 class RuptureProperties:
+    """Dataclass defining one or more Ruptures via a set of common properties"""
+
     dip: float = 90.
     aspect: float = 1.0
     tectonic_region: str = "Active Shallow Crust"
@@ -46,6 +48,8 @@ class RuptureProperties:
 
 @dataclass
 class SiteProperties:
+    """Dataclass defining one or more Sites via a set of common properties"""
+
     vs30: float = 760.0
     line_azimuth: float = 90.0
     distance_type: str = "rrup"
@@ -68,17 +72,18 @@ def get_ground_motion_from_scenarios(
     header_sep: Union[str, None] = Clabel.sep
 ) -> pd.DataFrame:
     """
-    Calculate the ground motion values from different scenarios to be used, e.g.
-    in trellis plots
+    Calculate the ground motion values from different configured scenarios
 
     :param gsims: Iterable of Ground shaking intensity models or their names (str)
     :param imts: Iterable of Intensity measure types or their names (str)
-    :param magnitudes: list or numpy array of magnitudes
-    :param distances: list or numpy array of distances
+    :param magnitudes: list or numpy array of magnitudes. Each magnitude
+        defines a configured Rupture
+    :param distances: list or numpy array of distances. Each distance defines a
+        configured Site
     :param rupture_properties: the optional Rupture properties (see
-        class RuptureProperties)
+        class RuptureProperties) to be applied to each Rupture
     :param site_properties: the optional Site properties (see class
-        SiteProperties)
+        SiteProperties) to be applied to each Site
     :param header_sep: str or None (default: " "): the separator used to concatenate
         each column header into one string (e.g. "PGA median BindiEtAl2014Rjb"). Set
         to "" or None to return a multi-level column header composed of the first 3

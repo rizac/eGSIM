@@ -47,7 +47,7 @@ def gsim(model: Union[str, GMPE], raise_deprecated=True) -> GMPE:
 
 
 def gsim_names() -> Iterable[str]:
-    """Return an iterable of all model names registered in OpenQuake"""
+    """Return all model names registered in OpenQuake, as iterable"""
     return registry.keys()
 
 
@@ -83,7 +83,7 @@ def imt(arg: Union[float, str, IMT]) -> IMT:
 
 
 def imt_names() -> Iterable[str]:
-    """Return all IMT names registered in OpenQuake"""
+    """Return all IMT names registered in OpenQuake, as iterable"""
     for name in dir(imt_module):
         if not ('A' <= name[:1] <= 'Z'):  # only upper-case module elements
             continue
@@ -190,9 +190,10 @@ def gsim_info(model: GMPE) -> tuple[str, list, list, Union[list, None]]:
 
 class SmtkError(Exception):
     """
-    Base exception for any input error (model, imt, flatfile).
-    str(SmtkError(arg1, arg2, ...)) = str(arg1) + self.separator + str(arg2) + ...
-    (self.separator = ', ' by default)
+    Base exception for any egsim.smtk error (e.g. invalid model, imt, flatfile error).
+
+    The string representation of these kind of errors is the concatenation
+    of the arguments given as input, separated by `self.separator` (= ", " by default)
     """
 
     separator = ', '

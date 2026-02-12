@@ -577,17 +577,18 @@ class ColumnPropertyRegistry:
 
 class FlatfileError(SmtkError):
     """
-    Subclass of :class:`smtk.validators.InputError` for describing flatfile
-    errors (specifically, column errors). See subclasses for details. Remember
-    that `str(FlatfileError(arg1, arg2, ...)) = str(arg1) + ", " + str(arg2) + ...
+    Subclass of :class:`SmtkError` describing a flatfile error
+    (e.g., missing column, mising data, incompatible data type)
     """
+
     pass
 
 
 class MissingColumnError(FlatfileError, AttributeError, KeyError):
     """
     MissingColumnError. It inherits also from AttributeError and
-    KeyError to be compliant with pandas and OpenQuake"""
+    KeyError to be compliant with pandas and OpenQuake
+    """
     pass
 
 
