@@ -1,11 +1,12 @@
 """
-Base Django settings for eGSIM project.
+eGSIM base Django settings file
 
-This file is supposed to be **overwritten** in dev / test / production, so take care to
-overwrite relevant variable in the latter (replace SECRET_KEY, DEBUG=False and so on)
+This module defines the default configuration shared by all environments.
+Other settings modules import from here and override only what differs:
 
-Info here:
-https://docs.djangoproject.com/en/stable/ref/settings
+from egsim.settings.base import *
+
+For more info, see https://docs.djangoproject.com/en/stable/ref/settings
 """
 from pathlib import Path
 

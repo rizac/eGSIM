@@ -1,8 +1,5 @@
 """
-Base Django dev settings, to open the app in the browser or use the API LOCALLY
-
-Info here:
-https://docs.djangoproject.com/en/stable/ref/settings
+eGSIM Django settings file for development (local testing in the web browser)
 """
 from egsim.settings.base import *
 

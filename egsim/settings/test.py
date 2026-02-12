@@ -1,5 +1,5 @@
 """
-Base Django settings for testing the eGSIM project.
+eGSIM Django settings file for testing (pytes-django)
 """
 from egsim.settings.base import *
 
