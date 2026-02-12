@@ -42,18 +42,22 @@ allows local execution on the CPU with greater control over optimization.
 
 
 **For usage in your code after installation, , 
-see the [Library functions reference](LIBRARY_FUNCTION_REFERENCE.md)**
+see the [Library functions reference](LIBRARY_FUNCTIONS_REFERENCE.md)**
 
-<!--
-## Clone repository
 
-Select a `root directory` (e.g. `/root/path/to/egsim`), and clone egsim into the
-so-called egsim directory:
+### Installation
+
+#### Clone repository
+
+Select a `root directory` and clone eGSIM into it:
 
 ```bash
-git clone https://github.com/rizac/eGSIM.git egsim
+git clone https://github.com/rizac/eGSIM.git
 ```
--->
+
+this will create the eGSIM directory. Move into it
+(`cd eGSIM`)
+
 
 ### Create and activate a Python virtual environment (virtualenv)
 
@@ -76,7 +80,7 @@ Deactivate virtualeanv:
 deactivate
 ```
 
-### Install
+### Install eGSIM
 
 > **IMPORTANT: From now on, all following operations must have the virtualenv activated FIRST**
 
