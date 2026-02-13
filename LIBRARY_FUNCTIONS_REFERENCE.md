@@ -279,6 +279,25 @@ def imt(arg) -> <class 'openquake.hazardlib.imt.IMT'>:
 
 
 
+### gsim_info
+```python
+from egsim.smtk import gsim_info
+
+# Signature and docstring:
+def gsim_info(model) -> tuple[str, list, list, list | None]:
+    """
+    Return the model info as a tuple with elements:
+     - the source code documentation (Python docstring) of the model
+     - the list of the intensity measures defined for the model
+     - the list of the ground motion properties required to compute the
+        model predictions
+     - the list of spectral acceleration period limits where the model
+       is defined, or None if the model is not defined for SA
+    """
+```
+
+
+
 ### SmtkError
 ```python
 from egsim.smtk import SmtkError

@@ -14,5 +14,6 @@ from .registry import (
     imt
 )
 
+from .registry import gsim_info
 from .registry import SmtkError
 from .flatfile import FlatfileError

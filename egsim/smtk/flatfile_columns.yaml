@@ -1,26 +1,26 @@
 # Flatfile metadata registry. Syntax (in YAML format):
 #
 # <column_name>:
-#   dtype:    The data type. Supported values are: null (the default when missing), int,
-#             float, str, bool, datetime. Provide a list of values (all the same dtype)
-#             for categorical data, i.e. when the column can only take on one of the
-#             given values. If non-null, the data type will be used for data validation
-#   default:  The default value used to fill missing data, e.g. empty cell, null, NaN.
-#             In Python (pandas), if the column dtype is int or bool, missing data will
-#             not be valid unless you supply a default (usually 0 / false)
-#   type:     The column type. Supported values are: rupture, site, distance, intensity
-#             (rupture parameter, site parameter, distance measure, intensity measure).
-#             Required only if the column denotes an OpenQuake parameter or measure
-#   alias:    The column alias(es), as string or list of strings. If you want to rename
-#             an OpenQuake parameter or distance, set the OpenQuake name as alias.
-#             Note: intensity measure columns (e.g. PGA, SA, PGV) cannot have aliases
-#   help:     The field help (optional), used to provide documentation
-#   ">"       (with quotation marks because > and < are special characters in YAML)
-#             The minimum value (endpoint excluded) of the column data. Currently used
-#             for info and not to validate data (it might be in the future)
-#   ">="      The min. value (endpoint included) of the column data (see ">" for details)
-#   "<"       The max. value (endpoint excluded) of the column data (see ">" for details)
-#   "<="      The max. value (endpoint included) of the column data (see ">" for details)
+#   dtype:   The data type. Supported values are: null (the default when missing), int,
+#            float, str, bool, datetime. Provide a list of values (all the same dtype)
+#            for categorical data, i.e. when the column can only take on one of the
+#            given values. If non-null, the data type will be used for data validation
+#   default: The default value used to fill missing data, e.g. empty cell, null, NaN.
+#            In Python (pandas), if the column dtype is int or bool, missing data will
+#            not be valid unless you supply a default (e.g. 0 and False respwctively)
+#   type:    The column type. Supported values are: rupture, site, distance, intensity
+#            (rupture parameter, site parameter, distance measure, intensity measure).
+#            Required only if the column denotes an OpenQuake parameter or measure
+#   alias:   The column alias(es), as string or list of strings. If you want to rename
+#            an OpenQuake parameter or distance, set the OpenQuake name as alias.
+#            Note: intensity measure columns (e.g. PGA, SA, PGV) cannot have aliases
+#   help:    The field help (optional), used for documentation
+#   ">"      (with quotation marks because > and < are special characters in YAML)
+#            The minimum value (endpoint excluded) of the column data. Currently not
+#            used, included for potential future validation
+#   ">="     The min. value (endpoint included) of the column data (see ">" for details)
+#   "<"      The max. value (endpoint excluded) of the column data (see ">" for details)
+#   "<="     The max. value (endpoint included) of the column data (see ">" for details)
 
 # YAML notes:
 # Unless required, strings (text sequences) don't need quotes (" or '). Date-times must be
