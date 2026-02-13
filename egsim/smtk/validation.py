@@ -4,7 +4,6 @@ Validation functions for the strong motion modeller toolkit (smtk) package of eG
 
 from __future__ import annotations
 
-from typing import Union, Optional
 from collections.abc import Iterable
 
 import numpy as np
@@ -25,7 +24,7 @@ from .registry import (
 )
 
 
-def harmonize_input_gsims(gsims: Iterable[Union[str, GMPE]]) -> dict[str, GMPE]:
+def harmonize_input_gsims(gsims: Iterable[str | GMPE]) -> dict[str, GMPE]:
     """
     Harmonize GSIMs given as names (str), OpenQuake Gsim classes or instances
     (:class:`GMPE`) into a dict[str, GMPE] where each name is mapped to
@@ -58,7 +57,7 @@ def harmonize_input_gsims(gsims: Iterable[Union[str, GMPE]]) -> dict[str, GMPE]:
     return {k: output_gsims[k] for k in sorted(output_gsims)}
 
 
-def harmonize_input_imts(imts: Iterable[Union[str, float, IMT]]) -> dict[str, IMT]:
+def harmonize_input_imts(imts: Iterable[str | float | IMT]) -> dict[str, IMT]:
     """
     Harmonize IMTs given as names (str) or instances (IMT) returning a
     dict[str, IMT] where each name is mapped to the relative instance. Dict keys will
@@ -69,7 +68,7 @@ def harmonize_input_imts(imts: Iterable[Union[str, float, IMT]]) -> dict[str, IM
     for imtx in imts:
         try:
             imt_set.add(imt(imtx))
-        except (TypeError, ValueError, KeyError) as _:
+        except SmtkError as _:
             errors.append(imtx if isinstance(imtx, str) else imt_name(imtx))
     if errors:
         raise ImtError(*errors)
@@ -132,7 +131,7 @@ def validate_imt_sa_limits(model: GMPE, imts: dict[str, IMT]) -> dict[str, IMT]:
 
 def init_context_maker(
     gsims: dict[str, GMPE],
-    imts: Iterable[Union[str, IMT]],
+    imts: Iterable[str | IMT],
     magnitudes: Iterable[float],
     tectonic_region=''
 ) -> ContextMaker:
@@ -158,7 +157,7 @@ def init_context_maker(
 
 
 def get_ground_motion_values(
-    model: GMPE, imts: list[IMT], ctx: np.recarray, *, model_name: Optional[str] = None
+    model: GMPE, imts: list[IMT], ctx: np.recarray, *, model_name: str | None = None
 ):
     """
     Compute the ground motion values from the arguments returning 4 arrays each
@@ -222,7 +221,7 @@ def get_ground_motion_values(
     return median.T, sigma.T, tau.T, phi.T
 
 
-def _format_model_error(model: Union[GMPE, str], exception: Exception) -> ModelError:
+def _format_model_error(model: GMPE | str, exception: Exception) -> ModelError:
     """Re-format the given exception into  a ModelError"""
 
     suffix = str(exception.__class__.__name__)

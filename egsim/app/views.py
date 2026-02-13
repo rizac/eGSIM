@@ -4,7 +4,7 @@ Django views for the eGSIM app (web app with frontend)
 from io import BytesIO, StringIO
 from itertools import chain
 from os.path import splitext
-from typing import Optional, Union, Type
+from typing import Type
 import re
 
 from shapely.geometry import shape
@@ -120,7 +120,7 @@ class GsimFromRegion(EgsimView):
             self,
             request: HttpRequest,
             data: dict,
-            files: Optional[dict] = None
+            files: dict | None = None
     ) -> HttpResponseBase:
         form = GsimForm(data)
         if form.is_valid():
@@ -137,7 +137,7 @@ class PlotsImgDownloader(EgsimView):
             self,
             request: HttpRequest,
             data: dict,
-            files: Optional[dict] = None
+            files: dict | None = None
     ) -> HttpResponseBase:
         """
         Process the response from a given request and the data / files
@@ -172,7 +172,7 @@ class PredictionsHtmlTutorial(EgsimView):
         self,
         request: HttpRequest,
         data: dict,
-        files: Optional[dict] = None
+        files: dict | None = None
     ) -> HttpResponseBase:
         """Process the response from a given request and the data / files extracted from it"""
 
@@ -201,7 +201,7 @@ class ResidualsHtmlTutorial(EgsimView):
         self,
         request: HttpRequest,
         data: dict,
-        files: Optional[dict] = None
+        files: dict | None = None
     ) -> HttpResponseBase:
         """Process the response from a given request and the data / files extracted from it"""
 
@@ -526,7 +526,7 @@ def get_api_doc_data(
 
 
 def get_hyperlink_text(
-    db_objs: list[Union[models.Flatfile, models.Regionalization]], sep=', '
+    db_objs: list[ models.Flatfile | models.Regionalization], sep=', '
 ):
     """
     Return all references URL from the given objects, in a string containing
@@ -546,7 +546,7 @@ def get_hyperlink_text(
 
 
 def get_display_name(
-    obj: Union[models.Flatfile, models.Regionalization], extended=False
+    obj: models.Flatfile | models.Regionalization, extended=False
 ) -> str:
     """
     Return the name from the given Database obj, assuring it is not empty (either
@@ -585,7 +585,7 @@ def get_bbox(reg: models.Regionalization) -> list[float]:
     return bounds
 
 
-def apiview2help(view: Union[APIFormView, Type[APIFormView]]) -> dict:
+def apiview2help(view: APIFormView | Type[APIFormView]) -> dict:
     """
     Return the same output as `form2help` from the given APIFormView. This method
     First get the help from the view form class, and then adds the view `format`
@@ -603,7 +603,7 @@ def apiview2help(view: Union[APIFormView, Type[APIFormView]]) -> dict:
     return params
 
 
-def form2help(form: Union[EgsimBaseForm, Type[EgsimBaseForm]], compact=True) -> dict:
+def form2help(form: EgsimBaseForm | Type[EgsimBaseForm], compact=True) -> dict:
     """
     Return the given form in a dict with all field names mapped to their help text
 

@@ -2,13 +2,12 @@
 
 from collections.abc import Collection
 
-from typing import Union
 import pandas as pd
 import numpy as np
 from scipy.constants import g
 
 
-def vs30_to_z1pt0_cy14(vs30: Union[float, np.ndarray], japan=False):
+def vs30_to_z1pt0_cy14(vs30: float | np.ndarray, japan=False):
     """
     Return the estimate depth to the 1.0 km/s velocity layer based on Vs30
     from Chiou & Youngs (2014) California model
@@ -29,7 +28,7 @@ def vs30_to_z1pt0_cy14(vs30: Union[float, np.ndarray], japan=False):
         return np.exp((-7.15 / 4.0) * np.log((vs30 ** 4. + c1) / (c2 + c1)))
 
 
-def vs30_to_z2pt5_cb14(vs30: Union[float, np.ndarray], japan=False):
+def vs30_to_z2pt5_cb14(vs30: float | np.ndarray, japan=False):
     """
     Convert vs30 to depth to 2.5 km/s interface using model proposed by
     Campbell & Bozorgnia (2014)
@@ -46,8 +45,8 @@ def vs30_to_z2pt5_cb14(vs30: Union[float, np.ndarray], japan=False):
 
 
 def convert_accel_units(
-    acceleration: Union[Collection[float], float], from_: str, to_: str
-) -> Union[Collection[float], float]:
+    acceleration: Collection[float] | float, from_: str, to_: str
+) -> Collection[float] | float:
     """
     Convert units of number or numeric array representing acceleration
 
@@ -95,11 +94,11 @@ def dataframe2dict(
     dframe: pd.DataFrame, as_json=True,
     drop_empty_levels=True,
     orient: str = 'list',  # or 'dict'
-) -> dict[Union[str, tuple], list]:
+) -> dict[str | tuple, list]:
     """
     Convert the given dataframe into a Python dict, in the format:
     ```
-    { column:Union[str, tuple]: values:list[Any], ... }
+    { column: str | tuple: values:list[Any], ... }
     ```
     :param dframe: the input dataframe
     :param as_json: if True (the default), the dict will be JSON serializable, i.e.
@@ -155,16 +154,16 @@ def dataframe2dict(
 
 
 def na_values(
-    values: Union[pd.Series, pd.DataFrame, np.ndarray]
-) -> Union[pd.Series, pd.DataFrame, np.ndarray]:
+    values: pd.Series | pd.DataFrame | np.ndarray
+) -> pd.Series | pd.DataFrame | np.ndarray:
     """Return a bool ndarray of values that are na (pandas "na" or +-inf)"""
 
     return pd.isna(values) | np.isin(values, [np.inf, -np.inf])
 
 
 def array2json(
-    values: Union[pd.Series, np.ndarray, pd.DataFrame],
-    na_vals: Union[pd.Series, np.ndarray, pd.DataFrame, bool, None] = None
+    values: pd.Series | pd.DataFrame | np.ndarray,
+    na_vals: pd.Series | pd.DataFrame | np.ndarray | bool | None = None
 ) -> list:
     """
     Convert `values` to a JSON serializable list, basically converting
@@ -187,7 +186,7 @@ def array2json(
 
 
 def datetime2str(
-    values: Union[np.ndarray, pd.Series], dformat='%Y-%m-%dT%H:%M:%S'
+    values: np.ndarray | pd.Series, dformat='%Y-%m-%dT%H:%M:%S'
 ) -> np.ndarray:
     """
     Convert `values` to a numpy array of date-time strings
@@ -206,7 +205,7 @@ def datetime2str(
     return pd.to_datetime(values).strftime(dformat).values  # noqa
 
 
-def datetime2float(values: Union[np.ndarray, pd.Series]) -> np.ndarray:
+def datetime2float(values: np.ndarray | pd.Series) -> np.ndarray:
     """
     Convert `values` to a numpy array of date-time floats (unit: second)
 

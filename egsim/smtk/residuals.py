@@ -6,7 +6,6 @@ from itertools import product
 
 from collections.abc import Iterable, Container, Collection
 from pandas import Index
-from typing import Union
 from math import sqrt
 
 import numpy as np
@@ -41,13 +40,13 @@ from .converters import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
 
 
 def get_residuals(
-    gsims: Iterable[Union[str, GMPE]],
-    imts: Iterable[Union[str, imt.IMT]],
+    gsims: Iterable[str | GMPE],
+    imts: Iterable[str | imt.IMT],
     flatfile: pd.DataFrame,
     likelihood=False,
     normalise=True,
     mean=False,
-    header_sep: Union[str, None] = Clabel.sep
+    header_sep: str | None = Clabel.sep
 ) -> pd.DataFrame:
     """
     Calculate the residuals from a given flatfile gsim(s) and imt(s)
@@ -373,7 +372,7 @@ def get_residuals_likelihood(residuals: pd.DataFrame, inplace=True) -> pd.DataFr
     return likelihoods
 
 
-def get_likelihood(values: Union[np.ndarray, pd.Series]) -> Union[np.ndarray, pd.Series]:
+def get_likelihood(values: np.ndarray | pd.Series) -> np.ndarray | pd.Series:
     """
     Return the likelihood of the given values according to
     Equation 9 of Scherbaum et al. (2004)
@@ -384,7 +383,7 @@ def get_likelihood(values: Union[np.ndarray, pd.Series]) -> Union[np.ndarray, pd
 
 # utilities:
 
-def get_column_name(flatfile: pd.DataFrame, column: str) -> Union[str, None]:
+def get_column_name(flatfile: pd.DataFrame, column: str) -> str | None:
     """
     Return the flatfile column matching `column`. This could be `column`
     itself, or any of its aliases (see `columns` module and YAML file)
@@ -653,8 +652,8 @@ def get_ground_motion_property_values(
 
 
 def fill_na(
-    flatfile: pd.DataFrame, src_col: str, dest: Union[None, np.ndarray, pd.Series]
-) -> Union[None, np.ndarray, pd.Series]:
+    flatfile: pd.DataFrame, src_col: str, dest: np.ndarray | pd.Series | None
+) -> np.ndarray | pd.Series | None:
     """
     Fill NAs (NaNs/Nulls) of `dest` with relative values from `src`.
 

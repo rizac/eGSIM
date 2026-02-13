@@ -11,7 +11,7 @@ import tokenize
 from pandas.core.base import IndexOpsMixin
 from pandas.errors import ParserError
 from tables import HDF5ExtError
-from typing import Union, Any
+from typing import Any
 from enum import Enum
 
 import numpy as np
@@ -40,9 +40,9 @@ EVENT_ID_COLUMN_NAME = 'evt_id'
 
 
 def read_flatfile(
-    filepath_or_buffer: Union[str, IOBase],
+    filepath_or_buffer: str | IOBase,
     rename: dict[str, str] = None,
-    dtypes: dict[str, Union[str, list]] = None,
+    dtypes: dict[str, str | list] = None,
     defaults: dict[str, Any] = None,
     csv_sep: str = None,
     **kwargs
@@ -186,7 +186,7 @@ def _read_csv_get_header(filepath_or_buffer: IOBase, sep=None, **kwargs) -> list
 
 def validate_flatfile_dataframe(
     dfr: pd.DataFrame,
-    extra_dtypes: dict[str, Union[ColumnDtype, pd.CategoricalDtype]] = None,  # noqa
+    extra_dtypes: dict[str, ColumnDtype | pd.CategoricalDtype] = None,  # noqa
     extra_defaults: dict[str, Any] = None,
     mixed_dtype_categorical='raise'
 ):
@@ -297,8 +297,8 @@ class ColumnDtype(Enum):
 
 
 def get_dtype_of(
-    obj: Union[IndexOpsMixin, np.dtype, str, float, int, datetime, bool]
-) -> Union[ColumnDtype, None]:
+    obj: IndexOpsMixin | np.dtype | str | float | int | datetime | bool
+) -> ColumnDtype | None:
     """
     Get the dtype of the given pandas array, dtype or Python scalar. If
     `ColumnDtype.category` is returned, then `obj.dtype` is assured to be
@@ -359,7 +359,7 @@ def get_dtype_of(
 
 def cast_to_dtype(
     value: Any,
-    dtype: Union[ColumnDtype, pd.CategoricalDtype],
+    dtype: ColumnDtype | pd.CategoricalDtype,
     mixed_dtype_categorical='raise'
 ) -> Any:
     """
@@ -374,13 +374,13 @@ def cast_to_dtype(
         Then pass None to ignore and return `value` as it is, 'raise'
         (the default) to raise ValueError, and 'coerce' to cast all items to string
     """
-    categories: Union[pd.CategoricalDtype, None] = None
+    categories: pd.CategoricalDtype | None = None
     if isinstance(dtype, pd.CategoricalDtype):
         categories = dtype
         dtype = get_dtype_of(dtype.categories.dtype)
 
     actual_base_dtype = get_dtype_of(value)
-    actual_categories: Union[pd.CategoricalDtype, None] = None
+    actual_categories: pd.CategoricalDtype | None = None
     if isinstance(getattr(value, 'dtype', None), pd.CategoricalDtype):
         actual_categories = value.dtype
         actual_base_dtype = get_dtype_of(value.dtype.categories)
@@ -455,7 +455,7 @@ def column_exists(column: str) -> bool:
 
 
 
-def column_names(*, type: Union[str, ColumnType]='all') -> set[str]:  # noqa
+def column_names(*, type: str | ColumnType='all') -> set[str]:  # noqa
     """
     Return a set of strings with all column names, filtered by the type parameter
     (default : "all", no filter). Spectral acceleration, if returned, will be
@@ -473,7 +473,7 @@ def column_names(*, type: Union[str, ColumnType]='all') -> set[str]:  # noqa
     }
 
 
-def column_type(column: str) -> Union[ColumnType, None]:
+def column_type(column: str) -> ColumnType | None:
     """
     Return the `ColumnType` enum item of the given column, or None.
     if `column` is 'SA(<period>)', it will default to 'SA'
@@ -481,7 +481,7 @@ def column_type(column: str) -> Union[ColumnType, None]:
     return ColumnPropertyRegistry.get_properties(column).get('type', None)
 
 
-def column_default(column: str) -> Union[None, Any]:
+def column_default(column: str) -> Any | None:
     """
     Return the default of the given column name (used to fill missing data), or
     None if no default is set. if `column` is 'SA(<period>)', it will default to 'SA'
@@ -508,7 +508,7 @@ def column_help(column: str) -> str:
     return ColumnPropertyRegistry.get_properties(column).get('help', "")
 
 
-def column_dtype(column: str) -> Union[ColumnDtype, pd.CategoricalDtype, None]:
+def column_dtype(column: str) -> ColumnDtype | pd.CategoricalDtype | None:
     """
     Return the data type of the given column name, as None (no data type set),
     `ColumnDtype` Enum item, or pands `CategoricalDtype` object (in this case

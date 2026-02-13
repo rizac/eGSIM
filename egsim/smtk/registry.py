@@ -1,6 +1,6 @@
 """Registry with helper functions to access OpenQuake entities and properties"""
 
-from typing import Union, Iterable, Callable, Optional
+from typing import Iterable, Callable
 import re
 import numpy as np
 
@@ -11,7 +11,7 @@ from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.hazardlib.valid import gsim as valid_gsim
 
 
-def gsim(model: Union[str, GMPE], raise_deprecated=True) -> GMPE:
+def gsim(model: str | GMPE, raise_deprecated=True) -> GMPE:
     """
     Return a Gsim instance (Python object of class `GMPE`) from the given input
 
@@ -65,10 +65,10 @@ def gsim_name(model: GMPE) -> str:
     return _toml2class[name.strip()]
 
 
-_toml2class: Optional[dict[str, str]] = None  #toml repr -> class name
+_toml2class: dict[str, str] | None = None  #toml repr -> class name
 
 
-def imt(arg: Union[float, str, IMT]) -> IMT:
+def imt(arg: float | str | IMT) -> IMT:
     """
     Return an IMT object from the given argument
 
@@ -106,14 +106,14 @@ def imt_names() -> Iterable[str]:
                 pass
 
 
-def imt_name(imtx: Union[Callable, IMT]) -> str:
+def imt_name(imtx: Callable | IMT) -> str:
     if isinstance(imtx, IMT):
         return repr(imtx)
     # it's a callable (e.g. a function defined in the openquake `imt` module):
     return imtx.__name__
 
 
-def sa_period(obj: Union[float, str, IMT]) -> Union[float, None]:
+def sa_period(obj: float | str | IMT) -> float | None:
     """
     Return the period (float) from the given `obj` argument, or None if `obj`
     does not indicate a Spectral Acceleration object/string with a finite period
@@ -125,7 +125,7 @@ def sa_period(obj: Union[float, str, IMT]) -> Union[float, None]:
         imt_inst = imt(obj)
         if not imt_name(imt_inst).startswith('SA('):
             return None
-    except (TypeError, KeyError, ValueError):
+    except SmtkError:
         return None
 
     period = imt_inst.period
@@ -134,7 +134,7 @@ def sa_period(obj: Union[float, str, IMT]) -> Union[float, None]:
     return float(period) if np.isfinite(period) else None
 
 
-def sa_limits(model: GMPE) -> Union[tuple[float, float], None]:
+def sa_limits(model: GMPE) -> tuple[float, float] | None:
     """Return the SA period limits defined for the given gsim, or None"""
 
     periods = None
@@ -170,7 +170,7 @@ def ground_motion_properties_required_by(*models: GMPE) -> frozenset[str]:
     return frozenset(ret)
 
 
-def gsim_info(model: GMPE) -> tuple[str, list, list, Union[list, None]]:
+def gsim_info(model: GMPE) -> tuple[str, list, list, list| None]:
     """
     Return the model info as a tuple with elements:
      - the source code documentation (Python docstring) of the model

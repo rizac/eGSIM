@@ -29,8 +29,7 @@ from egsim.app.forms import (FlatfileVisualizeForm, PredictionsVisualizeForm,
 from egsim.app.views import URLS, img_ext, form2dict
 from django.test.client import Client
 
-from egsim.smtk import sa_limits
-from egsim.smtk.registry import Clabel
+from egsim.smtk.registry import Clabel, sa_limits
 
 GSIM, IMT = 'gsim', 'imt'
 

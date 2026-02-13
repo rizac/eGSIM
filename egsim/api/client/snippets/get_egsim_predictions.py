@@ -1,5 +1,4 @@
 import io
-from typing import Optional
 # required external packages (pip install ...):
 import requests
 import pandas as pd  # https://pandas.pydata.org/docs/user_guide/dsintro.html#dataframe
@@ -11,8 +10,8 @@ def get_egsim_predictions(
         imt: list[str],
         magnitudes: list[float],
         distances: list[float],
-        rupture_params: Optional[dict] = None,
-        site_params: Optional[dict] = None,
+        rupture_params: dict | None = None,
+        site_params: dict | None = None,
         data_format="hdf",
         base_url="https://egsim.gfz-potsdam.de/api/query/predictions"
 ) -> pd.DataFrame:

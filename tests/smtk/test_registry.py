@@ -118,11 +118,11 @@ def test_imt_as_float_is_converted_to_sa():
         assert isinstance(imt(val), IMT)
         assert imt(val) == SA(val)
     for val in [np.nan, "abc"]:
-        with pytest.raises(KeyError):
+        with pytest.raises(SmtkError):
             imt(val)
-    with pytest.raises(ValueError):
+    with pytest.raises(SmtkError):
         imt('SA(0.1a)')
-    with pytest.raises(ValueError):
+    with pytest.raises(SmtkError):
         imt('SA("0.1a")')
 
 

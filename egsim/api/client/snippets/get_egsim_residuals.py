@@ -1,5 +1,4 @@
 import io
-from typing import Union
 # required external packages (pip install ...):
 import requests
 import pandas as pd  # https://pandas.pydata.org/docs/user_guide/dsintro.html#dataframe
@@ -9,7 +8,7 @@ import pandas as pd  # https://pandas.pydata.org/docs/user_guide/dsintro.html#da
 def get_egsim_residuals(
         model: list[str],
         imt: list[str],
-        flatfile: Union[io.IOBase, str],
+        flatfile: io.IOBase | str,
         query_string=None,
         ranking=False,
         likelihood=False,

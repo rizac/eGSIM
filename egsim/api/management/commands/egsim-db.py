@@ -1,13 +1,13 @@
 """eGSIM management command to edit the DB"""
 
 from datetime import datetime
-from typing import Optional, Callable, Any
+from typing import Callable, Any
 import shlex
 
 from django.core.management import BaseCommand
 from django.db import DatabaseError
-from django.db.models import (QuerySet, Field, CharField, IntegerField, DateField,
-                              FloatField, Model,
+from django.db.models import (QuerySet, Model,
+                              Field, CharField, IntegerField, DateField, FloatField,
                               DateTimeField, TextField, BooleanField, SmallIntegerField,
                               PositiveIntegerField, ForeignKey)
 
@@ -36,7 +36,7 @@ class Command(BaseCommand):
                     tables[key.lower()] = cls
             except Exception:  # noqa
                 pass
-        db_model: Optional[Model] = None
+        db_model: Model | None = None
         queryset = None
         resp = None
         while resp != self.quit:
@@ -57,7 +57,7 @@ class Command(BaseCommand):
     help = '?'  # noqa
     suffix = {'h': f'{help}: help', 'q': f'{quit}: quit', 'b': f'{back}: go back'}
 
-    def select_db_model(self, tables: dict[str, Model]) -> tuple[Optional[Model], str]:
+    def select_db_model(self, tables: dict[str, Model]) -> tuple[Model | None, str]:
         """Return (DbModel or None, aborted)"""
 
         self.stdout.write(f'{len(tables)} table(s): ' +
@@ -80,7 +80,7 @@ class Command(BaseCommand):
         allow_pkey=False,
         allow_editable=False,
         allow_fkey=False
-    ) -> tuple[Optional[Field], Optional[Any], str]:
+    ) -> tuple[Field | None, Any | None, str]:
         """Return (Field, user_input)"""
 
         fields = {
@@ -128,7 +128,7 @@ class Command(BaseCommand):
 
         return None, None, input_result
 
-    def select_db_instances(self, db_model: Model) -> tuple[Optional[QuerySet], str]:
+    def select_db_instances(self, db_model: Model) -> tuple[QuerySet | None, str]:
         """Return (QuerySet, user_input)"""
 
         while True:
@@ -221,8 +221,8 @@ class Command(BaseCommand):
     def print_table(
         self,
         queryset: QuerySet,
-        fields: Optional[list[str]] = None,
-        order_by: Optional[tuple[str]] = ('name',),
+        fields: list[str] | None = None,
+        order_by: tuple[str] | None = ('name',),
         max_width: int = 120,
         max_rows=5
     ):

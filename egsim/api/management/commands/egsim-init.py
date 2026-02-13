@@ -5,12 +5,16 @@ from os.path import join, expanduser, abspath, isfile, dirname, basename
 
 import yaml
 from django.core.management import BaseCommand, CommandError
-from egsim.smtk.registry import gsim_names, gsim, SmtkError
-from egsim.smtk import (
-    intensity_measures_defined_for, ground_motion_properties_required_by, sa_limits
+from egsim.smtk.registry import (
+    gsim_names,
+    gsim,
+    SmtkError,
+    intensity_measures_defined_for,
+    ground_motion_properties_required_by,
+    sa_limits
 )
 from egsim.smtk.flatfile import column_exists
-from ... import models
+from egsim.api import models
 from django.conf import settings
 
 

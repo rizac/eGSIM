@@ -2,7 +2,6 @@
 
 from itertools import product
 from collections.abc import Collection, Iterable
-from typing import Union, Optional
 from dataclasses import dataclass, field, asdict
 from math import sqrt, pi, sin, cos, fabs
 
@@ -40,7 +39,7 @@ class RuptureProperties:
     rake: float = 0.
     ztor: float = 0.
     strike: float = 0.
-    hypocenter_location: Optional[tuple[float, float]] = None
+    hypocenter_location: tuple[float, float] | None = None
     msr: BaseMSR = field(default_factory=WC1994)
     # set initial_point as a random location on Earth
     initial_point: Point = field(default_factory=lambda: Point(45.18333, 9.15, 0.))
@@ -55,21 +54,21 @@ class SiteProperties:
     distance_type: str = "rrup"
     origin_point: tuple[float, float] = (0.5, 0.0)
     vs30measured: bool = True
-    z1pt0: Optional[float] = None
-    z2pt5: Optional[float] = None
+    z1pt0: float | None = None
+    z2pt5: float | None = None
     backarc: bool = False
     xvf: float = 150.0
     region: int = 0
 
 
 def get_ground_motion_from_scenarios(
-    gsims: Iterable[Union[str, GMPE]],
-    imts: Iterable[Union[str, IMT]],
-    magnitudes: Union[float, Collection[float]],
-    distances: Union[float, Collection[float]],
-    rupture_properties: Optional[RuptureProperties] = None,
-    site_properties: Optional[SiteProperties] = None,
-    header_sep: Union[str, None] = Clabel.sep
+    gsims: Iterable[str | GMPE],
+    imts: Iterable[str | IMT],
+    magnitudes: float | Collection[float],
+    distances: float | Collection[float],
+    rupture_properties: RuptureProperties | None = None,
+    site_properties: SiteProperties | None = None,
+    header_sep: str | None = Clabel.sep
 ) -> pd.DataFrame:
     """
     Calculate the ground motion values from different configured scenarios
@@ -363,7 +362,7 @@ def sites_at_distance(
 
 
 def get_hypocentre_on_planar_surface(
-    plane: PlanarSurface, hypo_loc: Optional[tuple[float, float]] = None
+    plane: PlanarSurface, hypo_loc: tuple[float, float] | None = None
 ) -> Point:
     """
     Determine the location of the hypocentre within the plane

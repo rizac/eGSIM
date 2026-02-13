@@ -1,4 +1,3 @@
-import sys
 import textwrap
 import inspect
 from egsim import smtk

@@ -1,13 +1,12 @@
 """Base Form for to model-to-data operations i.e. flatfile handling"""
 
-from typing import Optional
 import pandas as pd
 from django.core.files.uploadedfile import TemporaryUploadedFile
 
 from django.forms import Form
 from django.forms.fields import CharField, FileField
 
-from egsim.smtk import (
+from egsim.smtk.registry import (
     ground_motion_properties_required_by,
     intensity_measures_defined_for,
     sa_limits
@@ -165,7 +164,7 @@ class FlatfileValidationForm(APIForm, FlatfileForm):
     """
     Form for flatfile validation, on success return info from the uploaded flatfile
     """
-    def output(self) -> Optional[dict]:
+    def output(self) -> dict:
         """
         Compute and return the output from the input data (`self.cleaned_data`),
         which is a dict with all flatfile columns info.
@@ -251,7 +250,7 @@ class FlatfileMetadataInfoForm(GsimForm, APIForm):
         return {'columns': columns}
 
 
-def get_hr_flatfile_column_meta(name: str, values: Optional[pd.Series] = None) -> dict:
+def get_hr_flatfile_column_meta(name: str, values: pd.Series | None = None) -> dict:
     """
     Return human-readable (hr) flatfile column metadata in the following `dict` form:
     {

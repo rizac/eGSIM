@@ -4,7 +4,6 @@ For ref, see: https://plotly.com/javascript/reference/
 """
 import pandas as pd
 import numpy as np
-from typing import Optional, Union
 from collections.abc import Iterable, Iterator
 
 from egsim.smtk.converters import array2json, datetime2str
@@ -23,7 +22,7 @@ class AxisType:
     infer = '-'
 
 
-def axis_type(values: Optional[Union[np.ndarray, pd.Series]]) -> str:
+def axis_type(values: np.ndarray | pd.Series | None) -> str:
     """Return the Plotly axis type (str) to display the given values. See `AxisType`"""
 
     dtype = get_dtype_of(values)
@@ -36,7 +35,7 @@ def axis_type(values: Optional[Union[np.ndarray, pd.Series]]) -> str:
     return AxisType.infer
 
 
-def colors_cycle(hex_colors: Optional[Iterable[str]] = None) -> Iterator[str]:
+def colors_cycle(hex_colors: Iterable[str] | None = None) -> Iterator[str]:
     """Endless iterator cycling through default colors in `rgba(...)` form"""
 
     values = []
@@ -61,7 +60,7 @@ def colors_cycle(hex_colors: Optional[Iterable[str]] = None) -> Iterator[str]:
     return cycle(values)
 
 
-def values2json(values: Union[np.ndarray, pd.Series]) -> list:
+def values2json(values: np.ndarray | pd.Series) -> list:
     """Converter from numpy/pandas array to plotly compatible list"""
 
     if axis_type(values) == AxisType.date:  # plotly wants ISO strings
@@ -69,7 +68,7 @@ def values2json(values: Union[np.ndarray, pd.Series]) -> list:
     return array2json(values)
 
 
-def axis_range(values: Union[np.ndarray, pd.Series]) -> Union[list, None]:
+def axis_range(values: np.ndarray | pd.Series) -> list | None:
     """
     Compute the optimal axis range for the given values
 

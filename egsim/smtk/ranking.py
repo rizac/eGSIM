@@ -3,7 +3,6 @@ Collection of function to extract fit measures from residuals for model ranking
 """
 
 from collections.abc import Iterable
-from typing import Union
 from math import ceil
 
 import numpy as np
@@ -21,7 +20,7 @@ def get_measures_of_fit(
     as_dataframe=True,
     edr_bandwidth=0.01,
     edr_multiplier=3.0
-) -> Union[pd.DataFrame, dict]:
+) -> pd.DataFrame | dict:
     """
     Retrieve several Measures of fit from the given residuals, models and imts
 
@@ -226,9 +225,9 @@ def _get_edr_gsim_information(
 
 
 def get_edr(
-    obs: Union[np.ndarray, pd.Series],
-    expected: Union[np.ndarray, pd.Series],
-    stddev: Union[np.ndarray, pd.Series],
+    obs: np.ndarray | pd.Series,
+    expected: np.ndarray | pd.Series,
+    stddev: np.ndarray | pd.Series,
     bandwidth=0.01,
     multiplier=3.0
 ) -> tuple[float, float, float]:
@@ -264,7 +263,7 @@ def get_edr(
 
 
 def _get_edr_kappa(
-    obs: Union[np.ndarray, pd.Series], expected: Union[np.ndarray, pd.Series]
+    obs: np.ndarray | pd.Series, expected: np.ndarray | pd.Series
 ) -> np.floating:
     """
     Return the correction factor kappa

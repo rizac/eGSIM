@@ -5,7 +5,7 @@ from collections.abc import Callable, Iterable
 from datetime import date, datetime
 import re
 from io import StringIO, BytesIO
-from typing import Union, Type, Optional, IO, Any
+from typing import Type, IO, Any
 from urllib.parse import quote as urlquote
 
 import yaml
@@ -95,7 +95,7 @@ class EgsimView(View):
         self,
         request: HttpRequest,
         data: dict,
-        files: Optional[dict] = None
+        files: dict | None = None
     ) -> HttpResponseBase:
         """
         Return a Django HttpResponse from the given arguments extracted from a GET
@@ -137,8 +137,8 @@ class EgsimView(View):
         self,
         query_dict: QueryDict, *,
         nulls=("null",),
-        literal_comma: Optional[set] = frozenset()
-    ) -> dict[str, Union[str, list[str]]]:
+        literal_comma: set | None = frozenset()
+    ) -> dict[str, str | list[str]]:
         """
         Parse the given query dict and returns a Python dict. This method parses
         GET and POST request data and can be overwritten in subclasses.
@@ -166,7 +166,7 @@ class EgsimView(View):
 
 
 def error_response(
-    message: Union[str, Exception, bytes] = '',
+    message: str | Exception | bytes = '',
     status=400,
     **kwargs
 ) -> HttpResponse:
@@ -187,7 +187,7 @@ class NotFound(EgsimView):
         self,
         request: HttpRequest,
         data: dict,
-        files: Optional[dict] = None
+        files: dict | None = None
     ) -> HttpResponse:
         return error_response(status=404)
 
@@ -252,7 +252,7 @@ class APIFormView(EgsimView):
         self,
         request: HttpRequest,
         data: dict,
-        files: Optional[dict] = None
+        files: dict | None = None
     ) -> HttpResponseBase:
         """
         Return a HttpResponse from the given arguments. The Response body / content
@@ -294,7 +294,7 @@ class SmtkView(APIFormView):
         self,
         request: HttpRequest,
         data: dict,
-        files: Optional[dict] = None
+        files: dict | None = None
     ) -> HttpResponseBase:
         """
         Call superclass method but catch ModelError(s) returning the appropriate
@@ -382,7 +382,7 @@ def write_df_to_hdf_stream(frames: dict[str, pd.DataFrame], **kwargs) -> BytesIO
         return BytesIO(out._handle.get_file_image())  # noqa
 
 
-def read_df_from_hdf_stream(stream: Union[bytes, IO], **kwargs) -> pd.DataFrame:
+def read_df_from_hdf_stream(stream: bytes | IO, **kwargs) -> pd.DataFrame:
     """
     Read pandas DataFrame from an HDF BytesIO or bytes sequence
 
@@ -409,7 +409,7 @@ def write_df_to_csv_stream(data: pd.DataFrame, **csv_kwargs) -> BytesIO:
     return content
 
 
-def read_df_from_csv_stream(stream: Union[bytes, IO], **kwargs) -> pd.DataFrame:
+def read_df_from_csv_stream(stream: bytes | IO, **kwargs) -> pd.DataFrame:
     """
     Read pandas DataFrame from a CSV BytesIO or bytes sequence
 

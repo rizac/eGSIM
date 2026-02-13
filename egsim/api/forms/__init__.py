@@ -13,10 +13,16 @@ from django.forms.forms import DeclarativeFieldsMetaclass  # noqa
 from django.forms.fields import Field, FloatField
 
 from egsim.api import models
-from egsim.smtk import validate_inputs, harmonize_input_gsims, harmonize_input_imts
 from egsim.smtk.flatfile import column_help
 from egsim.smtk.registry import gsim_info
-from egsim.smtk.validation import IncompatibleModelImtError, ImtError, ModelError
+from egsim.smtk.validation import (
+    IncompatibleModelImtError,
+    ImtError,
+    ModelError,
+    validate_inputs,
+    harmonize_input_gsims,
+    harmonize_input_imts
+)
 
 
 _base_singleton_renderer = BaseRenderer()  # singleton no-op renderer, see below
