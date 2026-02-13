@@ -3,8 +3,9 @@ eGSIM Django settings file **template** for production
 
 On the production server, copy-paste the content of this file into
 <eGSIM_REPO>/settings.py
-and modify that file
-(Note: for safety, `settings.py` is git-ignored)
+and then modify and configure the latter as app settings file.
+
+(Note: for safety, `settings.py` is ignored in this GIT repository)
 """
 
 from egsim.settings.base import *

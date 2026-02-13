@@ -65,7 +65,7 @@ if __name__ == "__main__":
     with open(output_path, "w", encoding="utf-8") as f:
         print("# eGSIM Library Functions Reference", file=f)
         print("> Note: `smtk` stands for Strong Motion Toolkit, ", file=f)
-        print("> a legacy standalone project now integrated as a subpackage of eGSIM. ",
+        print("> a legacy project now integrated as the core package of eGSIM. ",
               file=f)
         print("", file=f)
 

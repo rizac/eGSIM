@@ -2,14 +2,14 @@
 eGSIM base Django settings file
 
 This module defines the default configuration shared by all environments.
-Other settings modules import from here and override only what differs:
+Other settings modules import from here:
 
 from egsim.settings.base import *
 
-For more info, see https://docs.djangoproject.com/en/stable/ref/settings
+And override only what differs. Django settings doc here:
+https://docs.djangoproject.com/en/stable/ref/settings
 """
 from pathlib import Path
-
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY: str
@@ -69,7 +69,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'egsim.wsgi.application'
 
-
 # Database
 # https://docs.djangoproject.com/en/stable/ref/settings/#databases
 
@@ -79,7 +78,6 @@ DATABASES = {
         'NAME': ''  # you will need to populate this in subclassed settings
     }
 }
-
 
 # Password validation, not used keep defaults here (see settings link above for help):
 
@@ -98,7 +96,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 # Internationalization (not used keep defaults here, see settings link above for help)
 
 LANGUAGE_CODE = 'en-us'
@@ -109,45 +106,29 @@ USE_I18N = True
 
 USE_TZ = False
 
-
-# static files root (path on the server) I GUESS it is not used at all in development
-# mode. In production, it is used as URL to retrieve static files, if they
-# are hosted on some machine (e.g. AWS), or by some server on the same
-# machine (after configuring Nginx accordingly to serve static files at this url):
+# static files url:
 STATIC_URL = '/static/'
 
-# While in development (debug=True), STATIC_ROOT does nothing. You even don't
+# static root (only declared for clarity, to be implemented in sub-settings files).
+# Note: While in development (DEBUG=True), STATIC_ROOT does nothing. You even don't
 # need to set it. Django looks for static files inside each app's directory
-# (djangoproject/appname/static) and then in STATICFILES_DIRS (see below) and
+# (djangoproject/appname/static) and then in STATICFILES_DIRS (if implemented) and
 # serves them automatically (this is the magic done by manage.py runserver
-# when DEBUG=True). Note that in our case djangoproject = appname = egsim.
-# When your project goes live, things differ. Most likely you will serve
-# dynamic content using Django and static files will be served by Nginx. Why?
-# Because Nginx is incredibly efficient and will reduce the workload off Django.
-# This is where STATIC_ROOT becomes handy, as Nginx doesn't know anything about
-# our django project and doesn't know where to find static files.
-# So you set STATIC_ROOT = '/some/folder/' and tell Nginx to look for static
-# files in /some/folder/. Then you run manage.py collectstatic and Django
-# will copy static files from all the apps you have to /some/folder/.
-# STATIC_ROOT = ''
+# when DEBUG=True).
+# When your project goes live (production), most likely you will serve
+# dynamic content using Django and static files by Nginx / Apache, because the latter
+# are incredibly efficient and will reduce the workload off Django.
+# To do so, you
+# 1) set STATIC_ROOT here so that when you run `manage.py collectstatic`
+#    Django will copy static files from all the apps you have to STATIC_ROOT
+# 2) you configure Nginx/Apache to look for static files in STATIC_ROOT
+STATIC_ROOT: str
 
-# STATICFILES_DIRS is used to include additional directories for collectstatic
-# to look for, and in development (debug=True) to search for static files
-# in *addition* to the default djangoproject/appname/static.
-# To keep things simple because we have just one django  project and one app
-# (both named 'egsim') we do not want to tie any static file to a particular app,
-# thus we adopt a very common approach: store static files under
-# 'djangoproject/static' folder, which has the only drawback that we have to
-# add the path to STATICFILES_DIRS
-# STATICFILES_DIRS = (
-#      os.path.join(BASE_DIR, 'static'),
-# )
-
-# static files url:
+# media files url:
 MEDIA_URL = '/media/'
 
-# media dir:
-# MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+# media root (only declared for clarity, to be implemented in sub-settings files):
+MEDIA_ROOT: str
 
 # If we have logins better to set this to True (in the meantime, set to False):
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
