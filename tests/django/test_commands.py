@@ -89,7 +89,8 @@ def test_collectstatic(settings, tmp_path):
     call_command("collectstatic", interactive=False, clear=True)
 
     expected = [
-        'admin', 'css', 'img', 'js'
+        # 'admin',  # <- this dir is not collected anymore (APP in settings removed)
+        'css', 'img', 'js'
     ]
     assert sorted(os.listdir(tmp_path)) == expected
 
