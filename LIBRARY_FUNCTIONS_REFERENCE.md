@@ -194,7 +194,7 @@ def get_measures_of_fit(
     as_dataframe=True,
     edr_bandwidth=0.01,
     edr_multiplier=3.0
-) -> typing.Union[pandas.DataFrame, dict]:
+) -> pandas.DataFrame | dict:
     """
     Retrieve several Measures of fit from the given residuals, models and imts
 
