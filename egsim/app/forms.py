@@ -52,11 +52,6 @@ class PredictionsVisualizeForm(PredictionsForm):
 
     def output(self) -> dict:
         dataframe = super().output()
-        # dist_col_lbl_selector = (
-        #     Clabel.input,
-        #     ColumnType.distance.value,
-        #     slice(None)
-        # )
         dist_col = (Clabel.input, ColumnType.distance.value, Clabel.rrup)
         mag_col = (Clabel.input, ColumnType.rupture.value, Clabel.mag)
         mag_label = mag_col[-1].title()
@@ -111,14 +106,9 @@ class PredictionsVisualizeForm(PredictionsForm):
             def y_label(imt):  # noqa
                 return 'SA (g)'
 
-            # imts is a dict[str, IMT] of sorted SA(p) (see super.clean_imt and
-            # self.clean) rename it as `sas` just for clarity:
-            # sas = imts
-            # x_values = [float(sa_period(_)) for _ in sas]
-
             def groupby(dframe: pd.DataFrame):
                 sa_cols = {}
-                x_values = {}
+                x_vals = {}
                 for m in models:
                     model_sa_cols = [
                         c for c in dframe.columns
@@ -128,7 +118,7 @@ class PredictionsVisualizeForm(PredictionsForm):
                         (c[0], Clabel.std, c[2]) in dframe.columns
                     ]
                     model_sa_cols = sorted(model_sa_cols, key=lambda c: sa_period(c[0]))
-                    x_values[m] = [float(sa_period(_[0])) for _ in model_sa_cols]
+                    x_vals[m] = [float(sa_period(_[0])) for _ in model_sa_cols]
                     sa_cols[m] = model_sa_cols
 
                 for (d, mag), dfr in dframe.groupby([dist_col, mag_col]):
@@ -139,7 +129,7 @@ class PredictionsVisualizeForm(PredictionsForm):
                             dfr.loc[:, sa_cols[m]].iloc[0, :].values,
                             dfr.loc[:, sa_cols[m]].iloc[0, :].values
                         )
-                    yield p, x_values, data
+                    yield p, x_vals, data
 
         c_cycle = colors_cycle()
         colors = {m: next(c_cycle) for m in sorted(set(models))}
@@ -253,9 +243,10 @@ class ResidualsVisualizeForm(ResidualsForm):
     x = CharField(
         required=False,
         initial=None,
-        help_text='The flatfile field to use for plot, or None/null: in this latter case '
-                  'a histogram will be returned depending on the value of the parameter '
-                  'likelihood (True: LH values, else: residuals Z values)')
+        help_text='The flatfile field to use for plot, or None/null: in this latter '
+                  'case a histogram will be returned depending on the value of the '
+                  'parameter likelihood (True: LH values, else: residuals Z values)'
+    )
 
     def clean(self):
         cleaned_data = super().clean()
@@ -332,8 +323,9 @@ class ResidualsVisualizeForm(ResidualsForm):
                     y = dataframe[col]
 
                 color = colors.setdefault(model, next(c_cycle))
-                data, layout = self.get_plot_traces_and_layout(model, imt, x, y,
-                                                               likelihood, col_x, color)
+                data, layout = self.get_plot_traces_and_layout(
+                    model, imt, x, y, likelihood, col_x, color
+                )
 
             # provide a key that is comparable for sorting the plots. Note that imt
             # is separated into name and period (so that "SA(9)" < "SA(10)") and that
@@ -553,7 +545,9 @@ class FlatfileVisualizeForm(APIForm, FlatfileForm):
         """Call `super.clean()` and handle the flatfile"""
 
         cleaned_data = super().clean()
-        x, y = cleaned_data.get('x', None), cleaned_data.get('y', None)
+        x = cleaned_data.get('x', None)
+        y = cleaned_data.get('y', None)
+
         if not x and not y:
             self.add_error("x", 'either x or y is required')
             self.add_error("y", 'either x or y is required')
@@ -576,7 +570,8 @@ class FlatfileVisualizeForm(APIForm, FlatfileForm):
         """
         cleaned_data = self.cleaned_data
         dataframe = cleaned_data['flatfile']
-        x_label, y_label = cleaned_data.get('x', None), cleaned_data.get('y', None)
+        x_label = cleaned_data.get('x', None)
+        y_label = cleaned_data.get('y', None)
 
         data, layout = self.get_plot_traces_and_layout(
             dataframe[x_label] if x_label else None,

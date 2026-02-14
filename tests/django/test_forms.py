@@ -13,7 +13,7 @@ import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
 from openquake.hazardlib import imt
 
-from egsim.api.forms import (GsimImtForm, EgsimBaseForm, split_pars, GsimForm)
+from egsim.api.forms import (GsimImtForm, EgsimBaseForm, split_periods, GsimForm)
 from egsim.api.forms.flatfile import FlatfileForm, FlatfileValidationForm, sa_hr_help
 from egsim.api.forms.scenarios import PredictionsForm
 from egsim.smtk import read_flatfile
@@ -569,11 +569,11 @@ def test_split_pars():
         "2014 on Earthquake Spectra, Volume 30, Number 3 and titled ‘Summary of " \
         "the ASK14 Ground Motion Relation for Active Crustal Regions.’."
 
-    splits = split_pars(t)
+    splits = split_periods(t)
     assert len(splits) == 2
 
     t = "the event time (as ISO formatted string, e.g. 2006-03-31T00:12:24)"
-    splits = split_pars(t)
+    splits = split_periods(t)
     assert len(splits) == 1
 
 
