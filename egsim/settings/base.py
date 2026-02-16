@@ -48,7 +48,7 @@ ROOT_URLCONF = 'egsim.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [Path(__file__).resolve().parent.parent / "templates"],
+        'DIRS': [Path(__file__).resolve().parent.parent / "app" / "templates"],
         'APP_DIRS': True,
         'OPTIONS': {
             'debug': False,
@@ -75,7 +75,7 @@ WSGI_APPLICATION = 'egsim.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': ''  # you will need to populate this in subclassed settings
+        "NAME": ":memory:",  # to be set in dev and prod
     }
 }
 
@@ -122,13 +122,13 @@ STATIC_URL = '/static/'
 # 1) set STATIC_ROOT here so that when you run `manage.py collectstatic`
 #    Django will copy static files from all the apps you have to STATIC_ROOT
 # 2) you configure Nginx/Apache to look for static files in STATIC_ROOT
-STATIC_ROOT: str
+STATIC_ROOT: str | Path
 
 # media files url:
 MEDIA_URL = '/media/'
 
 # media root (only declared for clarity, to be implemented in sub-settings files):
-MEDIA_ROOT: str
+MEDIA_ROOT: str | Path
 
 # If we have logins better to set this to True (in the meantime, set to False):
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True

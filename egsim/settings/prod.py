@@ -30,15 +30,12 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 # python -c "from django.core.management.utils import get_random_secret_key;print(get_random_secret_key())"  # noqa
 SECRET_KEY: str
 
-
-# path to the database file:
-DATABASES['default']['NAME'] = ''
-
 # static files root (path on the server, staticfiles from this repo will be copied there
 # in order to be served by Nginx / Apache, that must be configured)
 STATIC_ROOT = ''
 
-# media root (path on the server. In eGSIM, media root hilds flatfiles and
-# regionalizations):
+# media root (In eGSIM, media root holds flatfiles, regionalizations and db):
 MEDIA_ROOT = ''
 
+# Override Db path to be in media root (as long as the latter is not public):
+DATABASES['default']['NAME'] = Path(MEDIA_ROOT) / "db.sqlite3"  # noqa

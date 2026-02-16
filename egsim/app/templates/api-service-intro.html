@@ -9,10 +9,13 @@ deviations of the GMMs.
 
 Model-to-data analysis allows users to compare observed (or simulated) and predicted
 ground motions via residuals computation. For a given model and intensity measure,
-the (non-normalized) total residual is defined by:
+the non-normalized total residual is defined by:
 <span class='text-nowrap' style='font-style: italic;'>residual = ln(observed) - ln(predicted)</span>,
 whereas inter- (between-) and intra- (within-) event residuals are computed using eq. 10 of
-<a href='https://doi.org/10.1785/BSSA0820010505' target='_blank'>Abrahamson & Youngs (1992)</a>.
+<a href='https://doi.org/10.1785/BSSA0820010505' target='_blank'>Abrahamson & Youngs (1992)</a>
+(note that by default, i.e. when the "normalize" parameter is unset,
+all residuals will be normalized by the model's total-, inter- and intra-standard
+deviations, respectively).
 
 {% elif service == 'model-info' %}
 

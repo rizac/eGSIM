@@ -163,7 +163,9 @@ To do so:
 
 - Delete or rename the database of the settings file
 
-  (path is in the settings file variable `DATABASES['default']['NAME']`)
+  (path is in the settings file variable `DATABASES['default']['NAME']`.
+  As of 2026, the path is the same for all settings and set in
+  `settings/base.py`)
 
 - **If the DB Schema has been modified** (otherwise **skip**):
   
@@ -174,7 +176,7 @@ To do so:
 
   - Recreate migration file (file to autopopulate the DB):
     ```bash
-    export DJANGO_SETTINGS_MODULE=egsim.settings.base;python manage.py makemigrations && python manage.py migrate && python manage.py egsim-init
+    export DJANGO_SETTINGS_MODULE=egsim.settings.base;python manage.py makemigrations
     ```
 
   - `git add` the newly created migration file 
@@ -183,7 +185,7 @@ To do so:
 
 - Migrate (populate DB): 
   ```bash
-  export DJANGO_SETTINGS_MODULE="egsim.settings.base";python manage.py migrate && python manage.py egsim-init
+  export DJANGO_SETTINGS_MODULE=egsim.settings.dev;python manage.py migrate && python manage.py egsim-init
   ```
 
 > Note:
