@@ -1,6 +1,6 @@
 # eGSIM Library Functions Reference
 > Note: `smtk` stands for Strong Motion Toolkit, 
-> a legacy standalone project now integrated as a subpackage of eGSIM. 
+> a legacy project now integrated as the core package of eGSIM. 
 
 
 

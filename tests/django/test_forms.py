@@ -10,14 +10,15 @@ from io import BytesIO
 from os.path import dirname, join, abspath
 
 import pytest
+from unittest.mock import patch
 from django.core.files.uploadedfile import SimpleUploadedFile
 from openquake.hazardlib import imt
 
 from egsim.api.forms import (GsimImtForm, EgsimBaseForm, split_periods, GsimForm)
-from egsim.api.forms.flatfile import FlatfileForm, FlatfileValidationForm, sa_hr_help
+from egsim.api.forms.flatfile import FlatfileForm, FlatfileValidationForm, get_sa_help
 from egsim.api.forms.scenarios import PredictionsForm
-from egsim.smtk import read_flatfile
-from egsim.smtk.flatfile import column_help
+from egsim.smtk import read_flatfile, gsim
+from egsim.smtk.registry import sa_limits
 from egsim.smtk.scenarios import RuptureProperties, SiteProperties
 
 GSIM, IMT = 'gsim', 'imt'
@@ -576,35 +577,72 @@ def test_split_pars():
     splits = split_periods(t)
     assert len(splits) == 1
 
+    t = "the event time quoting 'From journal X. Be careful'"
+    splits = split_periods(t)
+    assert len(splits) == 1
 
-def test_sa_flatfile_field_help():
-    base_sa_help_text = [
+
+def test_get_sa_help():
+    sa_base_help_prefix = (
         "Spectral Acceleration, in g. SA columns must be supplied in the form "
-        "\"SA(P)\", where P denotes the SA period, in seconds.",
+        "\"SA(P)\", where P denotes the SA period, in seconds."
+    )
+
+    sa_base_help_suffix = (
         "If a specific period is required "
         "for computation but missing in the flatfile, the relative SA value will be "
         "determined for each record by logarithmic interpolation (log10), but in this "
         "case the flatfile must contain at least two distinct SA columns"
-    ]
+    )
 
-    expected_outputs = [
-        base_sa_help_text[0] + f" {_} " + base_sa_help_text[1] for _ in [
-            f'<b>The only period supported by the selected model is {0.1}</b>.',
-            f'<b>The period range supported by the selected model is [{0.1}, {0.2}] '
-            f'(endpoints included)</b>.',
-            f'<b>The only period supported by all 2 selected models is {0.1}</b>.',
-            f'<b>The period range supported by all 2 selected models is [{0.1}, {0.2}] '
-            f'(endpoints included)</b>.',
-        ]
-    ]
+    # Note:
+    # sa_limits(gsim('BindiEtAl2014Rjb')) = (0.02, 3.0)
+    # sa_limits(gsim('CauzziEtAl2014')) = (0.01, 10.0)
 
-    text = column_help('SA')
-    assert text == " ".join(base_sa_help_text)
+    text = get_sa_help([gsim('BindiEtAl2014Rjb')])
+    assert text == (
+        f'{sa_base_help_prefix} '
+        f'<b>The period range supported by the selected model '
+        f'is [0.02, 3.0] (endpoints included)</b>. '
+        f'{sa_base_help_suffix}'
+    )
 
-    for expected_text, args in zip(expected_outputs, [
-        (('model1',), text, (0.1,)),
-        (('model1',), text, (0.1, 0.2)),
-        (('model1', 'model2'), text, (0.1,)),
-        (('model1', 'model2'), text, (0.1, 0.2)),
-    ]):
-        assert sa_hr_help(*args) == expected_text
+    text = get_sa_help([gsim('BindiEtAl2014Rjb'), gsim('CauzziEtAl2014')])
+    # Cauzzi et Al has 0.01 10
+    assert text == (
+        f'{sa_base_help_prefix} '
+        f'<b>The period range supported by all 2 selected models '
+        f'is [0.02, 3.0] (endpoints included)</b>. '
+        f'{sa_base_help_suffix}'
+    )
+
+    # Now, we want to test when there is only ONE period supported by all models
+    # Lets mock get_sa_limits and if the arg is None, it returns [0.01, 0.02] (so
+    # it overlaps only on 0.02 with BindiEtAl2014Rjb)
+
+    def new_sa_limit(arg):
+        if arg is None:
+            return [0.02, 0.02]
+        else:
+            return sa_limits(arg)
+
+    with patch("egsim.api.forms.flatfile.sa_limits", new=new_sa_limit):
+        text = get_sa_help([None, gsim('BindiEtAl2014Rjb'), gsim('CauzziEtAl2014')])
+        # Cauzzi et Al has 0.01 10
+        assert text == (
+            f'{sa_base_help_prefix} '
+            f'<b>The only period supported by all 3 selected models is 0.02</b>. '
+            f'{sa_base_help_suffix}'
+        )
+
+    # Same as above, but with only one model:
+    with patch("egsim.api.forms.flatfile.sa_limits", new=new_sa_limit):
+        text = get_sa_help([None])
+        # Cauzzi et Al has 0.01 10
+        assert text == (
+            f'{sa_base_help_prefix} '
+            f'<b>The only period supported by the selected model is 0.02</b>. '
+            f'{sa_base_help_suffix}'
+        )
+
+

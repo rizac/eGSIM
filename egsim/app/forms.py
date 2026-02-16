@@ -52,51 +52,51 @@ class PredictionsVisualizeForm(PredictionsForm):
 
     def output(self) -> dict:
         dataframe = super().output()
-        dist_col = (Clabel.input, ColumnType.distance.value, Clabel.rrup)
-        mag_col = (Clabel.input, ColumnType.rupture.value, Clabel.mag)
-        mag_label = mag_col[-1].title()
-        dist_label = dist_col[-1].title()
+        df_dist_label = (Clabel.input, ColumnType.distance.value, Clabel.rrup)
+        df_mag_label = (Clabel.input, ColumnType.rupture.value, Clabel.mag)
+        plot_mag_label = df_mag_label[-1].title()
+        plot_dist_label = df_dist_label[-1].title()
         imt_label = 'Imt'
         models = self.cleaned_data['gsim'].keys()  # sorted (see super.clean_gsim)
         imts = self.cleaned_data['imt'].keys()  # sorted (see super.clean_imt)
 
         if self.cleaned_data['plot_type'] == 'm':
-            x_label = mag_label
+            x_label = plot_mag_label
 
             def y_label(imt):
                 return f'Median {imt}'
 
             def groupby(dframe: pd.DataFrame):
-                for dist, dfr in dframe.groupby(dist_col):
-                    x = {m: dfr[mag_col] for m in models}
+                for dist_value, dfr in dframe.groupby(df_dist_label):
+                    x = {model: dfr[df_mag_label].values for model in models}
                     for i in imts:
-                        p = {dist_label: dist, imt_label: i}
+                        p = {plot_dist_label: dist_value, imt_label: i}
                         data = {}
-                        for m in models:
-                            if (i, Clabel.median, m) in dfr.columns:
-                                data[m] = (
-                                    dfr.loc[:, (i, Clabel.median, m)].values,
-                                    dfr.loc[:, (i, Clabel.std, m)].values
+                        for model in models:
+                            if (i, Clabel.median, model) in dfr.columns:
+                                data[model] = (
+                                    dfr.loc[:, (i, Clabel.median, model)].values,
+                                    dfr.loc[:, (i, Clabel.std, model)].values
                                 )
                         yield p, x, data
 
         elif self.cleaned_data['plot_type'] == 'd':
-            x_label = dist_label
+            x_label = plot_dist_label
 
             def y_label(imt):
                 return f'Median {imt}'
 
             def groupby(dframe: pd.DataFrame):
-                for mag, dfr in dframe.groupby(mag_col):
-                    x = {m: dfr[dist_col].values for m in models}
+                for mag_value, dfr in dframe.groupby(df_mag_label):
+                    x = {model: dfr[df_dist_label].values for model in models}
                     for i in imts:
-                        p = {mag_label: mag, imt_label: i}
+                        p = {plot_mag_label: mag_value, imt_label: i}
                         data = {}
-                        for m in models:
-                            if (i, Clabel.median, m) in dfr.columns:
-                                data[m] = (
-                                    dfr.loc[:, (i, Clabel.median, m)].values,
-                                    dfr.loc[:, (i, Clabel.std, m)].values
+                        for model in models:
+                            if (i, Clabel.median, model) in dfr.columns:
+                                data[model] = (
+                                    dfr.loc[:, (i, Clabel.median, model)].values,
+                                    dfr.loc[:, (i, Clabel.std, model)].values
                                 )
                         yield p, x, data
 
@@ -121,8 +121,8 @@ class PredictionsVisualizeForm(PredictionsForm):
                     x_vals[m] = [float(sa_period(_[0])) for _ in model_sa_cols]
                     sa_cols[m] = model_sa_cols
 
-                for (d, mag), dfr in dframe.groupby([dist_col, mag_col]):
-                    p = {mag_label: mag, dist_label: d, imt_label: 'SA'}
+                for (d, mag), dfr in dframe.groupby([df_dist_label, df_mag_label]):
+                    p = {plot_mag_label: mag, plot_dist_label: d, imt_label: 'SA'}
                     data = {}
                     for m in models:
                         data[m] = (
@@ -211,7 +211,7 @@ class PredictionsVisualizeForm(PredictionsForm):
                     color=color_transparent,
                     fillcolor=color_transparent,
                     fill='tonexty',
-                    # https://plotly.com/javascript/reference/scatter/#scatter-fill  # noqa
+                    # <https://plotly.com/javascript/reference/scatter/#scatter-fill>
                     x=xs[-1],
                     y=ys[-1],
                     name=model + ' stddev',

@@ -198,20 +198,9 @@ class FlatfileMetadataInfoForm(GsimForm, APIForm):
                 break
 
         if 'SA' in unique_imts:
-            inf = float('inf')
-            min_p, max_p = -inf, inf
-            for m_name, model in cleaned_data['gsim'].items():
-                p_bounds = sa_limits(model)
-                if p_bounds is None:
-                    # FIXME: we assume a model supporting SA with no period limits
-                    #  is defined for all periods, but is it true?
-                    continue
-                min_p = max(min_p, p_bounds[0])
-                max_p = min(max_p, p_bounds[1])
+            min_p, max_p = get_sa_limits(cleaned_data['gsim'].values())
             if min_p > max_p:
                 unique_imts -= {'SA'}
-            elif -inf < min_p <= max_p < inf:
-                cleaned_data['sa_period_limits'] = [min_p, max_p]
 
         if not unique_imts:
             self.add_error(
@@ -230,22 +219,18 @@ class FlatfileMetadataInfoForm(GsimForm, APIForm):
         """
         cleaned_data = self.cleaned_data
         gsims = list(cleaned_data['gsim'].values())
-
         required_columns = (  # event id always required
             ground_motion_properties_required_by(*gsims) | {EVENT_ID_COLUMN_NAME}
         )
         ff_columns = {column_aliases(c)[0] for c in required_columns}
-
         imts = cleaned_data['imt']
 
         columns = []
-        sa_period_limits = cleaned_data.get('sa_period_limits', None)
         for col in sorted(ff_columns | set(imts)):
-            columns.append(get_hr_flatfile_column_meta(col))
-            if col == 'SA' and sa_period_limits is not None:
-                columns[-1]['help'] = sa_hr_help(
-                    gsims, columns[-1]['help'], sa_period_limits
-                )
+            col_info = get_hr_flatfile_column_meta(col)
+            if col == 'SA':
+                col_info['help'] = get_sa_help(gsims)
+            columns.append(col_info)
 
         return {'columns': columns}
 
@@ -316,22 +301,56 @@ def get_hr_flatfile_column_meta(name: str, values: pd.Series | None = None) -> d
     }
 
 
-def sa_hr_help(gsims, sa_help: str, sa_p_limits: list[float]) -> str:
+def get_sa_limits(gsims) -> tuple[float, float]:
+    """Return the SA period limits that work with all the given ground motion models.
+    Return [-float('inf'), float('inf')] if no period bound can be found, i.e.,
+    when no models have SA period limits defined (which might be due to no model
+    being defined for SA, this is not checked for here).
+    If the first element is greater than the second element, it means
+    that there is no overlapping SA period for the given models.
+
+    :param gsims: iterable of ground motion models (str or GMPE instances)
     """
-    Build the SA field help, human-readable (hr). The output will be HTML.
-    `sa_help` should be text in flatfile_metadata for the field 'SA'
+    inf = float('inf')
+    min_p, max_p = -inf, inf
+    # for m_name, model in cleaned_data['gsim'].items():
+    for gsim in gsims:
+        p_bounds = sa_limits(gsim)
+        if p_bounds is None:
+            # FIXME: we assume a model supporting SA with no period limits
+            #  is defined for all periods, but is it true?
+            continue
+        min_p = max(min_p, p_bounds[0])
+        max_p = min(max_p, p_bounds[1])
+    return min_p, max_p
+
+
+def get_sa_help(gsims) -> str:
     """
-    sa_p_min = sa_p_max = sa_p_limits[0]
-    if len(sa_p_limits) > 1:
-        sa_p_max = sa_p_limits[1]
-    the_selected_model = 'the selected model'
+    Build the SA field help, human-readable (hr) from the flatfile SA help,
+    adding the info about the allowed SA periods common to all the given
+    ground motion models `gsims`
+    """
+    sa_help = column_help('SA')
+    sa_p_min, sa_p_max = get_sa_limits(gsims)
+    if not (-float('inf') < sa_p_min <= sa_p_max < float('inf')):
+        return sa_help
+
     if len(gsims) > 1:
         the_selected_model = f'all {len(gsims)} selected models'
-    new_text = (f'<b>The period range supported by {the_selected_model} '
-                f'is [{sa_p_min}, {sa_p_max}] (endpoints included)</b>.'
-                if sa_p_min < sa_p_max else
-                f'<b>The only period supported by {the_selected_model} '
-                f'is {sa_p_min}</b>.')
+    else:
+        the_selected_model = 'the selected model'
+
+    if sa_p_min < sa_p_max:
+        new_text = (
+            f'The period range supported by {the_selected_model} '
+            f'is [{sa_p_min}, {sa_p_max}] (endpoints included)'
+        )
+    else:
+         new_text = (
+             f'The only period supported by {the_selected_model} is {sa_p_min}'
+         )
+
     help_pars = split_periods(sa_help)
-    help_pars = help_pars[:2] + [new_text] + help_pars[2:]
+    help_pars = help_pars[:2] + [f'<b>{new_text}</b>. '] + help_pars[2:]
     return " ".join(s.strip() for s in help_pars)
