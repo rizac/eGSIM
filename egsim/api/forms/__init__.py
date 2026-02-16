@@ -486,7 +486,7 @@ class GsimInfoForm(GsimForm, APIForm):
             # remove unnecessary flatfile-related info (everything after 1st paragraph)
             # and also jsonify the string (replace " with ''):
             gm_props = {
-                k: split_periods(v)[0].strip().removesuffix(".").replace('"', "''")
+                k: split_by_period(v)[0].strip().removesuffix(".").replace('"', "''")
                 for k, v in gm_props.items()
             }
             # pretty print doc (removing all newlines, double quotes, etc.):
@@ -511,12 +511,11 @@ class GsimInfoForm(GsimForm, APIForm):
         return ret
 
 
-def split_periods(text, quotation_chars=("'", '"', '`'), require_uppercase=True):
+def split_by_period(text, quotation_chars=("'", '"', '`'), require_uppercase=True):
     """
     Splits `text` in chunks using as delimiter the period "." followed by one or more
-    spaces.
-    Contrarily to `text.split(". ")`, concatenating the returned list elements returns
-    exactly `text`. In addition, this method allows:
+    spaces. The delimiters are included in the chunks, i.e., concatenating the returned
+    list elements returns exactly `text`. This method allows:
     1. To skip delimiters found inside quoted phrases (quotation_chars)
     2. To skip delimiters that are not followed by an uppercase letter
     (require_uppercase)
@@ -537,7 +536,6 @@ def split_periods(text, quotation_chars=("'", '"', '`'), require_uppercase=True)
                 split.append(text[last_token_end: i])
                 last_token_end = i
 
-        # Toggle quote context
         if char in quotation_chars:
             if in_quote is None:
                 in_quote = char
