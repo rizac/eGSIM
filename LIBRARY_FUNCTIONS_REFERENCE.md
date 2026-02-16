@@ -10,14 +10,14 @@ from egsim.smtk import get_ground_motion_from_scenarios
 
 # Signature and docstring:
 def get_ground_motion_from_scenarios(
-    gsims,
-    imts,
-    magnitudes,
-    distances,
-    rupture_properties=None,
-    site_properties=None,
-    header_sep=' '
-) -> <class 'pandas.DataFrame'>:
+    gsims: Iterable[str | GMPE],
+    imts: Iterable[str | IMT],
+    magnitudes: float | Collection[float],
+    distances: float | Collection[float],
+    rupture_properties: RuptureProperties | None = None,
+    site_properties: SiteProperties | None = None,
+    header_sep: str | None = Clabel.sep
+) -> pd.DataFrame:
     """
     Calculate the ground motion values from different configured scenarios
 
@@ -48,20 +48,20 @@ def get_ground_motion_from_scenarios(
 from egsim.smtk import RuptureProperties
 
 # Signature and docstring:
-class RuptureProperties(
-    dip=90.0,
-    aspect=1.0,
-    tectonic_region='Active Shallow Crust',
-    rake=0.0,
-    ztor=0.0,
-    strike=0.0,
-    hypocenter_location=None,
-    msr=<factory>,
-    initial_point=<factory>
-):
-    """
-    Dataclass defining one or more Ruptures via a set of common properties
-    """
+@dataclass
+class RuptureProperties:
+    """Dataclass defining one or more Ruptures via a set of common properties"""
+
+    dip: float = 90.
+    aspect: float = 1.0
+    tectonic_region: str = "Active Shallow Crust"
+    rake: float = 0.
+    ztor: float = 0.
+    strike: float = 0.
+    hypocenter_location: tuple[float, float] | None = None
+    msr: BaseMSR = field(default_factory=WC1994)
+    # initial_point default is a random location on Earth:
+    initial_point: Point = field(default_factory=lambda: Point(45.18333, 9.15, 0.))
 ```
 
 
@@ -71,21 +71,20 @@ class RuptureProperties(
 from egsim.smtk import SiteProperties
 
 # Signature and docstring:
-class SiteProperties(
-    vs30=760.0,
-    line_azimuth=90.0,
-    distance_type='rrup',
-    origin_point=(0.5, 0.0),
-    vs30measured=True,
-    z1pt0=None,
-    z2pt5=None,
-    backarc=False,
-    xvf=150.0,
-    region=0
-):
-    """
-    Dataclass defining one or more Sites via a set of common properties
-    """
+@dataclass
+class SiteProperties:
+    """Dataclass defining one or more Sites via a set of common properties"""
+
+    vs30: float = 760.0
+    line_azimuth: float = 90.0
+    distance_type: str = "rrup"
+    origin_point: tuple[float, float] = (0.5, 0.0)
+    vs30measured: bool = True
+    z1pt0: float | None = None
+    z2pt5: float | None = None
+    backarc: bool = False
+    xvf: float = 150.0
+    region: int = 0
 ```
 
 
@@ -96,12 +95,12 @@ from egsim.smtk import read_flatfile
 
 # Signature and docstring:
 def read_flatfile(
-    filepath_or_buffer,
-    rename=None,
-    dtypes=None,
-    defaults=None,
-    csv_sep=None,
-    kwargs
+    filepath_or_buffer: str | IOBase,
+    rename: dict[str, str] = None,
+    dtypes: dict[str, str | list] = None,
+    defaults: dict[str, Any] = None,
+    csv_sep: str = None,
+    **kwargs
 ) -> pd.DataFrame:
     """
     Read a flatfile from either a comma-separated values (CSV) or HDF file,
@@ -145,13 +144,13 @@ from egsim.smtk import get_residuals
 
 # Signature and docstring:
 def get_residuals(
-    gsims,
-    imts,
-    flatfile,
+    gsims: Iterable[str | GMPE],
+    imts: Iterable[str | imt.IMT],
+    flatfile: pd.DataFrame,
     likelihood=False,
     normalise=True,
     mean=False,
-    header_sep=' '
+    header_sep: str | None = Clabel.sep
 ) -> pd.DataFrame:
     """
     Calculate the residuals from a given flatfile gsim(s) and imt(s)
@@ -188,13 +187,13 @@ from egsim.smtk import get_measures_of_fit
 
 # Signature and docstring:
 def get_measures_of_fit(
-    gsims,
-    imts,
-    residuals,
+    gsims: Iterable[str],
+    imts: Iterable[str],
+    residuals: pd.DataFrame,
     as_dataframe=True,
     edr_bandwidth=0.01,
     edr_multiplier=3.0
-) -> pandas.DataFrame | dict:
+) -> pd.DataFrame | dict:
     """
     Retrieve several Measures of fit from the given residuals, models and imts
 
@@ -220,10 +219,8 @@ def get_measures_of_fit(
 from egsim.smtk import gsim_names
 
 # Signature and docstring:
-def gsim_names() -> typing.Iterable[str]:
-    """
-    Return all model names registered in OpenQuake, as iterable
-    """
+def gsim_names() -> Iterable[str]:
+    """Return all model names registered in OpenQuake, as iterable"""
 ```
 
 
@@ -233,10 +230,8 @@ def gsim_names() -> typing.Iterable[str]:
 from egsim.smtk import imt_names
 
 # Signature and docstring:
-def imt_names() -> typing.Iterable[str]:
-    """
-    Return all IMT names registered in OpenQuake, as iterable
-    """
+def imt_names() -> Iterable[str]:
+    """Return all IMT names registered in OpenQuake, as iterable"""
 ```
 
 
@@ -246,10 +241,7 @@ def imt_names() -> typing.Iterable[str]:
 from egsim.smtk import gsim
 
 # Signature and docstring:
-def gsim(
-    model,
-    raise_deprecated=True
-) -> <class 'openquake.hazardlib.gsim.base.GMPE'>:
+def gsim(model: str | GMPE, raise_deprecated=True) -> GMPE:
     """
     Return a Gsim instance (Python object of class `GMPE`) from the given input
 
@@ -269,7 +261,7 @@ def gsim(
 from egsim.smtk import imt
 
 # Signature and docstring:
-def imt(arg) -> <class 'openquake.hazardlib.imt.IMT'>:
+def imt(arg: float | str | IMT) -> IMT:
     """
     Return an IMT object from the given argument
 
@@ -284,7 +276,7 @@ def imt(arg) -> <class 'openquake.hazardlib.imt.IMT'>:
 from egsim.smtk import gsim_info
 
 # Signature and docstring:
-def gsim_info(model) -> tuple[str, list, list, list | None]:
+def gsim_info(model: GMPE) -> tuple[str, list, list, list| None]:
     """
     Return the model info as a tuple with elements:
      - the source code documentation (Python docstring) of the model
@@ -303,13 +295,16 @@ def gsim_info(model) -> tuple[str, list, list, list | None]:
 from egsim.smtk import SmtkError
 
 # Signature and docstring:
-class SmtkError:
+class SmtkError(Exception):
     """
     Base exception for any egsim.smtk error (e.g. invalid model, imt, flatfile error).
 
     The string representation of these kind of errors is the concatenation
     of the arguments given as input, separated by `self.separator` (= ", " by default)
     """
+
+    separator = ', '
+
 ```
 
 
@@ -319,10 +314,12 @@ class SmtkError:
 from egsim.smtk import FlatfileError
 
 # Signature and docstring:
-class FlatfileError:
+class FlatfileError(SmtkError):
     """
     Subclass of :class:`SmtkError` describing a flatfile error
     (e.g., missing column, mising data, incompatible data type)
     """
+
+    pass
 ```
 

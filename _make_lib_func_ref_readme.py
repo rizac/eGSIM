@@ -1,5 +1,8 @@
 import textwrap
 import inspect
+
+from numpy.core.defchararray import startswith
+
 from egsim import smtk
 
 
@@ -12,48 +15,42 @@ def list_function_docstrings():
         obj_mod = getattr(obj, "__module__", "")
         if obj_mod != module.__name__ and not obj_mod.startswith(f"{module.__name__}."):
             continue
-        sig = pretty_print_signature(obj)
-        doc = textwrap.indent(inspect.getdoc(obj), "    ")
-        yield name, sig, doc
+        obj_header = get_obj_header(obj)
+        yield name, obj_header
 
 
-def pretty_print_signature(obj, indent=4):
-    obj_name = obj.__name__
-    prefix = "class "
-    sig_params = []
-    if inspect.isfunction(obj) or inspect.ismethod(obj):
-        prefix = "def "
-    elif not inspect.isclass(obj):
-        raise ValueError(f"{obj} must be a function or a class")
-    try:
-        sig = inspect.signature(obj)
-        sig_params = sig.parameters.values()
-    except ValueError:
-        if not inspect.isclass(obj):
-            raise
+def get_obj_header(py_obj):
+    """Return an obj header. If py_obj is a Python function or method, return the
+    function signature and its docstring. If class/ dataclass, the class name
+    and the class body up to the first occurrence of "def ".
 
-    params = []
-    for p in sig_params:
-        if p.default is inspect._empty:
-            params.append(p.name)
-        else:
-            params.append(f"{p.name}={p.default!r}")
+    Note: obj must have a docstring!
+    """
+    source_lines, _ = inspect.getsourcelines(py_obj)
+    result = []
+    quote = None
+    is_class = None
+    for line in source_lines:
+        result.append(line.rstrip("\n"))
+        line = line.strip()
+        if is_class is None:
+            is_class = line.startswith("class ") or line == "@dataclass"
+            continue
+        if quote is None and (
+            line.startswith("'''") or line.startswith('"""')
+        ):
+            quote = line[:3]
+            line = line[3:] # avoid jumping in if below if it's just """ or '''
+        if quote is not None and line.endswith(quote):
+            if not is_class:
+                break
+            quote = None
+            continue
+        if is_class and quote is None and line.startswith("def "):
+            result.pop()
+            break
 
-    if len(params) == 1:
-        obj_name = f"{obj_name}({params[0]})"
-    elif len(params):
-        pad = "    "
-        params_str = ",\n".join(pad + p for p in params)
-        obj_name = f"{obj_name}(\n{params_str}\n)"
-    elif inspect.isfunction(obj) or inspect.ismethod(obj):
-        obj_name += "()"
-
-    ret = ":"
-    if inspect.isfunction(obj) or inspect.ismethod(obj):
-        if sig.return_annotation is not inspect._empty:
-            ret = " -> " + str(sig.return_annotation) + ":"
-
-    return prefix + obj_name + ret
+    return "\n".join(result)
 
 
 if __name__ == "__main__":
@@ -69,7 +66,7 @@ if __name__ == "__main__":
               file=f)
         print("", file=f)
 
-        for n, s, d in list_function_docstrings():
+        for n, s_d in list_function_docstrings():
             print('', file=f)  # append newline
             print('', file=f)
             print(f'### {n}', file=f)
@@ -77,9 +74,9 @@ if __name__ == "__main__":
             print(f'from egsim.smtk import {n}', file=f)
             print('', file=f)
             print('# Signature and docstring:', file=f)
-            print(s, file=f)
-            print('    """', file=f)
-            print(d, file=f)
-            print('    """', file=f)
+            print(s_d, file=f)
+            # print('    """', file=f)
+            # print(d, file=f)
+            # print('    """', file=f)
             print('```', file=f)
             print('', file=f)

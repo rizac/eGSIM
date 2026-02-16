@@ -41,7 +41,7 @@ class RuptureProperties:
     strike: float = 0.
     hypocenter_location: tuple[float, float] | None = None
     msr: BaseMSR = field(default_factory=WC1994)
-    # set initial_point as a random location on Earth
+    # initial_point default is a random location on Earth:
     initial_point: Point = field(default_factory=lambda: Point(45.18333, 9.15, 0.))
 
 
