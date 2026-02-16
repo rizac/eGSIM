@@ -1,22 +1,22 @@
 # eGSIM - Maintenance & Operations (web app)
 
+> Note: the value of `DJANGO_SETTINGS_MODULE` in the examples below 
+> must be changed in production (usually `egsim.settings`, where
+> the file settings.py is git-ignored and must be created on the server)
+
 ## Run tests (smtk lib only)
 ```bash
-pytest -vvv ./tests/smtk
+pytest -xvvv ./tests/smtk
 ```
+(-x=stop at first error, -v*=increase verbosity). 
 
 ## Run tests (web app)
-
-> Note: the value of `DJANGO_SETTINGS_MODULE` in the examples below 
-> must be changed in production
 
 Move in the `egsim directory` and type:
 
 ```bash
 export DJANGO_SETTINGS_MODULE=egsim.settings.test; pytest -xvvv ./tests/
 ```
-(x=stop at first error, v*=increase verbosity). 
-
 with coverage report:
 
 ```bash
@@ -43,15 +43,11 @@ And then under **Environment variables:** add:
 
 ## Test GUI in local browser
 
-> Note: the value of `DJANGO_SETTINGS_MODULE` in the examples below 
-> must be changed in production
-
 > Note: the DB should have been created beforehand (see dedicated section below)
 
-Type:
 
 ```bash
-export DJANGO_SETTINGS_MODULE="egsim.settings.dev";python manage.py runserver 
+export DJANGO_SETTINGS_MODULE=egsim.settings.dev;python manage.py runserver 
 ```
 
 <details>
@@ -135,7 +131,7 @@ pip install -U --ignore-installed django && pip install -U -e ".[web]"
 `python -c 'import django;print(django.__version__)'`
 Run tests:
 ```
-export DJANGO_SETTINGS_MODULE="egsim.settings.test" && pytest -xvvv ./tests/django
+export DJANGO_SETTINGS_MODULE=egsim.settings.test && pytest -xvvv ./tests
 ```
 Fix code as needed, commit push and so on
 
@@ -154,9 +150,6 @@ to the platform.
 
 ## Django Database (sqlite DB)
 
-> Note: the value of `DJANGO_SETTINGS_MODULE` in the examples below 
-> must be changed in production
-
 **WHEN**: 
 
  - **The DB needs to be emptied and repopulated**  
@@ -172,7 +165,7 @@ To do so:
 
   (path is in the settings file variable `DATABASES['default']['NAME']`)
 
-- **If the DB Schema HAS CHANGED** (otherwise skip):
+- **If the DB Schema has been modified** (otherwise **skip**):
   
   - Delete the (only) migration file
 
@@ -181,7 +174,7 @@ To do so:
 
   - Recreate migration file (file to autopopulate the DB):
     ```bash
-    export DJANGO_SETTINGS_MODULE="egsim.settings.dev";python manage.py makemigrations && python manage.py migrate && python manage.py egsim-init
+    export DJANGO_SETTINGS_MODULE=egsim.settings.base;python manage.py makemigrations && python manage.py migrate && python manage.py egsim-init
     ```
 
   - `git add` the newly created migration file 
@@ -190,7 +183,7 @@ To do so:
 
 - Migrate (populate DB): 
   ```bash
-  export DJANGO_SETTINGS_MODULE="egsim.settings.dev";python manage.py migrate && python manage.py egsim-init
+  export DJANGO_SETTINGS_MODULE="egsim.settings.base";python manage.py migrate && python manage.py egsim-init
   ```
 
 > Note:
@@ -198,9 +191,6 @@ To do so:
 > managing migration files
 
 ## Modify eGSIM DB data from the command line
-
-> Note: the value of `DJANGO_SETTINGS_MODULE` in the examples below 
-> must be changed in production
 
 **WHEN**: mostly when you want to hide a flatfile, model or 
 regionalization from the program usually temporarily (more complex 
@@ -211,8 +201,7 @@ Execute the interactive command:
    export DJANGO_SETTINGS_MODULE="egsim.settings.dev";python manage.py egsim-db
    ```
 
-> NOTE:
-> this Django command replaces the very expensive admin panel
+> NOTE: this Django command replaces the very expensive admin panel
 > (again, our DB is very simple)
 
 
