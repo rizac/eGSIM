@@ -178,8 +178,13 @@ To do so:
     ```bash
     export DJANGO_SETTINGS_MODULE=egsim.settings.base;python manage.py makemigrations
     ```
+    Note: In principle, in the previous command any settings file is ok, as long 
+    as it shares the same `INSTALLED_APPS` variable as in `egsim.settings.base`
 
-  - `git add` the newly created migration file 
+  - Add / commit / push the newly created migration file:
+    ```bash
+    git add egsim/api/migrations/0001_initial.py && git commit -m 'update migration file' && git push
+    ```
      
     (should be `egsim/api/migrations/0001_initial.py`)
 
