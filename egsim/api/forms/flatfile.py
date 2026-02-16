@@ -27,7 +27,7 @@ from egsim.smtk.flatfile import (
     column_names
 )
 from egsim.api import models
-from egsim.api.forms import EgsimBaseForm, APIForm, GsimForm, split_by_period
+from egsim.api.forms import EgsimBaseForm, APIForm, GsimForm
 
 
 # Let's provide uploaded flatfile Field in a separate Form as the Field is not
@@ -351,6 +351,12 @@ def get_sa_help(gsims) -> str:
              f'The only period supported by {the_selected_model} is {sa_p_min}'
          )
 
-    help_pars = split_by_period(sa_help)
-    help_pars = help_pars[:2] + [f'<b>{new_text}</b>. '] + help_pars[2:]
-    return " ".join(s.strip() for s in help_pars)
+    idx = sa_help.find(". If a specific period is required ")
+    if idx > -1:
+        prefix = f'{sa_help[:idx+2]}' # leading ". " is part of predix
+        suffix = f"{sa_help[idx+1:]}"  # leading "." is removed from suffix
+    else:
+        # assure prefix ends with ". ":
+        prefix = sa_help.rstrip().removesuffix(".").rstrip() + ". "
+        suffix = ""
+    return f'{prefix}<b>{new_text}</b>.{suffix}'.strip()

@@ -14,7 +14,7 @@ from unittest.mock import patch
 from django.core.files.uploadedfile import SimpleUploadedFile
 from openquake.hazardlib import imt
 
-from egsim.api.forms import (GsimImtForm, EgsimBaseForm, split_by_period, GsimForm)
+from egsim.api.forms import (GsimImtForm, EgsimBaseForm, GsimForm)
 from egsim.api.forms.flatfile import FlatfileForm, FlatfileValidationForm, get_sa_help
 from egsim.api.forms.scenarios import PredictionsForm
 from egsim.smtk import read_flatfile, gsim
@@ -561,25 +561,6 @@ def check_egsim_form(new_class: Type[EgsimBaseForm]):
         # all good. Merge into `field2params`:
         field2params[field] = params
     return field2params
-
-
-def test_split_pars():
-
-    t = "Implements GMPE by Abrahamson, Silva and Kamai developed within the " \
-        "the PEER West 2 Project. This GMPE is described in a paper published in " \
-        "2014 on Earthquake Spectra, Volume 30, Number 3 and titled ‘Summary of " \
-        "the ASK14 Ground Motion Relation for Active Crustal Regions.’."
-
-    splits = split_by_period(t)
-    assert len(splits) == 2
-
-    t = "the event time (as ISO formatted string, e.g. 2006-03-31T00:12:24)"
-    splits = split_by_period(t)
-    assert len(splits) == 1
-
-    t = "the event time quoting 'From journal X. Be careful'"
-    splits = split_by_period(t)
-    assert len(splits) == 1
 
 
 def test_get_sa_help():

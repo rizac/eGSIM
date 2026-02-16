@@ -481,14 +481,28 @@ class GsimInfoForm(GsimForm, APIForm):
         ret = {}
         for gmm_name, gmm in self.cleaned_data['gsim'].items():
             doc, imts, gm_props, sa_lim = gsim_info(gmm)
-            # ground motion properties:
-            gm_props = {p: column_help(p) for p in gm_props}
-            # remove unnecessary flatfile-related info (everything after 1st paragraph)
-            # and also jsonify the string (replace " with ''):
-            gm_props = {
-                k: split_by_period(v)[0].strip().removesuffix(".").replace('"', "''")
-                for k, v in gm_props.items()
-            }
+
+            # ground motion properties, get help (short help):
+            gm_props_with_short_help = {}
+            for gmp in gm_props:
+                gm_help = column_help(gmp)
+                current_quote_char = None
+                for i, c in enumerate(gm_help):
+                    # skip quoted strings:
+                    if current_quote_char is None and c in ('"', '"', '`'):
+                        current_quote_char = c
+                        continue
+                    elif current_quote_char is not None and c == current_quote_char:
+                        current_quote_char = None
+                        continue
+                    # check if period and space and uppercase letter:
+                    if c == '.' and i + 1 < len(doc) and doc[i + 1].isspace():
+                        rem = doc[i+1:].strip()
+                        if not rem or rem[0].isupper():
+                            gm_help = gm_help[:i + 1].strip()
+                        break
+                gm_props_with_short_help[gmp] = gm_help
+
             # pretty print doc (removing all newlines, double quotes, etc.):
             doc = " ".join(
                 line.strip().
@@ -504,51 +518,8 @@ class GsimInfoForm(GsimForm, APIForm):
             ret[gmm_name] = {
                 'description': doc,
                 'defined_for': imts,
-                'requires': gm_props,
+                'requires': gm_props_with_short_help,
                 'sa_period_limits': sa_lim,
                 'hazard_source_models': hazard_source_models.get(gmm_name)
             }
         return ret
-
-
-def split_by_period(text, quotation_chars=("'", '"', '`'), require_uppercase=True):
-    """
-    Splits `text` in chunks using as delimiter the period "." followed by one or more
-    spaces. The delimiters are included in the chunks, i.e., concatenating the returned
-    list elements returns exactly `text`. This method allows:
-    1. To skip delimiters found inside quoted phrases (quotation_chars)
-    2. To skip delimiters that are not followed by an uppercase letter
-    (require_uppercase)
-    """
-    in_quote = None
-    period_found = False
-    i = 0
-    length = len(text)
-    split = []
-    last_token_end = 0
-    while i < length:
-        char = text[i]
-
-        if period_found:
-            period_found = False
-            # Check for capital letter
-            if not require_uppercase or text[i].isupper():
-                split.append(text[last_token_end: i])
-                last_token_end = i
-
-        if char in quotation_chars:
-            if in_quote is None:
-                in_quote = char
-            elif in_quote == char:
-                in_quote = None
-        elif char == '.' and in_quote is None:
-            while i + 1 < length and text[i + 1].isspace(): # Look ahead for spaces
-                i += 1
-                period_found = True
-
-        i += 1
-
-    if last_token_end < len(text):
-        split.append(text[last_token_end:])
-
-    return split or [text]
