@@ -11,7 +11,7 @@ tmp/
 # Django stuff:
 *.log
 local_settings.py
-# this is the settings file in production, so exlude it for safety:
+# this is the typical Django settings file name, ignore just in case we accidentally put it in the repo:
 settings.py
 # the db name (same for all settings), ignore just in case we accidentally put it in the repo:
 db.sqlite3
