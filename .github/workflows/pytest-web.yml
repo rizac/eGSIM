@@ -50,16 +50,8 @@ jobs:
           python -m venv venv
           source venv/bin/activate
           python -m pip install --upgrade pip setuptools wheel
-
-      # Download openquake.engine source distribution and install editable
-      - name: Install openquake.engine (editable)
-        run: |
-          source venv/bin/activate
-          mkdir -p /tmp/openquake
-          (cd /tmp/openquake && git clone --branch v${OQ_VERSION} https://github.com/gem/oq-engine.git .)
-          pip install -r "/tmp/openquake/${REQUIREMENTS_FILE}"
+          pip install -r "./${REQUIREMENTS_FILE}"
           pip install -U -e ".[web]"  # upgrade all packages to most recent ones
-          # pip freeze > ./${REQUIREMENTS_FILE}  # in case one wants to freeze dependencies locally
 
       # Run Django migrations and pytest
       - name: Test eGSIM (web app)
