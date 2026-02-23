@@ -62,8 +62,6 @@ jobs:
           # python manage.py egsim-init --no-input
           pytest --ignore=./tests/tmp/ -xvvv ./tests
 
-       Show pip freeze in log, save requirements-web.txt, and upload artifact
-
       - name: Show pip freeze in workflow log
         run: |
           source venv/bin/activate
