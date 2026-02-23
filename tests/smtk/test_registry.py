@@ -156,28 +156,17 @@ def is_library_functions_readme_outdated():
     LIBRARY_FUNCTIONS_README_IS_UPDATED needs to be kept in sync with changes
     with smtk code
     """
-
-    paths = {Path(smtk.__file__).resolve().parent}
-
-    for name, obj in vars(smtk).items():
-        if name.startswith("__") and name.endswith("__"):
-            continue
-        mod_name = getattr(obj, "__module__", None)
-        if mod_name is None:
-            continue
-        if mod_name == smtk.__name__ or mod_name.startswith(smtk.__name__ + "."):
-            mod = inspect.getmodule(obj)
-            if mod and hasattr(mod, "__file__"):
-                paths.add(Path(mod.__file__).resolve())
+    root = None
+    if "GITHUB_WORKSPACE" in os.environ:  # gihub workflow
+        root = Path(os.environ["GITHUB_WORKSPACE"]) / 'egsim' / 'smtk'
+    else:
+        root = Path(smtk.__file__).resolve().parent
 
     newest_mtime = -1
-    for entry in paths:
+    for entry in root.root.rglob("*.py"):
         mtime = entry.stat().st_mtime
         if mtime > newest_mtime:
             newest_mtime = mtime
 
-    lib_func_ref_readme = (
-        Path(smtk.__file__).resolve().parent.parent.parent /
-        'LIBRARY_FUNCTIONS_REFERENCE.md'
-    )
-    return Path(lib_func_ref_readme).stat().st_mtime < newest_mtime
+    lib_func_ref_readme = root.parent.parent / 'LIBRARY_FUNCTIONS_REFERENCE.md'
+    return lib_func_ref_readme.stat().st_mtime < newest_mtime

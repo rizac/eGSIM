@@ -96,6 +96,7 @@ jobs:
 
       - name: Install eGSIM smtk lib (Windows)
         if: matrix.config.os == 'windows-latest'
+        shell: cmd
         run: |
           venv\Scripts\activate
           python -m pip install --upgrade pip setuptools wheel
@@ -103,8 +104,17 @@ jobs:
           python -m pip install .
 
       - name: Test eGSIM (smtk lib)
+        if: matrix.config.os != 'windows-latest'
         run: |
           source venv/bin/activate
+          pip install pytest
+          pytest --ignore=./tests/tmp/ -xvvv ./tests/smtk
+
+      - name: Test eGSIM (smtk lib, Windows)
+        if: matrix.config.os == 'windows-latest'
+        shell: cmd
+        run: |
+          venv\Scripts\activate
           pip install pytest
           pytest --ignore=./tests/tmp/ -xvvv ./tests/smtk
 
