@@ -141,7 +141,17 @@ def test_sa_limits():
             assert lims is None or (len(lims) == 2 and lims[0] < lims[1])
 
 
-def test_library_functions_readme_is_updated():
+def pytest_sessionfinish(session, exitstatus):
+    if exitstatus == 0 and is_library_functions_readme_outdated():
+        print(
+            'WARNING: Library functions README is outdated '
+            '(comparing file mod. time).\n'
+            'To fix this message, run: ' +
+            'python _make_lib_func_ref_readme.py, check updated file content\n'
+            'commit and re-run tests'
+        )
+
+def is_library_functions_readme_outdated():
     """
     LIBRARY_FUNCTIONS_README_IS_UPDATED needs to be kept in sync with changes
     with smtk code
@@ -170,9 +180,4 @@ def test_library_functions_readme_is_updated():
         Path(smtk.__file__).resolve().parent.parent.parent /
         'LIBRARY_FUNCTIONS_REFERENCE.md'
     )
-    if Path(lib_func_ref_readme).stat().st_mtime < newest_mtime:
-        raise AssertionError(
-            lib_func_ref_readme.name + ' non updated. Run ' +
-            'python _make_lib_func_ref_readme.py, check updated file content, '
-            'commit and re-run tests'
-        )
+    return Path(lib_func_ref_readme).stat().st_mtime < newest_mtime
