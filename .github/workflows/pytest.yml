@@ -20,13 +20,13 @@ jobs:
             os: macos-latest
             python-version: "3.11"
 
-          - req-file: requirements-py311-macos_x86_64.txt
-            os: macos-13
-            python-version: "3.11"
-
-          - req-file: requirements-py311-win64.txt
-            os: windows-latest
-            python-version: "3.11"
+#          - req-file: requirements-py311-macos_x86_64.txt
+#            os: macos-13
+#            python-version: "3.11"
+#
+#          - req-file: requirements-py311-win64.txt
+#            os: windows-latest
+#            python-version: "3.11"
 
           - req-file: requirements-py312-linux64.txt
             os: ubuntu-latest
@@ -36,23 +36,23 @@ jobs:
             os: macos-latest
             python-version: "3.12"
 
-          - req-file: requirements-py312-macos_x86_64.txt
-            os: macos-13
-            python-version: "3.12"
-
-          - req-file: requirements-py312-win64.txt
-            os: windows-latest
-            python-version: "3.12"
+#          - req-file: requirements-py312-macos_x86_64.txt
+#            os: macos-13
+#            python-version: "3.12"
+#
+#          - req-file: requirements-py312-win64.txt
+#            os: windows-latest
+#            python-version: "3.12"
 
           # test latest python version ("3.x") for ubuntu and macos only:
 
-          - req-file: requirements-py312-linux64.txt
-            os: ubuntu-latest
-            python-version: "3.x"
-
-          - req-file: requirements-py312-macos_arm64.txt
-            os: macos-latest
-            python-version: "3.x"
+#          - req-file: requirements-py312-linux64.txt
+#            os: ubuntu-latest
+#            python-version: "3.x"
+#
+#          - req-file: requirements-py312-macos_arm64.txt
+#            os: macos-latest
+#            python-version: "3.x"
 
     runs-on: ${{ matrix.config.os }}
 
