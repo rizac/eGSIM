@@ -1,4 +1,4 @@
-name: Test sM
+name: Test eGSIM smtk library
 
 on:
   push:
