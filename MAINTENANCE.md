@@ -1,22 +1,27 @@
 # eGSIM - Maintenance & Operations (web app)
 
-> Note: the value of `DJANGO_SETTINGS_MODULE` in the examples below 
-> must be changed in production (usually `egsim.settings`, where
-> the file settings.py is git-ignored and must be created on the server)
+## Install for development
+
+Follow installation on GitHub workflow, remember to add -e editable
+in the last command: `pip install -e ...`
 
 ## Run tests (smtk lib only)
 ```bash
-pytest -xvvv ./tests/smtk
+pytest -vvv ./tests/smtk
 ```
-(-x=stop at first error, -v*=increase verbosity). 
 
 ## Run tests (web app)
+
+> Note: the value of `DJANGO_SETTINGS_MODULE` in the examples below 
+> must be changed in production
 
 Move in the `egsim directory` and type:
 
 ```bash
 export DJANGO_SETTINGS_MODULE=egsim.settings.test; pytest -xvvv ./tests/
 ```
+(x=stop at first error, v*=increase verbosity). 
+
 with coverage report:
 
 ```bash
@@ -43,11 +48,15 @@ And then under **Environment variables:** add:
 
 ## Test GUI in local browser
 
-> Note: the DB should have been created beforehand (see dedicated section below)
+> Note: the value of `DJANGO_SETTINGS_MODULE` in the examples below 
+> must be changed in production
 
+> Note: the DB should have been created befoirehand(see dedicated section below)
+
+Type:
 
 ```bash
-export DJANGO_SETTINGS_MODULE=egsim.settings.dev;python manage.py runserver 
+export DJANGO_SETTINGS_MODULE="egsim.settings.dev";python manage.py runserver 
 ```
 
 <details>
@@ -84,7 +93,7 @@ Set variables (change it in your case!!):
 export PY_VERSION="3.11.14"; export OQ_VERSION="3.24.1";
 ```
 
-Create a new virtual env, decide which Python version you want 
+Create a new virtual env, decide which Python version you want
 to use for the server, and install it if needed.
 
 ```
@@ -99,19 +108,21 @@ Clone a specific openquake version, usually on the same level of eGSIM:
 
 Look at the openquake directory and search your installation file ${REQUIREMENTS_FILE}. E.g.:
 ```
-export REQUIREMENTS_FILE=../oq-engine${OQ_VERSION}/requirements-py311-linux64.txt
+export REQUIREMENTS_FILE="requirements-py311-linux64.txt"
 ```
 ```
-pip install --upgrade pip && pip install -r "$REQUIREMENTS_FILE" && pip install openquake.engine==${OQ_VERSION} && pip freeze > "$(basename "$REQUIREMENTS_FILE")"
+pip install --upgrade pip && (cd ../oq-engine${OQ_VERSION} && pip install -r ${REQUIREMENTS_FILE} && pip install -e .) 
 ```
 
 Go to eGSIM setup.py and set:
-`__VERSION_=${OQ_VERSION}` (e.g., `__VERSION__="3.24.1"`. We keep eGSIM version 
-in synchro with OpenQuake):
+`__VERSION__=${OQ_VERSION}` (e.g., `__VERSION__="3.24.1"`. 
+As of end 2025, we keep eGSIM version aligned 
+with OpenQuake for simplicity. Now install eGSIM (library only):
 ```
-pip install -U -e . && pip freeze > "$(basename "$REQUIREMENTS_FILE")"
+pip install -U -e .
+pip freeze > ./${REQUIREMENTS_FILE}
 ```
-Open requirements file and **remove** egsim line.
+
 
 Run tests (smtk only):
 ```
@@ -122,16 +133,17 @@ pytest -xvvv ./tests/smtk
 ```
 Fix if needed
 
-Install web app (force upgrade :
+Install web app (force upgrade for Django):
 ```
-pip install -U --ignore-installed django && pip install -U -e ".[web]"
+pip install -U ".[web]"
+pip install -U --no-deps django
+pip freeze > ./${REQUIREMENTS_FILE}.web
 ```
+Open ${REQUIREMENTS_FILE}.web, and add " --no-deps" at the end of the where Django is installed
 
-(you might still see old django version in requirements file. To check Django version, run:)
-`python -c 'import django;print(django.__version__)'`
 Run tests:
 ```
-export DJANGO_SETTINGS_MODULE=egsim.settings.test && pytest -xvvv ./tests
+export DJANGO_SETTINGS_MODULE="egsim.settings.test" && pytest -xvvv ./tests/django
 ```
 Fix code as needed, commit push and so on
 
@@ -150,6 +162,9 @@ to the platform.
 
 ## Django Database (sqlite DB)
 
+> Note: the value of `DJANGO_SETTINGS_MODULE` in the examples below 
+> must be changed in production
+
 **WHEN**: 
 
  - **The DB needs to be emptied and repopulated**  
@@ -163,11 +178,9 @@ To do so:
 
 - Delete or rename the database of the settings file
 
-  (path is in the settings file variable `DATABASES['default']['NAME']`.
-  As of 2026, the path is the same for all settings and set in
-  `settings/base.py`)
+  (path is in the settings file variable `DATABASES['default']['NAME']`)
 
-- **If the DB Schema has been modified** (otherwise **skip**):
+- **If the DB Schema HAS CHANGED** (otherwise skip):
   
   - Delete the (only) migration file
 
@@ -176,21 +189,16 @@ To do so:
 
   - Recreate migration file (file to autopopulate the DB):
     ```bash
-    export DJANGO_SETTINGS_MODULE=egsim.settings.base;python manage.py makemigrations
+    export DJANGO_SETTINGS_MODULE="egsim.settings.dev";python manage.py makemigrations && python manage.py migrate && python manage.py egsim-init
     ```
-    Note: In principle, in the previous command any settings file is ok, as long 
-    as it shares the same `INSTALLED_APPS` variable as in `egsim.settings.base`
 
-  - Add / commit / push the newly created migration file:
-    ```bash
-    git add egsim/api/migrations/0001_initial.py && git commit -m 'update migration file' && git push
-    ```
+  - `git add` the newly created migration file 
      
     (should be `egsim/api/migrations/0001_initial.py`)
 
 - Migrate (populate DB): 
   ```bash
-  export DJANGO_SETTINGS_MODULE=egsim.settings.dev;python manage.py migrate && python manage.py egsim-init
+  export DJANGO_SETTINGS_MODULE="egsim.settings.dev";python manage.py migrate && python manage.py egsim-init
   ```
 
 > Note:
@@ -198,6 +206,9 @@ To do so:
 > managing migration files
 
 ## Modify eGSIM DB data from the command line
+
+> Note: the value of `DJANGO_SETTINGS_MODULE` in the examples below 
+> must be changed in production
 
 **WHEN**: mostly when you want to hide a flatfile, model or 
 regionalization from the program usually temporarily (more complex 
@@ -208,7 +219,8 @@ Execute the interactive command:
    export DJANGO_SETTINGS_MODULE="egsim.settings.dev";python manage.py egsim-db
    ```
 
-> NOTE: this Django command replaces the very expensive admin panel
+> NOTE:
+> this Django command replaces the very expensive admin panel
 > (again, our DB is very simple)
 
 
