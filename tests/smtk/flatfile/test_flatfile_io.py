@@ -16,20 +16,21 @@ from egsim.smtk.flatfile import (read_flatfile,
                                  query,
                                  ColumnType,
                                  FlatfileError,
+                                 column_type,
                                  get_dtype_of, optimize_flatfile_dataframe, ColumnDtype,
                                  FlatfileQueryError)
-from egsim.smtk.flatfile import FlatfileMetadata, _load_flatfile_metadata
+from egsim.smtk.flatfile import ColumnPropertyRegistry, column_names
 from egsim.smtk.validation import ConflictError
 
 
 def test_read_flatifle_yaml():
 
-    dic = _load_flatfile_metadata(False)
-    params = FlatfileMetadata.get_rupture_params()
+    dic = ColumnPropertyRegistry.load_from_yaml(cache=False)
+    params = column_names(type='rupture')
     assert len({'rup_width', 'mag', 'magnitude', 'width'} & params) == 4
-    params = {c for c in dic if FlatfileMetadata.get_type(c) == ColumnType.distance}
+    params = {c for c in dic if column_type(c) == ColumnType.distance}
     assert len({'rrup', 'rhypo'} & params) == 2
-    params = {c for c in dic if FlatfileMetadata.get_type(c) == ColumnType.site}
+    params = {c for c in dic if column_type(c) == ColumnType.site}
     assert len({'sta_lat', 'station_latitude', 'lat' , 'vs30'} & params) == 4
 
 
@@ -65,7 +66,7 @@ def test_query():
     assert 'bool' in str(d.b.dtype)
     assert 'int' in str(d.i.dtype)
     assert 'datetime' in str(d.d.dtype)
-    assert 'object' in str(d.s.dtype)
+    assert 'object' in str(d.s.dtype) or 'str' in str(d.s.dtype)  # str in pandas 3.0
     assert 'float' in str(d.f.dtype)
 
     # test errors in no rows. Remove last row and test with values not in d:

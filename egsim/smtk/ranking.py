@@ -3,7 +3,6 @@ Collection of function to extract fit measures from residuals for model ranking
 """
 
 from collections.abc import Iterable
-from typing import Union
 from math import ceil
 
 import numpy as np
@@ -15,9 +14,13 @@ from .registry import Clabel
 
 
 def get_measures_of_fit(
-        gsims: Iterable[str], imts: Iterable[str], residuals: pd.DataFrame,
-        as_dataframe=True, edr_bandwidth=0.01, edr_multiplier=3.0
-) -> Union[pd.DataFrame, dict]:
+    gsims: Iterable[str],
+    imts: Iterable[str],
+    residuals: pd.DataFrame,
+    as_dataframe=True,
+    edr_bandwidth=0.01,
+    edr_multiplier=3.0
+) -> pd.DataFrame | dict:
     """
     Retrieve several Measures of fit from the given residuals, models and imts
 
@@ -42,8 +45,10 @@ def get_measures_of_fit(
             residuals = residuals.copy()
             residuals.columns = pd.MultiIndex.from_tuples(cols)
         else:
-            raise TypeError('The passed DataFrame does not seem to be issued from '
-                            'residuals computation')
+            raise TypeError(
+                'The passed DataFrame does not seem to be issued '
+                'from residuals computation'
+            )
 
     result = {}
     for res in [
@@ -63,8 +68,8 @@ def get_measures_of_fit(
 
 
 def get_residuals_stats(
-        gsims: Iterable[str], imts: Iterable[str], residuals: pd.DataFrame) -> \
-        dict[str, dict[str, float]]:
+    gsims: Iterable[str], imts: Iterable[str], residuals: pd.DataFrame
+) -> dict[str, dict[str, float]]:
     """
     Retrieve the mean and standard deviation values of the residuals
 
@@ -76,7 +81,9 @@ def get_residuals_stats(
     result = {}
     for gsim in gsims:
         for imt in imts:
-            for res_type in (Clabel.total_res, Clabel.inter_ev_res, Clabel.intra_ev_res):
+            for res_type in (
+                    Clabel.total_res, Clabel.inter_ev_res, Clabel.intra_ev_res
+            ):
                 mean, std = np.nan, np.nan
                 col = (imt, res_type, gsim)
                 if residuals.get(col) is not None:
@@ -89,8 +96,8 @@ def get_residuals_stats(
 
 
 def get_residuals_likelihood_stats(
-        gsims: Iterable[str], imts: Iterable[str], residuals: pd.DataFrame) -> \
-        dict[str, dict[str, float]]:
+    gsims: Iterable[str], imts: Iterable[str], residuals: pd.DataFrame
+) -> dict[str, dict[str, float]]:
     """
     Return the likelihood values for the residuals column found in `flatfile`
     (e.g. Total, inter- intra-event) according to Equation 9 of Scherbaum et al. (2004)
@@ -116,8 +123,8 @@ def get_residuals_likelihood_stats(
 
 
 def get_residuals_loglikelihood(
-        gsims: Iterable[str], imts: Iterable[str], residuals: pd.DataFrame) -> \
-        dict[str, dict[str, float]]:
+    gsims: Iterable[str], imts: Iterable[str], residuals: pd.DataFrame
+) -> dict[str, dict[str, float]]:
     """
     Return the loglikelihood fit for the "Total residuals"
     using the loglikehood (LLH) function described in Scherbaum et al. (2009)
@@ -156,9 +163,12 @@ def get_residuals_loglikelihood(
 
 
 def get_residuals_edr_values(
-        gsims: Iterable[str], imts: Iterable[str], residuals: pd.DataFrame,
-        bandwidth=0.01, multiplier=3.0) -> \
-        dict[str, dict[str, float]]:
+    gsims: Iterable[str],
+    imts: Iterable[str],
+    residuals: pd.DataFrame,
+    bandwidth=0.01,
+    multiplier=3.0
+) -> dict[str, dict[str, float]]:
     """
     Calculates the EDR values for each Gsim found in `flatfile` with computed residuals
     according to the Euclidean Distance Ranking method of Kale & Akkar (2013)
@@ -186,8 +196,10 @@ def get_residuals_edr_values(
 
 
 def _get_edr_gsim_information(
-        gsim: str, imts: Iterable[str], residuals: pd.DataFrame) -> \
-        tuple[np.ndarray, np.ndarray, np.ndarray]:
+    gsim: str,
+    imts: Iterable[str],
+    residuals: pd.DataFrame
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Extract the observed ground motions, expected and total standard
     deviation for the given model `gsim` (aggregating over all IMTs)
@@ -212,10 +224,13 @@ def _get_edr_gsim_information(
     return obs, expected, stddev
 
 
-def get_edr(obs: Union[np.ndarray, pd.Series],
-            expected: Union[np.ndarray, pd.Series],
-            stddev: Union[np.ndarray, pd.Series],
-            bandwidth=0.01, multiplier=3.0) -> tuple[float, float, float]:
+def get_edr(
+    obs: np.ndarray | pd.Series,
+    expected: np.ndarray | pd.Series,
+    stddev: np.ndarray | pd.Series,
+    bandwidth=0.01,
+    multiplier=3.0
+) -> tuple[float, float, float]:
     """
     Calculated the Euclidean Distanced-Based Rank for a set of
     observed and expected values from a particular Gsim
@@ -238,10 +253,8 @@ def get_edr(obs: Union[np.ndarray, pd.Series],
         d_val = (min_d + (float(iloc) * bandwidth)) * np.ones(nvals)
         d_1 = d_val - min_d
         d_2 = d_val + min_d
-        p_1 = norm.cdf((d_1 - mu_d) / stddev) -\
-            norm.cdf((-d_1 - mu_d) / stddev)
-        p_2 = norm.cdf((d_2 - mu_d) / stddev) -\
-            norm.cdf((-d_2 - mu_d) / stddev)
+        p_1 = norm.cdf((d_1 - mu_d) / stddev) - norm.cdf((-d_1 - mu_d) / stddev)
+        p_2 = norm.cdf((d_2 - mu_d) / stddev) - norm.cdf((-d_2 - mu_d) / stddev)
         mde += (p_2 - p_1) * d_val
     inv_n = 1.0 / float(nvals)
     mde_norm = np.sqrt(inv_n * np.sum(mde ** 2.))
@@ -249,15 +262,15 @@ def get_edr(obs: Union[np.ndarray, pd.Series],
     return float(mde_norm), float(np.sqrt(kappa)), float(edr)
 
 
-def _get_edr_kappa(obs: Union[np.ndarray, pd.Series],
-                   expected: Union[np.ndarray, pd.Series]) -> np.floating:
+def _get_edr_kappa(
+    obs: np.ndarray | pd.Series, expected: np.ndarray | pd.Series
+) -> np.floating:
     """
     Return the correction factor kappa
     """
     mu_a = np.mean(obs)
     mu_y = np.mean(expected)
-    b_1 = np.sum((obs - mu_a) * (expected - mu_y)) /\
-        np.sum((obs - mu_a) ** 2.)
+    b_1 = np.sum((obs - mu_a) * (expected - mu_y)) / np.sum((obs - mu_a) ** 2.)
     b_0 = mu_y - b_1 * mu_a
     y_c = expected - ((b_0 + b_1 * obs) - obs)
     de_orig = np.sum((obs - expected) ** 2.)

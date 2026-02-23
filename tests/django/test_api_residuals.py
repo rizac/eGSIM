@@ -28,7 +28,7 @@ from egsim.smtk.registry import Clabel
 
 @pytest.mark.django_db
 class Test:
-    """tests the residuals service"""
+    """Test the residuals service"""
 
     url = f"/{RESIDUALS_URL_PATH}"
     
@@ -53,16 +53,21 @@ class Test:
     def error_message(response: HttpResponse):
         return response.content.decode(response.charset)
 
-    def test_uploaded_flatfile(self,
-                               # pytest fixtures:
-                               client):
+    def test_uploaded_flatfile(
+            self,
+            # pytest fixtures:
+            client
+    ):
         with open(self.request_filepath) as _:
             inputdic = yaml.safe_load(_)
 
         # Uploaded flatfile, but not well-formed:
         # column in data-query not defined:
-        csv = SimpleUploadedFile("file.csv", b"PGA,b,c,d\n1.1,,,", 
-                                 content_type="text/csv")
+        csv = SimpleUploadedFile(
+            "file.csv",
+            b"PGA,b,c,d\n1.1,,,",
+            content_type="text/csv"
+        )
         inputdic2 = dict(inputdic, flatfile=csv)
         # test wrong flatfile:
         resp2 = client.post(self.url, data=inputdic2)
@@ -70,8 +75,11 @@ class Test:
         assert self.error_message(resp2) == 'data-query: undefined column "vs30"'
 
         # 1b no rows matching query:
-        csv = SimpleUploadedFile("file.csv", b"PGA,vs30,mag,b,c,d\n1.1,,,",
-                                 content_type="text/csv")
+        csv = SimpleUploadedFile(
+            "file.csv",
+            b"PGA,vs30,mag,b,c,d\n1.1,,,",
+            content_type="text/csv"
+        )
         inputdic2 = dict(inputdic, flatfile=csv)
         # test wrong flatfile:
         resp2 = client.post(self.url, data=inputdic2)
@@ -79,8 +87,11 @@ class Test:
         assert self.error_message(resp2) == "data-query: no rows matching query"
 
         # 1c missing ground motion properties:
-        csv = SimpleUploadedFile("file.csv", b"PGA,vs30,mag,b,c,d\n1.1,,,",
-                                 content_type="text/csv")
+        csv = SimpleUploadedFile(
+            "file.csv",
+            b"PGA,vs30,mag,b,c,d\n1.1,,,",
+            content_type="text/csv"
+        )
         inputdic2 = dict(inputdic, flatfile=csv)
         inputdic2.pop('data-query')  # to avoid adata-query errors (already checked)
         # test wrong flatfile:
@@ -89,48 +100,58 @@ class Test:
         assert self.error_message(resp2) == "flatfile: missing column(s) PGV"
 
         # 1d missing ground motion properties (2):
-        csv = SimpleUploadedFile("file.csv", b"PGA,PGV,vs30,mag,b,c,d\n1.1,,,",
-                                 content_type="text/csv")
+        csv = SimpleUploadedFile(
+            "file.csv",
+            b"PGA,PGV,vs30,mag,b,c,d\n1.1,,,",
+            content_type="text/csv"
+        )
         inputdic2 = dict(inputdic, flatfile=csv)
         inputdic2.pop('data-query')  # to avoid adata-query errors (already checked)
         # test wrong flatfile:
         resp2 = client.post(self.url, data=inputdic2)
         assert resp2.status_code == 400
-        assert self.error_message(resp2) == \
-               ("flatfile: missing column(s) SA(period_in_s) (columns found: 0, "
-                f'at least two are required)')
+        assert self.error_message(resp2) == (
+            "flatfile: missing column(s) SA(period_in_s) (columns found: 0, "
+            f'at least two are required)'
+        )
 
         # 1d missing ground motion properties (2):
-        csv = SimpleUploadedFile("file.csv", b"PGA,PGV,SA(0.2),vs30,mag,b,c,d\n1.1,,,",
-                                 content_type="text/csv")
+        csv = SimpleUploadedFile(
+            "file.csv",
+            b"PGA,PGV,SA(0.2),vs30,mag,b,c,d\n1.1,,,",
+            content_type="text/csv"
+        )
         inputdic2 = dict(inputdic, flatfile=csv)
         inputdic2.pop('data-query')  # to avoid adata-query errors (already checked)
         # test wrong flatfile:
         resp2 = client.post(self.url, data=inputdic2)
         assert resp2.status_code == 400
-        assert self.error_message(resp2) == \
-               "flatfile: missing column(s) rake, rjb"
+        assert self.error_message(resp2) == "flatfile: missing column(s) rake, rjb"
 
         # 3 dupes:
-        csv = SimpleUploadedFile("file.csv", b"CAV,hypo_lat,evt_lat,d\n1.1,,,",
-                                 content_type="text/csv")
+        csv = SimpleUploadedFile(
+            "file.csv", b"CAV,hypo_lat,evt_lat,d\n1.1,,,", content_type="text/csv"
+        )
         inputdic2 = dict(inputdic, flatfile=csv)
         # test wrong flatfile:
         resp2 = client.post(self.url, data=inputdic2)
         assert resp2.status_code == 400
         # account for different ordering in error columns:
-        assert self.error_message(resp2) in \
-               ("flatfile: column names conflict evt_lat+hypo_lat",
-                "flatfile: column names conflict hypo_lat+evt_lat")
+        assert self.error_message(resp2) in (
+            "flatfile: column names conflict evt_lat+hypo_lat",
+            "flatfile: column names conflict hypo_lat+evt_lat"
+        )
 
         def fake_post(self, request):  # noqa
             # Django testing class `client` expects every data in the `data` argument
             # whereas Django expects two different arguments, `data` and `files`
             # this method simply bypasses the files renaming (from the user provided
             # flatfile into 'uploaded_flatfile' in the Form) and calls directly :
-            return ResidualsView().response(request,
-                                            data=dict(inputdic2, flatfile='esm2018'),
-                                            files=MultiValueDict({'flatfile': csv}))
+            return ResidualsView().response(
+                request,
+                data=dict(inputdic2, flatfile='esm2018'),
+                files=MultiValueDict({'flatfile': csv})
+            )
 
         with patch.object(APIFormView, 'post', fake_post):
             resp2 = client.post(self.url, data=inputdic2)
@@ -138,9 +159,11 @@ class Test:
             assert 'flatfile' in self.error_message(resp2)
 
         # 4 missing column error (PGV):
-        csv = SimpleUploadedFile("file.csv", (b"PGA;rake;rjb;vs30;hypo_lat;mag\n"
-                                              b"1.1;1;1;1;1;1;1"),
-                                 content_type="text/csv")
+        csv = SimpleUploadedFile(
+            "file.csv",
+            b"PGA;rake;rjb;vs30;hypo_lat;mag\n1.1;1;1;1;1;1;1",
+            content_type="text/csv"
+        )
         inputdic2 = dict(inputdic, flatfile=csv)
         inputdic2.pop('data-query')
         # test wrong flatfile:
@@ -150,10 +173,11 @@ class Test:
         assert self.error_message(resp2) == 'flatfile: missing column(s) PGV'
 
         # 5 missing column error (event id):
-        csv = SimpleUploadedFile("file.csv",
-                                 (b"PGA;PGV;SA(0.2);rake;rjb;vs30;hypo_lat;mag\n"
-                                  b"1.1;1;1;1;1;1;1;1;0"),
-                                 content_type="text/csv")
+        csv = SimpleUploadedFile(
+            "file.csv",
+            b"PGA;PGV;SA(0.2);rake;rjb;vs30;hypo_lat;mag\n1.1;1;1;1;1;1;1;1;0",
+            content_type="text/csv"
+        )
         inputdic2 = dict(inputdic, flatfile=csv)
         inputdic2.pop('data-query')
         # test wrong flatfile:
@@ -163,7 +187,8 @@ class Test:
         assert self.error_message(resp2) == 'flatfile: missing column(s) evt_id'
 
     def test_upload_hdf(self, client, settings):  # <- both pytest-django fixutures
-        """As of pandas 2.2.2, HDF cannot be read from buffer but only from file.
+        """
+        As of pandas 2.2.2, HDF cannot be read from buffer but only from file.
         Test this here
         """
 
@@ -270,7 +295,8 @@ class Test:
     def test_residuals_service_err(self,
                                    # pytest fixtures:
                                    client):
-        """tests errors in the residuals API service."""
+        """Test errors in the residuals API service"""
+
         with open(self.request_filepath) as _:
             inputdic = yaml.safe_load(_)
 
@@ -335,9 +361,10 @@ class Test:
             if format is None:  # format defaults to JSON
                 resp_json = resp1.json()
                 continue
-            dfr2 = read_df_from_csv_stream(content, header=[0, 1, 2]) \
-                if format == 'csv' \
-                else read_df_from_hdf_stream(content)
+            if format == 'csv':
+                dfr2 = read_df_from_csv_stream(content, header=[0, 1, 2])
+            else:
+                dfr2 = read_df_from_hdf_stream(content)
             new_json = dataframe2dict(dfr2)
             assert np.allclose(
                 resp_json['SA(0.2)'][Clabel.total_res]['BindiEtAl2011'],
@@ -374,7 +401,8 @@ class Test:
     def test_residuals_invalid_get(self,
                                    # pytest fixtures:
                                    client):
-        """Tests supplying twice the plot_type (invalid) and see what
+        """
+        Tests supplying twice the plot_type (invalid) and see what
         happens. This request error can happen only from an API request, not
         from the web portal"""
         resp1 = client.get(self.url +
@@ -387,7 +415,8 @@ class Test:
     def test_allen2012(self,
                        # pytest fixtures:
                        client):
-        """test a case where the browser simply stops calculating without
+        """
+        test a case where the browser simply stops calculating without
         error messages. The cause was due to an AssertionError with empty
         message. UPDATE 2021: the case seems to be fixed now in OpenQuake"""
         inputdict = {
@@ -406,7 +435,8 @@ class Test:
     def test_booreetal_esm(self,
                            # pytest fixtures:
                            client):
-        """test a case where we got very strange between events (intra events)
+        """
+        test a case where we got very strange between events (intra events)
         Bug discovered in sept 2024
         Tests also normalize parameter
         """
@@ -431,7 +461,9 @@ class Test:
         # assert 13 < inter_ev_values.median() < 14
         # now it should be:
         q1, m, q9 = inter_ev_values.quantile([.1, .5, .9])
-        assert -1.5 < m < -1
+        assert -1 < m < 0
+        # legacy comparison (when using whole ESM db, not a test subset) was:
+        # assert -1.5 < m < -1
 
         # now with no norm:
         resp1 = client.get(self.url, data=inputdict | {'normalize': False},
@@ -440,7 +472,9 @@ class Test:
         dfr = read_df_from_hdf_stream(BytesIO(resp1.getvalue()))
         inter_ev_values = dfr[('SA(0.1)', 'inter_event_residual', 'BooreEtAl2014')]
         q1_nonorm, m_nonomr, q9_nonorm = inter_ev_values.quantile([.1, .5, .9])
-        assert -1 < m_nonomr < -.5
+        assert -1 < m_nonomr < 0
+        # legacy comparison (when using whole ESM db, not a test subset) was:
+        # assert -1 < m_nonomr < -.5
 
     def test_residuals_ranking(self,
                                # pytest fixtures:
@@ -475,9 +509,10 @@ class Test:
             #     prev_content = content
             # else:
             #     assert prev_content == content
-            dfr2 = read_df_from_csv_stream(BytesIO(content), header=0) \
-                if format == 'csv' \
-                else read_df_from_hdf_stream(BytesIO(content))
+            if format == 'csv':
+                dfr2 = read_df_from_csv_stream(BytesIO(content), header=0)
+            else:
+                dfr2 = read_df_from_hdf_stream(BytesIO(content))
 
             assert sorted(dfr2.columns) == sorted(resp_json.keys())
             for k in resp_json.keys():
@@ -582,18 +617,18 @@ class Test:
 
         assert resp2.status_code == 400
         err_msg = resp2.content
-        assert err_msg.startswith(b'NGAEastUSGSSammons1: Magnitude 3.90 outside '
+        assert err_msg.startswith(b'NGAEastUSGSSammons1: Magnitude 3.45 outside '
                                   b'of supported range (4.00 to 8.20) (OpenQuake '
                                   b'ValueError @')
 
-        # set  a flatfile mag range compatiblw with the model which just raised:
+        # set  a flatfile mag range compatible with the model which just raised:
         resp2 = client.post(self.url,
                             data={
                                 'model': models,
                                 'imt': imts,
                                 'flatfile': 'esm2018',
                                 # just toi speed up test
-                                'flatfile-query': '(mag > 4.5) & (mag < 4.6)',
+                                'flatfile-query': '(mag >= 4.0) & (mag <= 8.20)',
                                 'format': 'hdf'
                             },
                             content_type=MimeType.hdf)

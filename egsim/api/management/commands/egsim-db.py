@@ -1,11 +1,13 @@
+"""eGSIM management command to edit the DB"""
+
 from datetime import datetime
-from typing import Optional, Callable, Any
+from typing import Callable, Any
 import shlex
 
 from django.core.management import BaseCommand
 from django.db import DatabaseError
-from django.db.models import (QuerySet, Field, CharField, IntegerField, DateField,
-                              FloatField, Model,
+from django.db.models import (QuerySet, Model,
+                              Field, CharField, IntegerField, DateField, FloatField,
                               DateTimeField, TextField, BooleanField, SmallIntegerField,
                               PositiveIntegerField, ForeignKey)
 
@@ -15,23 +17,26 @@ from egsim.api import models
 class Command(BaseCommand):
     help = """Interactive Django command to modify eGSIM table content. 
     Particularly useful to 
-    quickly hide/show items in the API
+    quickly hide/show items in the web API
     """
 
     def handle(self, *args, **options):
         """Execute the command"""
+
         self.stdout.write(self.style.ERROR('Scanning Db tables...'))
         tables = {}
         for key in dir(models):
             try:
                 cls = getattr(models, key)
-                if models.__name__ == cls.__module__ and \
-                        issubclass(cls, models.EgsimDbModel) and \
-                        not cls._meta.abstract:
+                if (
+                    models.__name__ == cls.__module__ and
+                    issubclass(cls, models.EgsimDbModel) and
+                    not cls._meta.abstract
+                ):
                     tables[key.lower()] = cls
             except Exception:  # noqa
                 pass
-        db_model: Optional[Model] = None
+        db_model: Model | None = None
         queryset = None
         resp = None
         while resp != self.quit:
@@ -52,8 +57,9 @@ class Command(BaseCommand):
     help = '?'  # noqa
     suffix = {'h': f'{help}: help', 'q': f'{quit}: quit', 'b': f'{back}: go back'}
 
-    def select_db_model(self, tables: dict[str, Model]) -> tuple[Optional[Model], str]:
+    def select_db_model(self, tables: dict[str, Model]) -> tuple[Model | None, str]:
         """Return (DbModel or None, aborted)"""
+
         self.stdout.write(f'{len(tables)} table(s): ' +
                           self.style.WARNING(" ".join(tables)))
         while True:
@@ -67,11 +73,16 @@ class Command(BaseCommand):
                 self.print_table(tables[res].objects)  # noqa
                 return tables[res], res
 
-    def parse_field_and_value(self, db_model: Model, input_result, *,
-                              allow_pkey=False, allow_editable=False,
-                              allow_fkey=False) -> \
-            tuple[Optional[Field], Optional[Any], str]:
+    def parse_field_and_value(
+        self,
+        db_model: Model,
+        input_result, *,
+        allow_pkey=False,
+        allow_editable=False,
+        allow_fkey=False
+    ) -> tuple[Field | None, Any | None, str]:
         """Return (Field, user_input)"""
+
         fields = {
             f.name: f for f in db_model._meta.get_fields()  # noqa
             if f.__class__ in self.f_types
@@ -117,11 +128,14 @@ class Command(BaseCommand):
 
         return None, None, input_result
 
-    def select_db_instances(self, db_model: Model) -> tuple[Optional[QuerySet], str]:
+    def select_db_instances(self, db_model: Model) -> tuple[QuerySet | None, str]:
         """Return (QuerySet, user_input)"""
+
         while True:
-            msg = f'WHERE [COLUMN] [VALUE] ' \
-                  f'({self.suffix["h"]}, {self.suffix["q"]}, {self.suffix["b"]}): '
+            msg = (
+                f'WHERE [COLUMN] [VALUE] ' 
+                f'({self.suffix["h"]}, {self.suffix["q"]}, {self.suffix["b"]}): '
+            )
             field, val, resp = self.parse_field_and_value(db_model, input(msg))
             if resp == self.help:
                 self.stdout.write('type a column and a value (space separated) '
@@ -149,9 +163,12 @@ class Command(BaseCommand):
 
     def update_db_instance(self, queryset: QuerySet) -> str:
         """Return user_input"""
+
         while True:
-            msg = f'SET [COLUMN] [NEW VALUE] ' \
-                  f'({self.suffix["h"]}, {self.suffix["q"]}, {self.suffix["b"]}): '
+            msg = (
+                f'SET [COLUMN] [NEW VALUE] ' 
+                f'({self.suffix["h"]}, {self.suffix["q"]}, {self.suffix["b"]}): '
+            )
             field, val, resp = self.parse_field_and_value(queryset.model,
                                                           input(msg))
             if resp == self.help:
@@ -173,8 +190,7 @@ class Command(BaseCommand):
                     queryset.filter(id__in=true_ids).update(**{field.name: False})
                     queryset.exclude(id__in=true_ids).update(**{field.name: True})
                     # update res to display as message below:
-                    val = 'true if the value was false, and false ' \
-                          'if it was true'
+                    val = 'true if the value was false, and false if it was true'
                 else:
                     queryset.update(**{field.name: val})
                 self.stdout.write(
@@ -195,26 +211,31 @@ class Command(BaseCommand):
         PositiveIntegerField: lambda v: int(v),
         SmallIntegerField: lambda v: int(v),
         FloatField: lambda v: float(v),
-        BooleanField: lambda v: {'0': False, 'false': False, 'toggle': 'toggle',
-                                 '1': True, 'true': True}[str(v).lower()],  # noqa
+        BooleanField: lambda v: {
+            '0': False, 'false': False, 'toggle': 'toggle', '1': True, 'true': True
+        }[str(v).lower()],
         DateField: lambda v: datetime.strptime(str(v), '%Y-%m-%d').date(),
         DateTimeField: lambda v: datetime.strptime(str(v), '%Y-%m-%d %H:%M:%S')
     }
 
-    def print_table(self, queryset: QuerySet,
-                    fields: Optional[list[str]] = None,
-                    order_by: Optional[tuple[str]] = ('name',),
-                    max_width: int = 120,
-                    max_rows=5):
-        """Pretty print the given table rows.
+    def print_table(
+        self,
+        queryset: QuerySet,
+        fields: list[str] | None = None,
+        order_by: tuple[str] | None = ('name',),
+        max_width: int = 120,
+        max_rows=5
+    ):
+        """
+        Pretty print the given table rows.
 
         :param queryset: the QuerySet denoting a table rows collection,
             e.g. `db_model.objects.all()`
-        :param fields: the column names to show. If None (the default), show all columns.
-            The order dictates the priority of the columns when there is extra space
-            available
-        :param order_by: a list of field names whereby the rows will be sorted ascending.
-            Default: ['name']
+        :param fields: the column names to show. If None (the default), show all
+            columns. The order dictates the priority of the columns when there is
+            extra space available
+        :param order_by: a list of field names whereby the rows will be sorted
+            ascending. Default: ['name']
         :param max_width: the max table width, in characters
         :param max_rows: the maximum rows to show (default: 5)
         """
@@ -246,8 +267,10 @@ class Command(BaseCommand):
                     extra_space -= extra_col_space
 
             def format(string:str, length:int):  # noqa
-                return string[:max(0, length - 1)] + '…' if len(string) > length \
-                    else string.ljust(length)
+                if len(string) > length:
+                    return string[:max(0, length - 1)] + '…'
+                else:
+                    return string.ljust(length)
 
             tbl_header = [format(n, l) for n, l in field_lengths.items()]
             tbl_body = [
@@ -255,9 +278,11 @@ class Command(BaseCommand):
                 for obj in objs
             ]
 
-            table = [" " + "  ".join(tbl_header)] + \
-                    ["-" + "--".join(len(x) * "-" for x in tbl_header) + '-'] + \
-                    [" " + "  ".join(x) for x in tbl_body] + \
-                    [msg]
+            table = (
+                [" " + "  ".join(tbl_header)] +
+                ["-" + "--".join(len(x) * "-" for x in tbl_header) + '-'] +
+                [" " + "  ".join(x) for x in tbl_body] +
+                [msg]
+            )
 
         self.stdout.write(self.style.WARNING("\n".join(table)))

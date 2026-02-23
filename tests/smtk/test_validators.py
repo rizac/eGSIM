@@ -1,8 +1,14 @@
 import pytest
 from openquake.hazardlib import imt
 
-from egsim.smtk import validate_inputs, harmonize_input_gsims, harmonize_input_imts, gsim
-from egsim.smtk.validation import IncompatibleModelImtError, validate_imt_sa_limits
+from egsim.smtk import gsim
+from egsim.smtk.validation import (
+    IncompatibleModelImtError,
+    validate_imt_sa_limits,
+    validate_inputs,
+    harmonize_input_gsims,
+    harmonize_input_imts
+)
 
 
 def test_invalid_imts(capsys):
@@ -30,12 +36,17 @@ def test_invalid_imts(capsys):
         harmonize_input_imts(['SA(50)'])
     )
 
-    valid_imts = validate_imt_sa_limits(gsim(gsims[0]),
-                                        {'SA(50)': imt.from_string('SA(50)')})
+    valid_imts = validate_imt_sa_limits(
+        gsim(gsims[0]),{'SA(50)': imt.from_string('SA(50)')}
+    )
 
     assert not valid_imts
 
-    valid_imts = validate_imt_sa_limits(gsim(gsims[0]),
-                                        {'SA(1.1)': imt.from_string('SA(1.1)'),
-                                         'SA(50)': imt.from_string('SA(50)')})
+    valid_imts = validate_imt_sa_limits(
+        gsim(gsims[0]),
+        {
+            'SA(1.1)': imt.from_string('SA(1.1)'),
+            'SA(50)': imt.from_string('SA(50)')
+        }
+    )
     assert list(valid_imts) == ['SA(1.1)']

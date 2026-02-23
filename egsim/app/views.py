@@ -4,7 +4,7 @@ Django views for the eGSIM app (web app with frontend)
 from io import BytesIO, StringIO
 from itertools import chain
 from os.path import splitext
-from typing import Optional, Union, Type
+from typing import Type
 import re
 
 from shapely.geometry import shape
@@ -14,22 +14,28 @@ from django.shortcuts import render
 from django.conf import settings
 
 from ..api import models
-from ..api.forms.flatfile import (FlatfileMetadataInfoForm,
-                                  FlatfileValidationForm)
+from ..api.forms.flatfile import (
+    FlatfileMetadataInfoForm, FlatfileValidationForm
+)
 from ..api.forms import APIForm, EgsimBaseForm, GsimForm
 from ..api.forms.residuals import ResidualsForm
 from ..api.forms.scenarios import PredictionsForm
 from ..api.urls import MODEL_INFO_URL_PATH, RESIDUALS_URL_PATH, PREDICTIONS_URL_PATH
-from ..api.views import MimeType, EgsimView, GsimInfoView, PredictionsView, \
-    ResidualsView, APIFormView
+from ..api.views import (
+    MimeType,
+    EgsimView,
+    GsimInfoView,
+    PredictionsView,
+    ResidualsView,
+    APIFormView,
+    error_response
+)
 from .forms import PredictionsVisualizeForm, FlatfileVisualizeForm
-from ..smtk import registered_imts
-from ..smtk.registry import Clabel
+from ..smtk.registry import Clabel, imt_module
 
 img_ext = ('png', 'pdf', 'svg')
 data_ext = ('hdf', 'csv')
-oq_version = '3.15.0'
-oq_gmm_refs_page = "https://docs.openquake.org/oq-engine/3.15/reference/"
+oq_version = '3.24.1'
 
 
 class URLS:  # noqa
@@ -72,8 +78,10 @@ if any(
         "/" in getattr(URLS, _) and not getattr(URLS, _).startswith('https://')
         for _ in dir(URLS) if 'WEBPAGE' in _
 ):
-    raise SystemError("Remove '/' in URL WEBPAGES: '/' create nested paths which might "
-                      "mess up requests performed on the page (error 404)")
+    raise SystemError(
+        "Remove '/' in URL WEBPAGES: '/' create nested paths which might "
+        "mess up requests performed on the page (error 404)"
+    )
 
 
 ############################################
@@ -82,12 +90,12 @@ if any(
 
 
 def main(request, page=''):
-    """view for the main page"""
+    """View for the main page"""
+
     regionalizations = list(models.Regionalization.queryset())
     flatfiles = list(models.Flatfile.queryset())
     init_data = get_init_data_json(regionalizations, flatfiles, settings.DEBUG)
     init_data['currentPage'] = page or URLS.WEBPAGE_HOME
-    mf = init_data['gsims']
     return render(
         request,
         template_name='egsim.html',
@@ -95,7 +103,6 @@ def main(request, page=''):
             'debug': settings.DEBUG,
             'init_data': init_data,
             'oq_version': oq_version,
-            'oq_gmm_refs_page': oq_gmm_refs_page,
             'references': get_references(regionalizations, flatfiles),
             'api_doc': get_api_doc_data(
                 regionalizations, flatfiles, f'{request.scheme}://{request.get_host()}',
@@ -109,10 +116,12 @@ def main(request, page=''):
 class GsimFromRegion(EgsimView):
     """View handling clicks on the GUI map and returning region-selected model(s)"""
 
-    def response(self,
-                 request: HttpRequest,
-                 data: dict,
-                 files: Optional[dict] = None) -> HttpResponseBase:
+    def response(
+            self,
+            request: HttpRequest,
+            data: dict,
+            files: dict | None = None
+    ) -> HttpResponseBase:
         form = GsimForm(data)
         if form.is_valid():
             gm_models = form.cleaned_data['regionalization']
@@ -124,18 +133,22 @@ class GsimFromRegion(EgsimView):
 class PlotsImgDownloader(EgsimView):
     """View returning the browser displayed plots in image format"""
 
-    def response(self,
-                 request: HttpRequest,
-                 data: dict,
-                 files: Optional[dict] = None) -> HttpResponseBase:
-        """Process the response from a given request and the data / files
-        extracted from it"""
+    def response(
+            self,
+            request: HttpRequest,
+            data: dict,
+            files: dict | None = None
+    ) -> HttpResponseBase:
+        """
+        Process the response from a given request and the data / files
+        extracted from it
+        """
         filename = request.path[request.path.rfind('/') + 1:]
         img_format = splitext(filename)[1][1:].lower()
         try:
             content_type = getattr(MimeType, img_format)
         except AttributeError:
-            return self.error_response(f'Invalid format "{img_format}"')
+            return error_response(f'Invalid format "{img_format}"')
 
         from plotly import graph_objects as go, io as pio
         fig = go.Figure(data=data['data'], layout=data['layout'])
@@ -155,14 +168,17 @@ class PlotsImgDownloader(EgsimView):
 class PredictionsHtmlTutorial(EgsimView):
     """View returning the HTML page(s) explaining predictions table structure"""
 
-    def response(self,
-                 request: HttpRequest,
-                 data: dict,
-                 files: Optional[dict] = None) -> HttpResponseBase:
-        """Process the response from a given request and the data / files
-        extracted from it"""
-        from egsim.api.client.snippets.get_egsim_predictions import \
+    def response(
+        self,
+        request: HttpRequest,
+        data: dict,
+        files: dict | None = None
+    ) -> HttpResponseBase:
+        """Process the response from a given request and the data / files extracted from it"""
+
+        from egsim.api.client.snippets.get_egsim_predictions import (
             get_egsim_predictions
+        )
         api_form = PredictionsForm({
             'gsim': ['CauzziEtAl2014', 'BindiEtAl2014Rjb'],
             'imt': ['PGA', 'SA(0.1)'],
@@ -181,14 +197,17 @@ class PredictionsHtmlTutorial(EgsimView):
 class ResidualsHtmlTutorial(EgsimView):
     """View returning the HTML page(s) explaining residuals table structure"""
 
-    def response(self,
-                 request: HttpRequest,
-                 data: dict,
-                 files: Optional[dict] = None) -> HttpResponseBase:
-        """Process the response from a given request and the data / files
-        extracted from it"""
-        from egsim.api.client.snippets.get_egsim_residuals import \
+    def response(
+        self,
+        request: HttpRequest,
+        data: dict,
+        files: dict | None = None
+    ) -> HttpResponseBase:
+        """Process the response from a given request and the data / files extracted from it"""
+
+        from egsim.api.client.snippets.get_egsim_residuals import (
             get_egsim_residuals
+        )
         api_form = ResidualsForm({
             'gsim': ['CauzziEtAl2014', 'BindiEtAl2014Rjb'],
             'imt': ['PGA'],
@@ -210,11 +229,12 @@ class ResidualsHtmlTutorial(EgsimView):
 
 
 def get_init_data_json(
-        db_regionalizations: list[models.Regionalization],
-        db_flatfiles: list[models.Flatfile],
-        debug=False
+    db_regionalizations: list[models.Regionalization],
+    db_flatfiles: list[models.Flatfile],
+    debug=False
 ) -> dict:
-    """Return the JSON data to be passed to the browser at startup to initialize
+    """
+    Return the JSON data to be passed to the browser at startup to initialize
     the page content
 
     :param debug: True or False, the value of the settings DEBUG flag
@@ -226,9 +246,9 @@ def get_init_data_json(
         # imt_names should be hashable and unique, so sort and make a tuple:
         imt_names = tuple(sorted(gsim.imts.split(" ")))
         imt_group_index = imt_groups.setdefault(imt_names, len(imt_groups))
-        sa_limits = [gsim.min_sa_period, gsim.max_sa_period]
-        if sa_limits[0] is None or sa_limits[1] is None:
-            sa_limits = []
+        sa_lim = [gsim.min_sa_period, gsim.max_sa_period]
+        if sa_lim[0] is None or sa_lim[1] is None:
+            sa_lim = []
         model_warnings = []
         if gsim.unverified:
             model_warnings.append(models.Gsim.unverified.field.help_text)
@@ -238,11 +258,12 @@ def get_init_data_json(
             model_warnings.append(models.Gsim.adapted.field.help_text)
         if model_warnings:
             warning_text = "; ".join(model_warnings)
-            warning_group_index = warning_groups.setdefault(warning_text,
-                                                            len(warning_groups))
-            gsims.append([gsim.name, imt_group_index, sa_limits, warning_group_index])
+            warning_group_index = warning_groups.setdefault(
+                warning_text, len(warning_groups)
+            )
+            gsims.append([gsim.name, imt_group_index, sa_lim, warning_group_index])
         else:
-            gsims.append([gsim.name, imt_group_index, sa_limits])
+            gsims.append([gsim.name, imt_group_index, sa_lim])
 
     # get regionalization data (for selecting models on a map):
     regionalizations = []
@@ -373,7 +394,11 @@ def get_init_data_json(
         },
         'gsims': gsims,
         'imtsHelp': {
-            i: re.sub("\\s+", " ", registered_imts[i].__doc__.strip())
+            i: re.sub(
+                "\\s+",
+                " ",
+                (getattr(imt_module, i).__doc__ or  "No doc. available").strip()
+            )
             for imts in imt_groups for i in imts
         },
         # return the list of imts (imt_groups keys) in the right order:
@@ -386,10 +411,11 @@ def get_init_data_json(
 
 
 def get_references(
-        db_regionalizations: list[models.Regionalization],
-        db_flatfiles: list[models.Flatfile]
+    db_regionalizations: list[models.Regionalization],
+    db_flatfiles: list[models.Flatfile]
 ):
     """Return the references of the data used by the program"""
+
     refs = {}
     for item in chain(db_regionalizations, db_flatfiles):
         url = get_url(item)
@@ -401,11 +427,11 @@ def get_references(
 
 
 def get_api_doc_data(
-        db_regionalizations: list[models.Regionalization],
-        db_flatfiles: list[models.Flatfile],
-        url_host: str,
-        models_count:int,
-        imts: set[str]
+    db_regionalizations: list[models.Regionalization],
+    db_flatfiles: list[models.Flatfile],
+    url_host: str,
+    models_count:int,
+    imts: set[str]
 ):
     model_info_params = apiview2help(GsimInfoView)
     model_to_model_params = apiview2help(PredictionsView)
@@ -422,8 +448,9 @@ def get_api_doc_data(
     # Post process:
 
     # Fix docstrings common to all APIs params:
-    regionalizations_help_suffix = \
+    regionalizations_help_suffix = (
         f'. {multiselect_from} {", ".join(_.name for _ in db_regionalizations)}'
+    )
     refs = get_hyperlink_text(db_regionalizations)
     if refs:
         regionalizations_help_suffix += f'. References: {refs}'
@@ -456,12 +483,14 @@ def get_api_doc_data(
     # Fix docstrings of Model2Model params
     model_to_model_params['z1pt0']['default_value'] = '(inferred)'
     model_to_model_params['z2pt5']['default_value'] = '(inferred)'
-    model_to_model_params['magnitude']['help'] += \
-        f'. See also {", ".join(PredictionsForm.rupture_fieldnames)} ' \
+    model_to_model_params['magnitude']['help'] += (
+        f'. See also {", ".join(PredictionsForm.rupture_fieldnames)} ' 
         f'(Rupture configuration parameters, applied to all created Ruptures)'
-    model_to_model_params['distance']['help'] += \
-        f'. See also {", ".join(PredictionsForm.site_fieldnames)} ' \
+    )
+    model_to_model_params['distance']['help'] += (
+        f'. See also {", ".join(PredictionsForm.site_fieldnames)} ' 
         f'(Site configuration parameters, applied to all created Sites)'
+    )
 
     # Fix docstrings of Model2Data params:
     flatfile_help_suffix = (
@@ -497,8 +526,7 @@ def get_api_doc_data(
 
 
 def get_hyperlink_text(
-        db_objs: list[Union[models.Flatfile, models.Regionalization]],
-        sep=', '
+    db_objs: list[ models.Flatfile | models.Regionalization], sep=', '
 ):
     """
     Return all references URL from the given objects, in a string containing
@@ -518,11 +546,12 @@ def get_hyperlink_text(
 
 
 def get_display_name(
-        obj: Union[models.Flatfile, models.Regionalization],
-        extended=False
+    obj: models.Flatfile | models.Regionalization, extended=False
 ) -> str:
-    """return the name from the given Database obj, assuring it is not empty (either
-    display_name or name, or, if extended is True (default: False) both of them"""
+    """
+    Return the name from the given Database obj, assuring it is not empty (either
+    display_name or name, or, if extended is True (default: False) both of them
+    """
     display_name = obj.display_name
     name = obj.name
     if not display_name:
@@ -531,14 +560,16 @@ def get_display_name(
 
 
 def get_url(obj: models.Reference) -> str:
-    """return the URL or the DOI url from the given Reference obj"""
+    """Return the URL or the DOI url from the given Reference obj"""
+
     if obj.url:
         return obj.url
     return f'https://doi.org/{obj.doi}' if obj.doi else ''
 
 
 def get_bbox(reg: models.Regionalization) -> list[float]:
-    """Return the bounds of all the regions coordinates in the given regionalization
+    """
+    Return the bounds of all the regions coordinates in the given regionalization
 
     @param return: the 4-element list (minx, miny, maxx, maxy) i.e.
         (minLon, minLat, maxLon, maxLat)
@@ -554,28 +585,25 @@ def get_bbox(reg: models.Regionalization) -> list[float]:
     return bounds
 
 
-def apiview2help(view: Union[APIFormView, Type[APIFormView]]) -> dict:
-    """Return the same output as `form2help` from the given APIFormView. This method
+def apiview2help(view: APIFormView | Type[APIFormView]) -> dict:
+    """
+    Return the same output as `form2help` from the given APIFormView. This method
     First get the help from the view form class, and then adds the view `format`
     parameter as dict entry, before returning the dict
     """
     params = form2help(view.formclass, compact=False)
     help_ = 'The response data format'
-    choices = list(view.supported_formats())
-    default_format = view.default_format
-    if len(choices) > 1:
-        # reorder:
-        choices = [default_format] + [f for f in choices if f != default_format]
+    choices = list(view.responses)
     params['format'] = {
         'names': ['format'],
-        'default_value': default_format,
+        'default_value': choices[0],
         'help': help_,
         'choices': choices
     }
     return params
 
 
-def form2help(form: Union[EgsimBaseForm, Type[EgsimBaseForm]], compact=True) -> dict:
+def form2help(form: EgsimBaseForm | Type[EgsimBaseForm], compact=True) -> dict:
     """
     Return the given form in a dict with all field names mapped to their help text
 
@@ -607,7 +635,8 @@ def form2help(form: Union[EgsimBaseForm, Type[EgsimBaseForm]], compact=True) -> 
 
 
 def form2dict(form: EgsimBaseForm, compact=False) -> dict:
-    """Return the `data` argument passed in the form
+    """
+    Return the `data` argument passed in the form
     constructor in a JSON serializable dict
 
     @param form: the EgsimBaseForm (Django Form subclass)
@@ -629,11 +658,10 @@ def form2dict(form: EgsimBaseForm, compact=False) -> dict:
 
 
 def get_html_tutorial_context(
-        key: str,
-        api_form: APIForm,
-        api_client_function
+    key: str, api_form: APIForm, api_client_function
 ) -> dict:
     """Return the context (dict) for the Django rendering of the HTML tutorial page"""
+
     # create dataframe htm:
     s = StringIO()
     if not api_form.is_valid():
@@ -666,11 +694,13 @@ def get_html_tutorial_context(
             f'dframe[[c for c in dframe.columns if c.startswith("{Clabel.input} ")]]',
     }
     if key == 'residuals':
-        py_select_exprs['Select by metric type (Total residuals)'] = \
+        py_select_exprs['Select by metric type (Total residuals)'] = (
             f'dframe[[c for c in dframe.columns if " {Clabel.total_res} " in c]]'
+        )
     else:
-        py_select_exprs['Select by metric type (Medians)'] = \
+        py_select_exprs['Select by metric type (Medians)'] = (
             f'dframe[[c for c in dframe.columns if " {Clabel.median} " in c]]'
+        )
 
     py_select_snippets = []
     for title, expr in py_select_exprs.items():

@@ -1,13 +1,11 @@
-"""
-Residuals module
-"""
+"""Residuals module"""
+
 from __future__ import annotations  # https://peps.python.org/pep-0563/
 
 from itertools import product
 
 from collections.abc import Iterable, Container, Collection
 from pandas import Index
-from typing import Union
 from math import sqrt
 
 import numpy as np
@@ -19,23 +17,36 @@ from openquake.hazardlib import imt, const
 from openquake.hazardlib.contexts import RuptureContext
 from openquake.hazardlib.scalerel import PeerMSR
 
-from .flatfile import (FlatfileError, MissingColumnError, FlatfileMetadata,
-                       ColumnDataError, IncompatibleColumnError, EVENT_ID_COLUMN_NAME)
-from .validation import (validate_inputs, harmonize_input_gsims, init_context_maker,
-                         harmonize_input_imts, validate_imt_sa_limits,
-                         get_ground_motion_values)
+from .flatfile import (
+    FlatfileError,
+    MissingColumnError,
+    column_names,
+    column_type,
+    column_aliases,
+    ColumnDataError,
+    IncompatibleColumnError,
+    EVENT_ID_COLUMN_NAME
+)
+from .validation import (
+    validate_inputs,
+    harmonize_input_gsims,
+    init_context_maker,
+    harmonize_input_imts,
+    validate_imt_sa_limits,
+    get_ground_motion_values
+)
 from .registry import (Clabel, sa_period, ground_motion_properties_required_by)
 from .converters import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
 
 
 def get_residuals(
-        gsims: Iterable[Union[str, GMPE]],
-        imts: Iterable[Union[str, imt.IMT]],
-        flatfile: pd.DataFrame,
-        likelihood=False,
-        normalise=True,
-        mean=False,
-        header_sep: Union[str, None] = Clabel.sep
+    gsims: Iterable[str | GMPE],
+    imts: Iterable[str | imt.IMT],
+    flatfile: pd.DataFrame,
+    likelihood=False,
+    normalise=True,
+    mean=False,
+    header_sep: str | None = Clabel.sep
 ) -> pd.DataFrame:
     """
     Calculate the residuals from a given flatfile gsim(s) and imt(s)
@@ -70,7 +81,8 @@ def get_residuals(
     flatfile_r = prepare_flatfile(flatfile, gsims, imts)
     # 3. compute residuals:
     residuals = get_residuals_from_validated_inputs(
-        gsims, imts, flatfile_r, normalise=normalise, return_mean=mean)
+        gsims, imts, flatfile_r, normalise=normalise, return_mean=mean
+    )
     labels = [Clabel.total_res, Clabel.inter_ev_res, Clabel.intra_ev_res]
     if mean:
         labels += [Clabel.mean]
@@ -84,11 +96,12 @@ def get_residuals(
     # concat:
     col_mapping = {}
     for c in flatfile_r.columns:
-        c_type = FlatfileMetadata.get_type(c)
+        c_type = column_type(c)
         col_mapping[c] = (
             Clabel.input,
             c_type.value if c_type else Clabel.uncategorized_input,
-            c)
+            c
+        )
     flatfile_r.rename(columns=col_mapping, inplace=True)
     # sort columns:
     flatfile_r.sort_index(axis=1, inplace=True)
@@ -101,10 +114,13 @@ def get_residuals(
     return residuals
 
 
-def prepare_flatfile(flatfile: pd.DataFrame,
-                     gsims: dict[str, GMPE],
-                     imts: dict[str, imt.IMT]) -> pd.DataFrame:
-    """Return a version of flatfile ready for residuals computation with
+def prepare_flatfile(
+    flatfile: pd.DataFrame,
+    gsims: dict[str, GMPE],
+    imts: dict[str, imt.IMT]
+) -> pd.DataFrame:
+    """
+    Return a version of flatfile ready for residuals computation with
     the given gsims and imts
     """
     flatfile_r = get_flatfile_for_residual_analysis(flatfile, gsims.values(), imts)
@@ -123,11 +139,12 @@ def prepare_flatfile(flatfile: pd.DataFrame,
 
 
 def get_residuals_from_validated_inputs(
-        gsims: dict[str, GMPE],
-        imts: dict[str, imt.IMT],
-        flatfile: pd.DataFrame,
-        normalise=True,
-        return_mean=False) -> pd.DataFrame:
+    gsims: dict[str, GMPE],
+    imts: dict[str, imt.IMT],
+    flatfile: pd.DataFrame,
+    normalise=True,
+    return_mean=False
+) -> pd.DataFrame:
     residuals = []
     # compute the observations (compute the log for all once here):
     observed = get_observed_motions(flatfile, imts, True)
@@ -139,14 +156,16 @@ def get_residuals_from_validated_inputs(
             expected,
             observed.loc[expected.index, :],
             normalise=normalise,
-            return_mean=return_mean)
+            return_mean=return_mean
+        )
         residuals.append(res)
     # concat preserving index (last arg. is False by default but set anyway for safety):
     return pd.concat(residuals, axis='index', ignore_index=False)
 
 
 def get_observed_motions(flatfile: pd.DataFrame, imts: Container[str], log=True):
-    """Return the observed motions from the given flatfile. Basically copies
+    """
+    Return the observed motions from the given flatfile. Basically copies
     the flatfile with only the given IMTs, and by default computes the log of all
     values"""
     observed = flatfile[[c for c in flatfile.columns if c in imts]]
@@ -156,8 +175,9 @@ def get_observed_motions(flatfile: pd.DataFrame, imts: Container[str], log=True)
 
 
 def yield_event_contexts(flatfile: pd.DataFrame) -> Iterable[EventContext]:
-    """Group the flatfile by events, and yield `EventContext`s objects, one for
-    each event"""
+    """
+    Group the flatfile by events, and yield `EventContext`s objects, one for each event
+    """
     # check event id column or use the event location to group events:
     # group flatfile by events. Use ev. id (_EVENT_COLUMNS[0]) or, when
     # no ID found, event spatio-temporal coordinates (_EVENT_COLUMNS[1:])
@@ -183,16 +203,17 @@ class EventContext(RuptureContext):
         self._flatfile = flatfile
         if self.__class__.rupture_params is None:
             # get rupture params once for all instances the first time only:
-            self.__class__.rupture_params = FlatfileMetadata.get_rupture_params()
+            self.__class__.rupture_params = column_names(type='rupture')
 
     def __eq__(self, other):
         """Overwrite `BaseContext.__eq__` method"""
-        assert isinstance(other, EventContext) and \
-               self._flatfile.equals(other._flatfile)
+
+        assert isinstance(other, EventContext) and self._flatfile.equals(other._flatfile)
 
     @property
     def sids(self) -> Index:
-        """Return the ids (iterable of integers) of the records (or sites) used to build
+        """
+        Return the ids (iterable of integers) of the records (or sites) used to build
         this context. The returned pandas `Index` must have unique values so that
         the records (flatfile rows) can always be retrieved from the source flatfile via
         `flatfile.loc[self.sids, :]`
@@ -202,7 +223,8 @@ class EventContext(RuptureContext):
         return self._flatfile.index
 
     def __getattr__(self, column_name):
-        """Return a non-found Context attribute by searching in the underlying
+        """
+        Return a non-found Context attribute by searching in the underlying
         flatfile column. Raises AttributeError (as usual) if `item` is not found
         """
         try:
@@ -215,9 +237,10 @@ class EventContext(RuptureContext):
 
 
 def get_expected_motions(
-        gsims: dict[str, GMPE],
-        imts: dict[str, imt.IMT],
-        ctx: EventContext) -> pd.DataFrame:
+    gsims: dict[str, GMPE],
+    imts: dict[str, imt.IMT],
+    ctx: EventContext
+) -> pd.DataFrame:
     """
     Calculate the expected ground motions from the context
     """
@@ -231,7 +254,8 @@ def get_expected_motions(
             continue
         imt_names, imt_vals = list(imts_ok.keys()), list(imts_ok.values())
         mean, total, inter, intra = get_ground_motion_values(
-                gsim, imt_vals, cmaker.recarray([ctx]), model_name=gsim_name)
+                gsim, imt_vals, cmaker.recarray([ctx]), model_name=gsim_name
+        )
         # assign data to our tmp lists:
         columns.extend(product(imt_names, [Clabel.mean], [gsim_name]))
         data.append(mean)
@@ -246,15 +270,19 @@ def get_expected_motions(
             columns.extend((i, Clabel.intra_ev_std, gsim_name) for i in imt_names)
             data.append(intra)
 
-    return pd.DataFrame(columns=pd.MultiIndex.from_tuples(columns),
-                        data=np.hstack(data), index=ctx.sids)
+    return pd.DataFrame(
+        columns=pd.MultiIndex.from_tuples(columns),
+        data=np.hstack(data),
+        index=ctx.sids
+    )
 
 
 def get_residuals_from_expected_and_observed_motions(
-        expected: pd.DataFrame,
-        observed: pd.DataFrame,
-        normalise=True,
-        return_mean=False) -> pd.DataFrame:
+    expected: pd.DataFrame,
+    observed: pd.DataFrame,
+    normalise=True,
+    return_mean=False
+) -> pd.DataFrame:
     """
     Calculate the residual terms, returning a new DataFrame
 
@@ -291,8 +319,9 @@ def get_residuals_from_expected_and_observed_motions(
         intra_ev = expected.get((imtx, Clabel.intra_ev_std, gsim))
         if inter_ev is None or intra_ev is None:
             continue
-        inter, intra = _get_random_effects_residuals(obs, mean, inter_ev,
-                                                     intra_ev, normalise)
+        inter, intra = _get_random_effects_residuals(
+            obs, mean, inter_ev, intra_ev, normalise
+        )
         residuals[(imtx, Clabel.inter_ev_res, gsim)] = inter
         residuals[(imtx, Clabel.intra_ev_res, gsim)] = intra
     return residuals
@@ -306,8 +335,9 @@ def _get_random_effects_residuals(obs, mean, inter, intra, normalise=True):
     # TODO this is the only part where grouping by event is relevant: maybe
     #  move groupby here?
     nvals = float(len(mean))
-    inter_res = ((inter ** 2.) * sum(obs - mean)) /\
-        (nvals * (inter ** 2.) + (intra ** 2.))
+    inter_res = (
+        ((inter ** 2.) * sum(obs - mean)) / (nvals * (inter ** 2.) + (intra ** 2.))
+    )
     intra_res = obs - (mean + inter_res)
     if normalise:
         return inter_res / inter, intra_res / intra
@@ -342,10 +372,10 @@ def get_residuals_likelihood(residuals: pd.DataFrame, inplace=True) -> pd.DataFr
     return likelihoods
 
 
-def get_likelihood(values: Union[np.ndarray, pd.Series]) -> Union[np.ndarray, pd.Series]:
+def get_likelihood(values: np.ndarray | pd.Series) -> np.ndarray | pd.Series:
     """
-    Return the likelihood of the given values according to Equation 9 of
-    Scherbaum et al. (2004)
+    Return the likelihood of the given values according to
+    Equation 9 of Scherbaum et al. (2004)
     """
     zvals = np.fabs(values)
     return 1.0 - erf(zvals / sqrt(2.))
@@ -353,13 +383,15 @@ def get_likelihood(values: Union[np.ndarray, pd.Series]) -> Union[np.ndarray, pd
 
 # utilities:
 
-def get_column_name(flatfile: pd.DataFrame, column: str) -> Union[str, None]:
-    """Return the flatfile column matching `column`. This could be `column`
-     itself, or any of its aliases (see `columns` module and YAML file)
-     Returns None if no column is found, raise `IncompatibleColumnError` if more than
-     a matching column is found"""
+def get_column_name(flatfile: pd.DataFrame, column: str) -> str | None:
+    """
+    Return the flatfile column matching `column`. This could be `column`
+    itself, or any of its aliases (see `columns` module and YAML file)
+    Returns None if no column is found, raise `IncompatibleColumnError` if more than
+    a matching column is found
+    """
     ff_cols = set(flatfile.columns)
-    cols = set(FlatfileMetadata.get_aliases(column)) & ff_cols
+    cols = set(column_aliases(column)) & ff_cols
     if len(cols) > 1:
         raise IncompatibleColumnError(cols)
     elif len(cols) == 0:
@@ -392,10 +424,10 @@ def get_station_id_column_names(flatfile: pd.DataFrame) -> list[str]:
 
 
 def get_flatfile_for_residual_analysis(
-        flatfile: pd.DataFrame,
-        gsims: Collection[GMPE],
-        imts: Collection[str]) -> pd.DataFrame:
-    """Return a new dataframe with all columns required to compute residuals
+    flatfile: pd.DataFrame, gsims: Collection[GMPE], imts: Collection[str]
+) -> pd.DataFrame:
+    """
+    Return a new dataframe with all columns required to compute residuals
     from the given models (`gsim`) and intensity measures (`imts`) given with
     periods, when needed (e.g. "SA(0.2)")
     """
@@ -420,7 +452,8 @@ def get_flatfile_for_residual_analysis(
 
 
 def get_required_imts(flatfile: pd.DataFrame, imts: Collection[str]) -> pd.DataFrame:
-    """Return a new dataframe with all columns required to compute residuals
+    """
+    Return a new dataframe with all columns required to compute residuals
     for the given intensity measures (`imts`) given with
     periods, when needed (e.g. "SA(0.2)")
     """
@@ -447,7 +480,8 @@ def get_required_imts(flatfile: pd.DataFrame, imts: Collection[str]) -> pd.DataF
 
 
 def get_required_sa(flatfile: pd.DataFrame, sa_imts: Iterable[str]) -> pd.DataFrame:
-    """Return a new Dataframe with the SA columns defined in `sa_imts`
+    """
+    Return a new Dataframe with the SA columns defined in `sa_imts`
     The returned DataFrame will have all strings supplied in `sa_imts` as columns,
     with relative values copied (or inferred via interpolation) from the given flatfile
 
@@ -505,9 +539,10 @@ def get_required_sa(flatfile: pd.DataFrame, sa_imts: Iterable[str]) -> pd.DataFr
 
 
 def get_required_ground_motion_properties(
-        flatfile: pd.DataFrame,
-        gsims: Iterable[GMPE]) -> pd.DataFrame:
-    """Return a new dataframe with all columns required to compute residuals
+    flatfile: pd.DataFrame, gsims: Iterable[GMPE]
+) -> pd.DataFrame:
+    """
+    Return a new dataframe with all columns required to compute residuals
     from the given models (`gsim`), i.e. all columns denoting ground motion
     properties required by the passed models
     """
@@ -516,20 +551,23 @@ def get_required_ground_motion_properties(
 
     # REQUIRES_DISTANCES is empty when gsims = [FromFile]: in this case, add a
     # default 'rrup' (see openquake,hazardlib.contexts.ContextMaker.__init__):
-    if 'rrup' not in required_props and \
-            any(len(g.REQUIRES_DISTANCES) == 0 for g in gsims):
+    if (
+        'rrup' not in required_props and
+        any(len(g.REQUIRES_DISTANCES) == 0 for g in gsims)
+    ):
         required_props |= {'rrup'}
 
     missing_flatfile_columns = set()
     for p in required_props:
         try:
             # https://stackoverflow.com/a/29706954
-            # `required_props_flatfile` is a dataframe with a specific index (see above).
+            # `required_props_flatfile` is a dataframe with a specific index.
             # Adding a Series to it might result in NaNs where the Series index
             # does not match the DataFrame index. As such, assign the series.values to
             # the DataFrame (see test_residuals.test_assign_series to assure this is ok)
-            required_props_flatfile[p] = \
+            required_props_flatfile[p] = (
                 get_ground_motion_property_values(flatfile, p).values
+            )
         except MissingColumnError:
             missing_flatfile_columns.add(p)
     if missing_flatfile_columns:
@@ -542,9 +580,10 @@ DEFAULT_MSR = PeerMSR()
 
 
 def get_ground_motion_property_values(
-        flatfile: pd.DataFrame,
-        gm_property: str) -> pd.Series:
-    """Get the values (pandas Series) relative to the ground motion property
+    flatfile: pd.DataFrame, gm_property: str
+) -> pd.Series:
+    """
+    Get the values (pandas Series) relative to the ground motion property
     (rupture or sites parameter, distance measure) extracted from the given
     flatfile.
     The returned value might be a column of the flatfile or a new pandas Series
@@ -613,10 +652,11 @@ def get_ground_motion_property_values(
 
 
 def fill_na(
-        flatfile: pd.DataFrame,
-        src_col: str,
-        dest: Union[None, np.ndarray, pd.Series]) -> Union[None, np.ndarray, pd.Series]:
-    """Fill NAs (NaNs/Nulls) of `dest` with relative values from `src`.
+    flatfile: pd.DataFrame, src_col: str, dest: np.ndarray | pd.Series | None
+) -> np.ndarray | pd.Series | None:
+    """
+    Fill NAs (NaNs/Nulls) of `dest` with relative values from `src`.
+
     :return: a numpy array or pandas Series (the same type of `dest`, whenever
         possible) which might be a new object or `dest`, unchanged
     """

@@ -5,10 +5,18 @@ __pycache__/
 
 # added by me:
 tmp/
-media/
 .DS_Store
 .idea/
+
+# Django stuff:
+*.log
+local_settings.py
+# this is the typical Django settings file name, ignore just in case we accidentally put it in the repo:
 settings.py
+# the db name (same for all settings), ignore just in case we accidentally put it in the repo:
+db.sqlite3
+# the media root (same for all settings), ignore just in case we accidentally put it in the repo:
+media/
 
 # C extensions
 *.so
@@ -57,11 +65,6 @@ coverage.xml
 # Translations
 *.mo
 *.pot
-
-# Django stuff:
-*.log
-local_settings.py
-db.sqlite3
 
 # Flask stuff:
 instance/

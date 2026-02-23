@@ -1,21 +1,33 @@
-"""
-Base Form for to model-to-data operations i.e. flatfile handling
-"""
-from typing import Optional
+"""Base Form for to model-to-data operations i.e. flatfile handling"""
+
 import pandas as pd
 from django.core.files.uploadedfile import TemporaryUploadedFile
 
 from django.forms import Form
 from django.forms.fields import CharField, FileField
 
-from egsim.smtk import (ground_motion_properties_required_by,
-                        intensity_measures_defined_for, get_sa_limits)
-from egsim.smtk.flatfile import (read_flatfile, get_dtype_of, FlatfileMetadata,
-                                 query as flatfile_query, EVENT_ID_COLUMN_NAME,
-                                 FlatfileError, FlatfileQueryError,
-                                 IncompatibleColumnError)
+from egsim.smtk.registry import (
+    ground_motion_properties_required_by,
+    intensity_measures_defined_for,
+    sa_limits
+)
+from egsim.smtk.flatfile import (
+    read_flatfile,
+    get_dtype_of,
+    column_exists,
+    column_type,
+    column_aliases,
+    column_dtype,
+    column_help,
+    query as flatfile_query,
+    EVENT_ID_COLUMN_NAME,
+    FlatfileError,
+    FlatfileQueryError,
+    IncompatibleColumnError,
+    column_names
+)
 from egsim.api import models
-from egsim.api.forms import EgsimBaseForm, APIForm, GsimForm, split_pars
+from egsim.api.forms import EgsimBaseForm, APIForm, GsimForm
 
 
 # Let's provide uploaded flatfile Field in a separate Form as the Field is not
@@ -43,9 +55,7 @@ class FlatfileForm(EgsimBaseForm):
         required=False,
         help_text="The flatfile (pre- or user-defined) containing observed ground "
                   "motion properties and intensity measures, in CSV or HDF format"
-    )  # Note: with a ModelChoiceField the benefits of handling validation are outweighed
-    # by the fixes needed here and there to make values JSON serializable, so we opt for
-    # a CharField + custom validation in `clean`
+    )  # Note: CharField + custom validation in `clean` is better than ModelChoiceField
     selexpr = CharField(
         required=False,
         help_text='Filter flatfile records (rows) matching query expressions applied '
@@ -53,19 +63,23 @@ class FlatfileForm(EgsimBaseForm):
     )
 
     def __init__(self, data, files=None, **kwargs):
-        # set now `self._u_ff`, in case `self.clean` is called in `super.__init__` below:
-        self._u_ff = None if files is None else _UploadedFlatfile(files=files)
+        self._uploaded_flatfile_form = None
+        if files is not None:
+            self._uploaded_flatfile_form = _UploadedFlatfile(files=files)
         super().__init__(data=data, **kwargs)
 
     def clean(self):
         """Call `super.clean()` and handle the flatfile"""
-        u_form = self._u_ff
+
+        u_form = self._uploaded_flatfile_form
 
         # Handle flatfiles conflicts first. Note: with no selection from the web GUI we
         # have data['flatfile'] = None
         if u_form is not None and self.data.get('flatfile', None):
-            self.add_error("flatfile", 'select a flatfile by name or upload one, '
-                                       'not both')
+            self.add_error(
+                "flatfile",
+                'select a flatfile by name or upload one, not both'
+            )
         elif u_form is None and not self.data.get('flatfile', None):
             # note: with no selection from the web GUI we have data['flatfile'] = None
             self.add_error("flatfile",  self.ErrMsg.required)
@@ -86,8 +100,10 @@ class FlatfileForm(EgsimBaseForm):
             # there is just one key:
             ff_keys = list(u_form.files.keys())
             if len(ff_keys) != 1:
-                self.add_error("flatfile", f"only one flatfile should be uploaded "
-                                           f"(found {len(ff_keys)})")
+                self.add_error(
+                    "flatfile",
+                    f"only one flatfile should be uploaded (found {len(ff_keys)})"
+                )
                 return cleaned_data
             # Get our uploaded file (Django UploadedFile object, for ref see
             # https://docs.djangoproject.com/en/5.0/ref/files/uploads/):
@@ -105,8 +121,10 @@ class FlatfileForm(EgsimBaseForm):
             # and in-memory files are used only in some tests
 
         if u_flatfile is None:  # predefined flatfile
-            flatfile_db_obj = models.Flatfile.queryset('name', 'filepath').\
-                filter(name=cleaned_data['flatfile']).first()
+            flatfile_db_obj = models.Flatfile.queryset(
+                'name',
+                'filepath'
+            ).filter(name=cleaned_data['flatfile']).first()
             if flatfile_db_obj is None:
                 self.add_error("flatfile", self.ErrMsg.invalid_choice)
                 return cleaned_data
@@ -119,7 +137,9 @@ class FlatfileForm(EgsimBaseForm):
                 # (https://stackoverflow.com/a/10758350):
                 dataframe = read_flatfile(u_flatfile)
             except IncompatibleColumnError as ice:
-                self.add_error('flatfile', f'column names conflict {str(ice)}')
+                self.add_error(
+                    'flatfile', f'column names conflict {str(ice)}'
+                )
                 return cleaned_data
             except FlatfileError as err:
                 self.add_error("flatfile", str(err))
@@ -141,10 +161,10 @@ class FlatfileForm(EgsimBaseForm):
 
 
 class FlatfileValidationForm(APIForm, FlatfileForm):
-    """Form for flatfile validation, on success
-    return info from a given uploaded flatfile"""
-
-    def output(self) -> Optional[dict]:
+    """
+    Form for flatfile validation, on success return info from the uploaded flatfile
+    """
+    def output(self) -> dict:
         """
         Compute and return the output from the input data (`self.cleaned_data`),
         which is a dict with all flatfile columns info.
@@ -164,12 +184,12 @@ class FlatfileValidationForm(APIForm, FlatfileForm):
 
 
 class FlatfileMetadataInfoForm(GsimForm, APIForm):
-    """Form for querying the necessary metadata columns from a given selection
-    of models"""
-
+    """
+    Form for querying the necessary metadata columns from a given selection of models
+    """
     def clean(self):
         cleaned_data = super().clean()
-        unique_imts = FlatfileMetadata.get_intensity_measures()
+        unique_imts = column_names(type='intensity')
 
         for m_name, model in cleaned_data['gsim'].items():
             imts = intensity_measures_defined_for(model)
@@ -178,56 +198,46 @@ class FlatfileMetadataInfoForm(GsimForm, APIForm):
                 break
 
         if 'SA' in unique_imts:
-            inf = float('inf')
-            min_p, max_p = -inf, inf
-            for m_name, model in cleaned_data['gsim'].items():
-                p_bounds = get_sa_limits(model)
-                if p_bounds is None:
-                    # FIXME: we assume a model supporting SA with no period limits
-                    #  is defined for all periods, but is it true?
-                    continue
-                min_p = max(min_p, p_bounds[0])
-                max_p = min(max_p, p_bounds[1])
+            min_p, max_p = get_sa_limits(cleaned_data['gsim'].values())
             if min_p > max_p:
                 unique_imts -= {'SA'}
-            elif -inf < min_p <= max_p < inf:
-                cleaned_data['sa_period_limits'] = [min_p, max_p]
 
         if not unique_imts:
-            self.add_error('gsim', 'No intensity measure defined for all models')
+            self.add_error(
+                'gsim', 'No intensity measure defined for all models'
+            )
 
         cleaned_data['imt'] = sorted(unique_imts)
         return cleaned_data
 
     def output(self) -> dict:
-        """Compute and return the output from the input data (`self.cleaned_data`).
+        """
+        Compute and return the output from the input data (`self.cleaned_data`).
         This method must be called after checking that `self.is_valid()` is True
 
         :return: any Python object (e.g., a JSON-serializable dict)
         """
         cleaned_data = self.cleaned_data
-        gsims = list(cleaned_data['gsim'])
-
-        required_columns = (ground_motion_properties_required_by(*gsims) |
-                            {EVENT_ID_COLUMN_NAME})  # <- event id always required
-        ff_columns = {FlatfileMetadata.get_aliases(c)[0] for c in required_columns}
-
+        gsims = list(cleaned_data['gsim'].values())
+        required_columns = (  # event id always required
+            ground_motion_properties_required_by(*gsims) | {EVENT_ID_COLUMN_NAME}
+        )
+        ff_columns = {column_aliases(c)[0] for c in required_columns}
         imts = cleaned_data['imt']
 
         columns = []
-        sa_period_limits = cleaned_data.get('sa_period_limits', None)
         for col in sorted(ff_columns | set(imts)):
-            columns.append(get_hr_flatfile_column_meta(col))
-            if col == 'SA' and sa_period_limits is not None:
-                columns[-1]['help'] = sa_hr_help(
-                    gsims, columns[-1]['help'], sa_period_limits
-                )
+            col_info = get_hr_flatfile_column_meta(col)
+            if col == 'SA':
+                col_info['help'] = get_sa_help(gsims)
+            columns.append(col_info)
 
         return {'columns': columns}
 
 
-def get_hr_flatfile_column_meta(name: str, values: Optional[pd.Series] = None) -> dict:
-    """Return human-readable (hr) flatfile column metadata in the following `dict` form:
+def get_hr_flatfile_column_meta(name: str, values: pd.Series | None = None) -> dict:
+    """
+    Return human-readable (hr) flatfile column metadata in the following `dict` form:
     {
         'name': str,
         'help': str,
@@ -244,20 +254,20 @@ def get_hr_flatfile_column_meta(name: str, values: Optional[pd.Series] = None) -
     c_dtype = None
     c_categories = []
 
-    if FlatfileMetadata.has(name):
-        c_dtype = FlatfileMetadata.get_dtype(name)
-        cat_dtype = FlatfileMetadata.get_categorical_dtype(name)
-        if cat_dtype is not None:
-            # c_categories is a pandas CategoricalStype. So:
-            c_dtype = get_dtype_of(cat_dtype.categories)
-            c_categories = cat_dtype.categories.tolist()
-        c_type = getattr(FlatfileMetadata.get_type(name), 'value', "")
-        c_help = FlatfileMetadata.get_help(name) or ""
-        c_aliases = FlatfileMetadata.get_aliases(name)
+    if column_exists(name):
+        c_dtype = column_dtype(name)
+        if isinstance(c_dtype, pd.CategoricalDtype):
+            c_categories = c_dtype.categories.tolist()
+            c_dtype = get_dtype_of(c_dtype.categories)
+        c_type = getattr(column_type(name), 'value', "")
+        c_help = column_help(name) or ""
+        c_aliases = column_aliases(name)
         if len(c_aliases) > 1:
             c_aliases = [n for n in c_aliases if n != name]
-            c_aliases = (f"Alternative valid name{'s' if len(c_aliases) != 1 else ''}: "
-                         f"{', '.join(c_aliases)}")
+            c_aliases = (
+                f"Alternative valid name{'s' if len(c_aliases) != 1 else ''}: "
+                f"{', '.join(c_aliases)}"
+            )
             if c_help:
                 c_help += f". {c_aliases}"
             else:
@@ -276,8 +286,10 @@ def get_hr_flatfile_column_meta(name: str, values: Optional[pd.Series] = None) -
             if values is not None:  # custom values, compact categories info:
                 c_dtype += f", categorical, {len(c_categories)} values"
             else:
-                c_dtype += (f", categorical, to be chosen from "
-                            f"{', '.join(str(c) for c in c_categories)}")
+                c_dtype += (
+                    f", categorical, to be chosen from "
+                    f"{', '.join(str(c) for c in c_categories)}"
+                )
     else:
         c_dtype = ""
 
@@ -289,22 +301,62 @@ def get_hr_flatfile_column_meta(name: str, values: Optional[pd.Series] = None) -
     }
 
 
-def sa_hr_help(gsims, sa_help: str, sa_p_limits: list[float]) -> str:
+def get_sa_limits(gsims) -> tuple[float, float]:
+    """Return the SA period limits that work with all the given ground motion models.
+    Return [-float('inf'), float('inf')] if no period bound can be found, i.e.,
+    when no models have SA period limits defined (which might be due to no model
+    being defined for SA, this is not checked for here).
+    If the first element is greater than the second element, it means
+    that there is no overlapping SA period for the given models.
+
+    :param gsims: iterable of ground motion models (str or GMPE instances)
     """
-    builds the SA field help, human readable (hr). The output will be HTML.
-    `sa_help` should be text in flatfile_metadata for the field 'SA'
+    inf = float('inf')
+    min_p, max_p = -inf, inf
+    # for m_name, model in cleaned_data['gsim'].items():
+    for gsim in gsims:
+        p_bounds = sa_limits(gsim)
+        if p_bounds is None:
+            # FIXME: we assume a model supporting SA with no period limits
+            #  is defined for all periods, but is it true?
+            continue
+        min_p = max(min_p, p_bounds[0])
+        max_p = min(max_p, p_bounds[1])
+    return min_p, max_p
+
+
+def get_sa_help(gsims) -> str:
     """
-    sa_p_min = sa_p_max = sa_p_limits[0]
-    if len(sa_p_limits) > 1:
-        sa_p_max = sa_p_limits[1]
-    the_selected_model = 'the selected model'
+    Build the SA field help, human-readable (hr) from the flatfile SA help,
+    adding the info about the allowed SA periods common to all the given
+    ground motion models `gsims`
+    """
+    sa_help = column_help('SA')
+    sa_p_min, sa_p_max = get_sa_limits(gsims)
+    if not (-float('inf') < sa_p_min <= sa_p_max < float('inf')):
+        return sa_help
+
     if len(gsims) > 1:
         the_selected_model = f'all {len(gsims)} selected models'
-    new_text = (f'<b>The period range supported by {the_selected_model} '
-                f'is [{sa_p_min}, {sa_p_max}] (endpoints included)</b>.'
-                if sa_p_min < sa_p_max else
-                f'<b>The only period supported by {the_selected_model} '
-                f'is {sa_p_min}</b>.')
-    help_pars = split_pars(sa_help)
-    help_pars = help_pars[:2] + [new_text] + help_pars[2:]
-    return " ".join(s.strip() for s in help_pars)
+    else:
+        the_selected_model = 'the selected model'
+
+    if sa_p_min < sa_p_max:
+        new_text = (
+            f'The period range supported by {the_selected_model} '
+            f'is [{sa_p_min}, {sa_p_max}] (endpoints included)'
+        )
+    else:
+         new_text = (
+             f'The only period supported by {the_selected_model} is {sa_p_min}'
+         )
+
+    idx = sa_help.find(". If a specific period is required ")
+    if idx > -1:
+        prefix = f'{sa_help[:idx+2]}' # leading ". " is part of predix
+        suffix = f"{sa_help[idx+1:]}"  # leading "." is removed from suffix
+    else:
+        # assure prefix ends with ". ":
+        prefix = sa_help.rstrip().removesuffix(".").rstrip() + ". "
+        suffix = ""
+    return f'{prefix}<b>{new_text}</b>.{suffix}'.strip()

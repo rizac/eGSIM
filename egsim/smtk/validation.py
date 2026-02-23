@@ -1,7 +1,9 @@
-"""Validation functions for the strong motion modeller toolkit (smtk) package of eGSIM"""
+"""
+Validation functions for the strong motion modeller toolkit (smtk) package of eGSIM
+"""
+
 from __future__ import annotations
 
-from typing import Union, Optional
 from collections.abc import Iterable
 
 import numpy as np
@@ -10,12 +12,21 @@ from openquake.hazardlib.imt import IMT
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
 
-from .registry import (gsim_name, intensity_measures_defined_for, gsim, imt,
-                       get_sa_limits, imt_name, sa_period)
+from .registry import (
+    gsim_name,
+    intensity_measures_defined_for,
+    gsim,
+    imt,
+    sa_limits,
+    imt_name,
+    sa_period,
+    SmtkError
+)
 
 
-def harmonize_input_gsims(gsims: Iterable[Union[str, GMPE]]) -> dict[str, GMPE]:
-    """harmonize GSIMs given as names (str), OpenQuake Gsim classes or instances
+def harmonize_input_gsims(gsims: Iterable[str | GMPE]) -> dict[str, GMPE]:
+    """
+    Harmonize GSIMs given as names (str), OpenQuake Gsim classes or instances
     (:class:`GMPE`) into a dict[str, GMPE] where each name is mapped to
     the relative Gsim instance. Names will be sorted ascending.
 
@@ -38,8 +49,7 @@ def harmonize_input_gsims(gsims: Iterable[Union[str, GMPE]]) -> dict[str, GMPE]:
             if not isinstance(gs, str):
                 gs = gsim_name(gsim_inst)
             output_gsims[gs] = gsim_inst
-        except (TypeError, ValueError, IndexError, KeyError, FileNotFoundError,
-                OSError, AttributeError, DeprecationWarning) as _:
+        except SmtkError as _:
             errors.append(gs if isinstance(gs, str) else gsim_name(gs))
     if errors:
         raise ModelError(*errors)
@@ -47,8 +57,9 @@ def harmonize_input_gsims(gsims: Iterable[Union[str, GMPE]]) -> dict[str, GMPE]:
     return {k: output_gsims[k] for k in sorted(output_gsims)}
 
 
-def harmonize_input_imts(imts: Iterable[Union[str, float, IMT]]) -> dict[str, IMT]:
-    """harmonize IMTs given as names (str) or instances (IMT) returning a
+def harmonize_input_imts(imts: Iterable[str | float | IMT]) -> dict[str, IMT]:
+    """
+    Harmonize IMTs given as names (str) or instances (IMT) returning a
     dict[str, IMT] where each name is mapped to the relative instance. Dict keys will
     be sorted ascending comparing SAs using their period. E.g.: 'PGA' 'SA(2)' 'SA(10)'
     """
@@ -57,7 +68,7 @@ def harmonize_input_imts(imts: Iterable[Union[str, float, IMT]]) -> dict[str, IM
     for imtx in imts:
         try:
             imt_set.add(imt(imtx))
-        except (TypeError, ValueError, KeyError) as _:
+        except SmtkError as _:
             errors.append(imtx if isinstance(imtx, str) else imt_name(imtx))
     if errors:
         raise ImtError(*errors)
@@ -73,7 +84,8 @@ def _imtkey(imt_inst) -> tuple[str, float]:
 
 
 def validate_inputs(gsims: dict[str, GMPE], imts: dict[str, IMT]):
-    """Validate the input ground motion models (`gsims`)
+    """
+    Validate the input ground motion models (`gsims`)
     and intensity measures types (`imts`), raising `IncompatibleInput` in case
     of failure, and simply returning (None) otherwise
 
@@ -97,7 +109,8 @@ def validate_inputs(gsims: dict[str, GMPE], imts: dict[str, IMT]):
 
 
 def validate_imt_sa_limits(model: GMPE, imts: dict[str, IMT]) -> dict[str, IMT]:
-    """Return a dict of IMT names mapped to the IMT instances that are either not SA,
+    """
+    Return a dict of IMT names mapped to the IMT instances that are either not SA,
     or have a period within the model SA period limits
 
     :param model: a Ground motion model instance
@@ -107,7 +120,7 @@ def validate_imt_sa_limits(model: GMPE, imts: dict[str, IMT]) -> dict[str, IMT]:
     :return: a subset of the passed `imts` dict or `imts` unchanged if all its IMT
         are valid for the given model
     """
-    model_sa_p_lim = get_sa_limits(model)
+    model_sa_p_lim = sa_limits(model)
     return {
         i: v for i, v in imts.items()
         if model_sa_p_lim is None
@@ -116,14 +129,18 @@ def validate_imt_sa_limits(model: GMPE, imts: dict[str, IMT]) -> dict[str, IMT]:
     }
 
 
-def init_context_maker(gsims: dict[str, GMPE],
-                       imts: Iterable[Union[str, IMT]],
-                       magnitudes: Iterable[float],
-                       tectonic_region='') -> ContextMaker:
+def init_context_maker(
+    gsims: dict[str, GMPE],
+    imts: Iterable[str | IMT],
+    magnitudes: Iterable[float],
+    tectonic_region=''
+) -> ContextMaker:
     """Initialize a ContextMaker. Raise `InvalidModel`"""
+
     param = {
         "imtls": {i if isinstance(i, str) else imt_name(i): [] for i in imts},
-        "mags":  [f"{mag:.2f}" for mag in magnitudes]
+        "mags":  [f"{mag:.2f}" for mag in magnitudes],
+        'maximum_distance': lambda *a, **kw: 1000
     }
     oq_exceptions = (ValueError, KeyError)
     try:
@@ -139,8 +156,9 @@ def init_context_maker(gsims: dict[str, GMPE],
         raise err
 
 
-def get_ground_motion_values(model: GMPE, imts: list[IMT], ctx: np.recarray, *,
-                             model_name: Optional[str] = None):
+def get_ground_motion_values(
+    model: GMPE, imts: list[IMT], ctx: np.recarray, *, model_name: str | None = None
+):
     """
     Compute the ground motion values from the arguments returning 4 arrays each
     one of shape `( len(ctx), len(imts) )`. This is the main function to compute
@@ -176,15 +194,17 @@ def get_ground_motion_values(model: GMPE, imts: list[IMT], ctx: np.recarray, *,
         start = 0
         for mag in np.unique(ctx.mag):
             idxs = np.where(ctx.mag == mag)[0]
-            # Note: `idxs` might not be contiguous. To assure that `model.compute` writes
-            # onto the passed array (and not a copy) we will need to use slices:
+            # Note: `idxs` might not be contiguous. To assure that `model.compute`
+            # writes onto the passed array (and not a copy) we will need to use slices:
             end = start + len(idxs)
             try:
-                model.compute(ctx[idxs], imts,
-                              m_buf[:, start:end],
-                              s_buf[:, start:end],
-                              t_buf[:, start:end],
-                              p_buf[:, start:end])
+                model.compute(
+                    ctx[idxs], imts,
+                    m_buf[:, start:end],
+                    s_buf[:, start:end],
+                    t_buf[:, start:end],
+                    p_buf[:, start:end]
+                )
             except oq_exceptions as exc:
                 raise _format_model_error(model_name or model, exc)
             # set computed values back to our variables:
@@ -201,8 +221,9 @@ def get_ground_motion_values(model: GMPE, imts: list[IMT], ctx: np.recarray, *,
     return median.T, sigma.T, tau.T, phi.T
 
 
-def _format_model_error(model: Union[GMPE, str], exception: Exception) -> ModelError:
+def _format_model_error(model: GMPE | str, exception: Exception) -> ModelError:
     """Re-format the given exception into  a ModelError"""
+
     suffix = str(exception.__class__.__name__)
     import sys
     import traceback
@@ -214,35 +235,30 @@ def _format_model_error(model: Union[GMPE, str], exception: Exception) -> ModelE
         if '/openquake/' in fname and fname.rfind('/') < len(fname) - 3:
             suffix = f"OpenQuake {suffix} @{fname[fname.rfind('/') + 1:]}:{lineno}"
 
-    return ModelError(f'{model if isinstance(model, str) else gsim_name(model)}: '
-                      f'{str(exception)} ({suffix})')
+    return ModelError(
+        f'{model if isinstance(model, str) else gsim_name(model)}: '
+        f'{str(exception)} ({suffix})'
+    )
 
 
 # Custom Exceptions ===========================================================
 
 
-class InputError(ValueError):
-    """Base **abstract** exception for any input error (model, imt, flatfile).
-    Note that `str(InputError(arg1, arg2, ...)) = str(arg1) + ", " + str(arg2) + ...
-    """
-
-    def __str__(self):
-        """Reformat ``str(self)``"""
-        return ", ".join(sorted(str(a) for a in self.args))
-
-
-class ModelError(InputError):
+class ModelError(SmtkError):
     """Error for invalid models (e.g., misspelled, unable to compute predictions)"""
+
     pass
 
 
-class ImtError(InputError):
+class ImtError(SmtkError):
     """Error for invalid intensity measures (e.g., misspelled)"""
+
     pass
 
 
-class ConflictError(ValueError):
-    """Describes conflicts among entities (model and imt, flatfile column names).
+class ConflictError(SmtkError):
+    """
+    Exception raised by conflicts among entities (model and imt, flatfile column names).
     Each argument to this class is a conflict, represented by a sequence of the
     items E1, ... EN in conflict within each other. As such,
     `str(ConflictError([E1, E2, E3], ...)) =
@@ -251,9 +267,11 @@ class ConflictError(ValueError):
 
     def __str__(self):
         """Custom error msg"""
+
         return ", ".join(sorted(f'+'.join(sorted(a)) for a in self.args))
 
 
 class IncompatibleModelImtError(ConflictError):
-    """Describes conflicts within model and imts"""
+    """Exception raised by conflicts within model and imts"""
+
     pass

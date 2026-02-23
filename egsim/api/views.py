@@ -1,16 +1,22 @@
 """Module with the views for the web API (no GUI)"""
+
 from __future__ import annotations
 from collections.abc import Callable, Iterable
 from datetime import date, datetime
 import re
 from io import StringIO, BytesIO
-from typing import Union, Type, Optional, IO, Any
+from typing import Type, IO, Any
 from urllib.parse import quote as urlquote
 
 import yaml
 import pandas as pd
-from django.http import (JsonResponse, HttpRequest, QueryDict, FileResponse,
-                         HttpResponseBase)
+from django.http import (
+    JsonResponse,
+    HttpRequest,
+    QueryDict,
+    FileResponse,
+    HttpResponseBase
+)
 from django.http.response import HttpResponse
 from django.views.generic.base import View
 
@@ -23,7 +29,8 @@ from .forms.residuals import ResidualsForm
 
 
 class MimeType:  # noqa
-    """A collection of supported mime types (content_type in Django Response),
+    """
+    A collection of supported mime types (content_type in Django Response),
     loosely copied from mimetypes.types_map
     (https://docs.python.org/stable/library/mimetypes.html)
     """
@@ -39,39 +46,22 @@ class MimeType:  # noqa
 
 
 class EgsimView(View):
-    """Base View class for serving eGSIM HttpResponse. All views should inherits from this 
-    class. Instance of this class handle GET and POST requests by parsing 
-    request data and calling the abstract-like method `response`. Any exception raised 
-    during the process will be caught and returned as 500 HttpResponse with the exception 
-    string in the response body / content.
-    
-    Usage
-    =====
-    
-    Simply implement the abstract-like method `response`:
-    ```
-    class MyEgsimView(EgsimView):
-    
-        def response(self, request: HttpRequest, data: dict, files: Optional[dict] = None) -> HttpResponseBase:
-            content = ... # bytes or string sequence (serialized from a Python object)
-            return HttpResponse(content, content_type=MimeType.csv, ...)
-            # or, if cotent is a JSON dict:
-            return JsonResponse(content)
-    ```
-    And then bind as usual this class view to an endpoint in `urls.py`, .e.g.:
+    """
+    Base View class for serving eGSIM HttpResponse. All views should inherit from
+    this class, implementing the abstract-like method `response` (**see docstring
+    therein for details**). After that, you can map this view to a given URL as usual
+    (in `urls.py`):
     ```
     urlpatterns = [
         ...
-        re_path(...endpoint..., MyEgsimView.as_view()),
+        re_path(<endpoint>, MyEgsimView.as_view()),
         ...
     ]
     ```
-    """  # noqa
-    # error codes for general client and server errors:
-    CLIENT_ERR_CODE, SERVER_ERR_CODE = 400, 500
-
+    """
     def get(self, request: HttpRequest) -> HttpResponseBase:
         """Process a GET request and return a Django Response"""
+
         try:
             return self.response(request, data=self.parse_query_dict(request.GET))
         except Exception as exc:
@@ -79,13 +69,16 @@ class EgsimView(View):
 
     def post(self, request: HttpRequest) -> HttpResponseBase:
         """Process a POST request and return a Django Response"""
+
         try:
             if request.FILES:
                 # request.content_type='multipart/form-data' (see link below for details)
-                # https://docs.djangoproject.com/en/stable/ref/request-response/#django.http.HttpRequest.FILES  # noqa
-                return self.response(request,
-                                     data=self.parse_query_dict(request.POST),
-                                     files=request.FILES)
+                # <https://docs.djangoproject.com/en/stable/ref/request-response/#django.http.HttpRequest.FILES>
+                return self.response(
+                    request,
+                    data=self.parse_query_dict(request.POST),
+                    files=request.FILES
+                )
             else:
                 # request.content_type might be anything (most likely
                 # 'application/json' or 'application/x-www-form-urlencoded')
@@ -98,17 +91,23 @@ class EgsimView(View):
         except Exception as exc:
             return self.handle_exception(exc, request)
 
-    def response(self,
-                 request: HttpRequest,
-                 data: dict,
-                 files: Optional[dict] = None) -> HttpResponseBase:
-        """Return a Django HttpResponse from the given arguments extracted from a GET
+    def response(
+        self,
+        request: HttpRequest,
+        data: dict,
+        files: dict | None = None
+    ) -> HttpResponseBase:
+        """
+        Return a Django HttpResponse from the given arguments extracted from a GET
         or POST request. Any Exception raised here will be returned as 500 HttpResponse
         with `str(exception)` as Response body / content. Other specific error responses
         need to be returned in try except clauses, as usual:
         ```
         try:
-            ...
+            content = ... # bytes or string sequence (serialized from a Python object)
+            return HttpResponse(content, content_type=MimeType.csv, ...)
+            # or, if content is a JSON dict:
+            return JsonResponse(content)
         except ValueError as exc:
             return self.error_response(exc, status=400)
         ```
@@ -125,32 +124,23 @@ class EgsimView(View):
         server error (HttpResponse 500) with the exception string representation
         as response body / content
         """
-        return self.error_response((
-                f'Server error ({exc.__class__.__name__}): {exc}'.strip() +
-                f'. Please contact the server administrator '
-                f'if you think this error is due to a code bug'
-        ), status=self.SERVER_ERR_CODE)
-
-    def error_response(self,
-                       message: Union[str, Exception, bytes] = '',
-                       **kwargs) -> HttpResponse:
-        """
-        Return a HttpResponse with default status set to self.CLIENT_ERR_CODE
-        and custom message in the response body / content. For custom status,
-        provide the `status` explicitly as keyword argument
-        """
-        kwargs.setdefault('status', self.CLIENT_ERR_CODE)
-        if not isinstance(message, (str, bytes)):
-            message = str(message)
-        return HttpResponse(message, **kwargs)
+        # import traceback;
+        # traceback.print_exc()
+        return error_response(
+            f'Server error ({exc.__class__.__name__}): {str(exc).strip()}. '
+            f'Please contact the server administrator '
+            f'if you think this error is due to a code bug',
+            status=500
+        )
 
     def parse_query_dict(  # noqa
-            self,
-            query_dict: QueryDict, *,
-            nulls=("null",),
-            literal_comma: Optional[set] = frozenset()
-    ) -> dict[str, Union[str, list[str]]]:
-        """parse the given query dict and returns a Python dict. This method parses
+        self,
+        query_dict: QueryDict, *,
+        nulls=("null",),
+        literal_comma: set | None = frozenset()
+    ) -> dict[str, str | list[str]]:
+        """
+        Parse the given query dict and returns a Python dict. This method parses
         GET and POST request data and can be overwritten in subclasses.
 
         :param query_dict: a QueryDict resulting from an `HttpRequest.POST` or
@@ -164,7 +154,9 @@ class EgsimView(View):
         ret = {}
         for param_name, values in query_dict.lists():
             if param_name not in literal_comma and any(',' in v for v in values):
-                values = [v for val in values for v in re.split(r"\s*,\s*|\s+", val)]
+                values = [
+                    v for val in values for v in re.split(r"\s*,\s*|\s+", val)
+                ]
             for i in range(len(values)):
                 if values[i] in nulls:
                     values[i] = None
@@ -173,29 +165,47 @@ class EgsimView(View):
         return ret
 
 
+def error_response(
+    message: str | Exception | bytes = '',
+    status=400,
+    **kwargs
+) -> HttpResponse:
+    """
+    Return a HttpResponse with default status 400 (client error)
+    and custom message in the response body / content. For custom status,
+    provide the `status` explicitly as keyword argument
+    """
+    if not isinstance(message, (str, bytes)):
+        message = str(message)
+    return HttpResponse(message, status=status, **kwargs)
+
+
 class NotFound(EgsimView):
     """View for the 404 Not Found HttpResponse"""
 
-    def response(self,
-                 request: HttpRequest,
-                 data: dict,
-                 files: Optional[dict] = None) -> HttpResponse:
-        return self.error_response(status=404)
+    def response(
+        self,
+        request: HttpRequest,
+        data: dict,
+        files: dict | None = None
+    ) -> HttpResponse:
+        return error_response(status=404)
 
 
 class APIFormView(EgsimView):
-    """:class:`EgsimView` subclass serving :class:`ApiForm` outputs. This class is an 
-    EgsimView that additonally handles Form validation errors, returning a 400 
-    HttpResponse with the error message in the response body / content.
-
+    """
+    :class:`EgsimView` subclass serving :class:`ApiForm.output()` objects and 
+    expecting a 'format' request parameter (any attribute of :class:`MimeType`)
+    dictating the response type. Form validation errors will be 
+    returned as 400 HttpResponse, any uncaught exception as 500 HttpResponse.
+    
     Usage
     =====
     
     Given an `APiForm` subclass named `MyApiForm`:
     
-    Simple case: `MyApiForm.output()` method returns a JSON dict and your view is 
-    supposed to return MimeType.json ("application/json") content only. You only need to
-    implement a new endpoint in `urls.py`:
+    1. If this view is supposed to return JSON data only and `MyApiForm.output()` 
+    returns a JSON serializable dict, then simply implement a new endpoint in `urls.py`:
     
     ```
     urlpatterns = [
@@ -205,25 +215,23 @@ class APIFormView(EgsimView):
     ]
     ```
 
-    Advanced case: create a new :class:`APIFormView` which, during the processing of a 
-    request, reads the request's body 'format' parameter (default if missing 'json') 
-    redirecting to the relative `response` method, and returning a 400 HttpResponse 
-    error if no method is implemented). Implementation example:
+    2. In any other case, here a snippet to serve HDF data:
+    
     ```
     class MyApiFormView(APIFormView):
 
         formclass = MyApiForm  # bind this view to the given ApiForm **class**
         
-        # for any desired format (see :class:`MimeType`) implement the relative 
-        # `response_[format]` method returning the relative HttpResponse (see also
-        # `self.response_json`, already implemented for all subclasses). Example (hdf):
-
-        def response_hdf(self, form_output: Any, form: APIForm, **kwargs) -> HttpResponse:
-            # Form is valid. First serialize `form_output`, e.g. as bytes:
-            s_output = ... 
-            # and then implement the HttpResponse from the given form output:
-            return HttpResponse(s_output, content_type=MimeType.hdf, ...)
+        responses: {
+            'hdf': lambda form: MyApiFormView.response_hdf(form)
+        }
+        
+        @staticmethod
+        def response_hdf(form: APIForm) -> HttpResponse:
+            s_output = ... serialize form.output() (into BytesIO probably) ...
+            return HttpResponse(s_output, content_type=MimeType.hdf, status=200, ...)
     ```
+
     Finally, bind as usual this class view to an endpoint in `urls.py`, .e.g.:
     ```
     urlpatterns = [
@@ -232,52 +240,36 @@ class APIFormView(EgsimView):
         ...
     ]
     ```
-    """  # noqa
+    """
     # The APIForm of this view, to be set in subclasses:
-    formclass: Type[APIForm] = None
+    formclass: Type[APIForm] = APIForm
 
-    default_format: str = 'json'
+    responses: dict[str, Callable[[APIForm], HttpResponseBase]] = {
+        'json': lambda form: JsonResponse(form.output(), status=200)
+    }
 
-    def response(self,
-                 request: HttpRequest,
-                 data: dict,
-                 files: Optional[dict] = None):
-        """Return a HttpResponse from the given arguments. The Response body / content
+    def response(
+        self,
+        request: HttpRequest,
+        data: dict,
+        files: dict | None = None
+    ) -> HttpResponseBase:
+        """
+        Return a HttpResponse from the given arguments. The Response body / content
         will be populated with the output of this class Form
         (`self.formclass(...).output()`) serialized into the appropriate bytes sequence
         according to the 'format' parameter in 'data'.
         """
-        rformat = data.pop('format', self.default_format)
+        rformat = data.pop('format', list(self.responses)[0])
         try:
-            response_function = self.supported_formats()[rformat]
+            response_function = self.responses[rformat]
         except KeyError:
-            return self.error_response(f'format: {EgsimBaseForm.ErrMsg.invalid}')
+            return error_response(f'format: {EgsimBaseForm.ErrMsg.invalid}')
 
         form = self.formclass(data, files)
         if form.is_valid():
-            return response_function(self, form.output(), form)  # noqa
-        return self.error_response(form.errors_json_data()['message'])
-
-    @classmethod
-    def supported_formats(cls) -> \
-            dict[str, Callable[[APIForm, APIForm], HttpResponse]]:
-        """Return a list of supported formats (content_types) by inspecting
-        this class implemented methods. Each dict key is a MimeType attr name,
-        mapped to a class method used to obtain the response data in that
-        mime type"""
-        formats = {}
-        for a in dir(cls):
-            if a.startswith('response_'):
-                meth = getattr(cls, a)
-                if callable(meth):
-                    frmt = a.split('_', 1)[1]
-                    if hasattr(MimeType, frmt):
-                        formats[frmt] = meth
-        return formats
-
-    def response_json(self, form_output: Any, form: APIForm, **kwargs) -> JsonResponse:
-        kwargs.setdefault('status', 200)
-        return JsonResponse(form_output, **kwargs)
+            return response_function(form)  # noqa
+        return error_response(form.errors_json_data()['message'])
 
 
 class GsimInfoView(APIFormView):
@@ -287,53 +279,53 @@ class GsimInfoView(APIFormView):
 
 
 class SmtkView(APIFormView):
-    """APIFormView for smtk (strong motion toolkit) output (e.g. Predictions or
-    Residuals, set in the `formclass` class attribute"""
+    """
+    APIFormView for strong motion toolkit (smtk) output, e.g., Predictions, Residuals.
+    This view supported response formats are 'json', 'csv', 'hdf' (the default).
+    Subclasses should in principle only implement the class attribute `formclass`
+    """
 
-    default_format: str = 'hdf'
+    responses = {
+        'hdf': lambda form: SmtkView.response_hdf(form),
+        'csv': lambda form: SmtkView.response_csv(form)
+    }
 
-    def response(self,
-                 request: HttpRequest,
-                 data: dict,
-                 files: Optional[dict] = None):
-        """Calls superclass method but catch ModelError(s) returning the appropriate
-        HTTPResponse (Client error)"""
+    def response(
+        self,
+        request: HttpRequest,
+        data: dict,
+        files: dict | None = None
+    ) -> HttpResponseBase:
+        """
+        Call superclass method but catch ModelError(s) returning the appropriate
+        HTTPResponse (Client error)
+        """
         try:
             return super().response(request=request, data=data, files=files)
         except MissingColumnError as mce:
-            return self.error_response(f'flatfile: missing column(s) {str(mce)}')
+            return error_response(f'flatfile: missing column(s) {str(mce)}')
         except FlatfileError as err:
-            return self.error_response(f"flatfile: {str(err)}")
+            return error_response(f"flatfile: {str(err)}")
         except ModelError as m_err:
-            return self.error_response(m_err)
+            return error_response(m_err)
         # any other exception will be handled in self.get and self.post and returned as
         # 5xx response
 
-    def response_csv(  # noqa
-            self, form_output: pd.DataFrame, form: APIForm, **kwargs  # noqa
-    ) -> FileResponse:
-        content = write_df_to_csv_stream(form_output)
-        content.seek(0)  # for safety
-        kwargs.setdefault('content_type', MimeType.csv)
-        kwargs.setdefault('status', 200)
-        return FileResponse(content, **kwargs)
+    @staticmethod
+    def response_csv(form: APIForm) -> FileResponse:
+        """Return CSV-data response. form is already validated"""
 
-    def response_hdf(  # noqa
-            self, form_output: pd.DataFrame, form: APIForm, **kwargs  # noqa
-    ) -> FileResponse:
-        content = write_df_to_hdf_stream({'egsim': form_output})
+        content = write_df_to_csv_stream(form.output())
         content.seek(0)  # for safety
-        kwargs.setdefault('content_type', MimeType.hdf)
-        kwargs.setdefault('status', 200)
-        return FileResponse(content, **kwargs)
+        return FileResponse(content, content_type=MimeType.csv, status=200)
 
-    def response_json(self, form_output: pd.DataFrame, form: APIForm, **kwargs) \
-            -> JsonResponse:
-        """Return a JSON response. This method is implemented for
-        legacy code/tests and should be avoided whenever possible"""
-        json_data = dataframe2dict(form_output, as_json=True, drop_empty_levels=True)
-        kwargs.setdefault('status', 200)
-        return JsonResponse(json_data, **kwargs)
+    @staticmethod
+    def response_hdf(form: APIForm) -> FileResponse:
+        """Return CSV-data response. form is already validated"""
+
+        content = write_df_to_hdf_stream({'egsim': form.output()})
+        content.seek(0)  # for safety
+        return FileResponse(content, content_type=MimeType.hdf, status=200)
 
 
 class PredictionsView(SmtkView):
@@ -341,22 +333,30 @@ class PredictionsView(SmtkView):
 
     formclass = PredictionsForm
 
+    responses = SmtkView.responses | {
+        'json': lambda form: JsonResponse(
+            dataframe2dict(form.output(), as_json=True, drop_empty_levels=True),
+            status=200
+        )
+    }
+
 
 class ResidualsView(SmtkView):
     """SmtkView subclass for residuals computation"""
 
     formclass = ResidualsForm
 
-    def response_json(self, form_output: pd.DataFrame, form: APIForm, **kwargs) \
-            -> JsonResponse:
-        """Return a JSON response. This method is overwritten because the dataframe to
-        JSON conversion differs if we computed measures of fit (param. `ranking=True`)
-        """
-        orient = 'dict' if form.cleaned_data['ranking'] else 'list'
-        json_data = dataframe2dict(form_output, as_json=True,
-                                   drop_empty_levels=True, orient=orient)
-        kwargs.setdefault('status', 200)
-        return JsonResponse(json_data, **kwargs)
+    responses = SmtkView.responses | {
+        'json': lambda form: JsonResponse(
+            dataframe2dict(
+                form.output(),
+                as_json=True,
+                drop_empty_levels=True,
+                orient='dict' if form.cleaned_data['ranking'] else 'list'
+            ),
+            status=200
+        )
+    }
 
 
 # functions to read from BytesIO:
@@ -365,14 +365,16 @@ class ResidualsView(SmtkView):
 
 def write_df_to_hdf_stream(frames: dict[str, pd.DataFrame], **kwargs) -> BytesIO:
     """Write pandas DataFrame(s) to a HDF BytesIO"""
+
     if any(k == 'table' for k in frames.keys()):
         raise ValueError('Key "table" invalid (https://stackoverflow.com/a/70467886)')
     with pd.HDFStore(
-            "data.h5",  # apparently unused for in-memory data
-            mode="w",
-            driver="H5FD_CORE",  # create in-memory file
-            driver_core_backing_store=0,  # prevent saving to file on close
-            **kwargs) as out:
+        "data.h5",  # apparently unused for in-memory data
+        mode="w",
+        driver="H5FD_CORE",  # create in-memory file
+        driver_core_backing_store=0,  # prevent saving to file on close
+        **kwargs
+    ) as out:
         for key, dfr in frames.items():
             out.put(key, dfr, format='table')
             # out[key] = df
@@ -380,8 +382,9 @@ def write_df_to_hdf_stream(frames: dict[str, pd.DataFrame], **kwargs) -> BytesIO
         return BytesIO(out._handle.get_file_image())  # noqa
 
 
-def read_df_from_hdf_stream(stream: Union[bytes, IO], **kwargs) -> pd.DataFrame:
-    """Read pandas DataFrame from an HDF BytesIO or bytes sequence
+def read_df_from_hdf_stream(stream: bytes | IO, **kwargs) -> pd.DataFrame:
+    """
+    Read pandas DataFrame from an HDF BytesIO or bytes sequence
 
     :param stream: the stream / file-like (e.g. open file content)
     :param kwargs: additional arguments to be passed to pandas `read_hdf`
@@ -389,22 +392,24 @@ def read_df_from_hdf_stream(stream: Union[bytes, IO], **kwargs) -> pd.DataFrame:
     content = stream if isinstance(stream, bytes) else stream.read()
     # https://www.pytables.org/cookbook/inmemory_hdf5_files.html
     with pd.HDFStore(
-            "data.h5",  # apparently unused for in-memory data
-            mode="r",
-            driver="H5FD_CORE",  # create in-memory file
-            driver_core_backing_store=0,  # for safety, just in case
-            driver_core_image=content) as store:
+        "data.h5",  # apparently unused for in-memory data
+        mode="r",
+        driver="H5FD_CORE",  # create in-memory file
+        driver_core_backing_store=0,  # for safety, just in case
+        driver_core_image=content
+    ) as store:
         return pd.read_hdf(store, **kwargs)  # noqa
 
 
 def write_df_to_csv_stream(data: pd.DataFrame, **csv_kwargs) -> BytesIO:
     """Write pandas DataFrame to a CSV BytesIO"""
+
     content = BytesIO()
     data.to_csv(content, **csv_kwargs)  # noqa
     return content
 
 
-def read_df_from_csv_stream(stream: Union[bytes, IO], **kwargs) -> pd.DataFrame:
+def read_df_from_csv_stream(stream: bytes | IO, **kwargs) -> pd.DataFrame:
     """
     Read pandas DataFrame from a CSV BytesIO or bytes sequence
 
@@ -419,9 +424,11 @@ def read_df_from_csv_stream(stream: Union[bytes, IO], **kwargs) -> pd.DataFrame:
     header = kwargs.setdefault('header', [0])
     kwargs.setdefault('index_col', 0)
     dframe = pd.read_csv(content, **kwargs)
-    if header and len(header) > 1:  # multi-index, in case of "Unnamed:" column, replace:
-        dframe.rename(columns=lambda c: "" if c.startswith("Unnamed:") else c,
-                      inplace=True)
+    if header and len(header) > 1:
+        # multi-index, in case of "Unnamed:" column, replace:
+        dframe.rename(
+            columns=lambda c: "" if c.startswith("Unnamed:") else c, inplace=True
+        )
     return dframe
 
 
@@ -431,15 +438,17 @@ QUERY_STRING_SAFE_CHARS = "-_.~!*'()"
 
 
 def as_querystring(
-        data: Any,
-        safe=QUERY_STRING_SAFE_CHARS,
-        none_value='null',
-        encoding: str = None,
-        errors: str = None) -> str:
-    """Return `data` as query string (URL portion after the '?' character) for GET
+    data: Any,
+    safe=QUERY_STRING_SAFE_CHARS,
+    none_value='null',
+    encoding: str = None,
+    errors: str = None
+) -> str:
+    """
+    Return `data` as query string (URL portion after the '?' character) for GET
     requests. With the default set of input parameters, this function encodes strings
     exactly as JavaScript encodeURIComponent:
-    https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURIComponent#description
+    <https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURIComponent#description>
     
     Examples:
     ```
@@ -455,7 +464,7 @@ def as_querystring(
     :param none_value: string to be used when encountering None (default 'null')
     :param encoding: used to deal with non-ASCII characters. See `urllib.parse.quote`
     :param errors: used to deal with non-ASCII characters. See `urllib.parse.quote`
-    """  # noqa
+    """
     if data is None:
         return none_value
     if data is True or data is False:

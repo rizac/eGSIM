@@ -1,0 +1,80 @@
+name: Test eGSIM web app (kinda deployement)
+
+on:
+  push:
+    branches: [ main, master, dev ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  run-tests:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version: [ "3.11" ]  # add more if needed (the server version should be sufficient)
+
+    env:
+      OQ_VERSION: "3.24.1"
+      SETTINGS_MODULE: "egsim.settings.test"
+      REQUIREMENTS_FILE: "requirements-py311-linux64.txt"
+
+    steps:
+      # Checkout repository
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install system packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            gfortran \
+            libopenblas-dev \
+            liblapack-dev \
+            cmake \
+            pkg-config \
+            proj-bin \
+            proj-data \
+            libproj-dev
+
+      # Set up Python
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      # Create and activate virtual environment
+      - name: Create virtualenv
+        run: |
+          python -m venv venv
+          source venv/bin/activate
+          python -m pip install --upgrade pip setuptools wheel
+          pip install -r "./${REQUIREMENTS_FILE}"
+          pip install -U -e ".[web]"  # upgrade all packages to most recent ones
+
+      # Run Django migrations and pytest
+      - name: Test eGSIM (web app)
+        run: |
+          source venv/bin/activate
+          export DJANGO_SETTINGS_MODULE=${SETTINGS_MODULE}
+          # python manage.py migrate
+          # python manage.py egsim-init --no-input
+          pytest --ignore=./tests/tmp/ -xvvv ./tests
+
+      - name: Show pip freeze in workflow log
+        run: |
+          source venv/bin/activate
+          pip freeze
+
+      - name: Generate requirements-web.txt
+        run: |
+          source venv/bin/activate
+          pip freeze > requirements-web.txt
+
+      - name: Upload requirements-web.txt artifact
+        # GitHub repo -> Actions -> Workflow Run -> Scroll to Section "Artifacts" -> Download requirements-web.txt
+        uses: actions/upload-artifact@v4
+        with:
+          name: requirements-web
+          path: requirements-web.txt

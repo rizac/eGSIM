@@ -1,5 +1,4 @@
 import io
-from typing import Union
 # required external packages (pip install ...):
 import requests
 import pandas as pd  # https://pandas.pydata.org/docs/user_guide/dsintro.html#dataframe
@@ -9,7 +8,7 @@ import pandas as pd  # https://pandas.pydata.org/docs/user_guide/dsintro.html#da
 def get_egsim_residuals(
         model: list[str],
         imt: list[str],
-        flatfile: Union[io.IOBase, str],
+        flatfile: io.IOBase | str,
         query_string=None,
         ranking=False,
         likelihood=False,
@@ -17,7 +16,8 @@ def get_egsim_residuals(
         data_format="hdf",
         base_url="https://egsim.gfz-potsdam.de/api/query/residuals"
 ) -> pd.DataFrame:
-    """Retrieve the residuals for the flatfile and the selected
+    """
+    Retrieve the residuals for the flatfile and the selected
     set of ground motion models and intensity measure types. Examples:
     ```
         dataframe = get_residuals_from_egsim(... flatfile=<predefined_flatfile_name>...)

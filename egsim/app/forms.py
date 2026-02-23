@@ -1,4 +1,5 @@
 """Forms handling data (flatfiles)"""
+
 from itertools import product
 
 import numpy as np
@@ -13,8 +14,16 @@ from django.forms.fields import ChoiceField, CharField
 
 from egsim.smtk.flatfile import ColumnType
 from egsim.smtk.registry import Clabel, sa_period
-from .plotly import (colors_cycle, axis_type, axis_range, scatter_trace,
-                     bar_trace, line_trace, histogram_trace, AxisType)
+from .plotly import (
+    colors_cycle,
+    axis_type,
+    axis_range,
+    scatter_trace,
+    bar_trace,
+    line_trace,
+    histogram_trace,
+    AxisType
+)
 from ..smtk.converters import datetime2float
 
 
@@ -22,13 +31,15 @@ class PredictionsVisualizeForm(PredictionsForm):
     """Form returning predictions from configured scenarios in form of plots"""
 
     plot_type = ChoiceField(
-        required=True, initial=None,
+        required=True,
+        initial=None,
         choices=[
             ('m', 'IMT vs. Magnitude'),
             ('d', 'IMT vs. Distance'),
             ('s', 'Magnitude-Distance Spectra')
         ],
-        help_text='the plot type to be displayed: ')
+        help_text='the plot type to be displayed'
+    )
 
     def clean(self):
         cleaned_data = super().clean()
@@ -41,56 +52,51 @@ class PredictionsVisualizeForm(PredictionsForm):
 
     def output(self) -> dict:
         dataframe = super().output()
-        # dist_col_lbl_selector = (
-        #     Clabel.input,
-        #     ColumnType.distance.value,
-        #     slice(None)
-        # )
-        dist_col = (Clabel.input, ColumnType.distance.value, Clabel.rrup)
-        mag_col = (Clabel.input, ColumnType.rupture.value, Clabel.mag)
-        mag_label = mag_col[-1].title()
-        dist_label = dist_col[-1].title()
+        df_dist_label = (Clabel.input, ColumnType.distance.value, Clabel.rrup)
+        df_mag_label = (Clabel.input, ColumnType.rupture.value, Clabel.mag)
+        plot_mag_label = df_mag_label[-1].title()
+        plot_dist_label = df_dist_label[-1].title()
         imt_label = 'Imt'
         models = self.cleaned_data['gsim'].keys()  # sorted (see super.clean_gsim)
         imts = self.cleaned_data['imt'].keys()  # sorted (see super.clean_imt)
 
         if self.cleaned_data['plot_type'] == 'm':
-            x_label = mag_label
+            x_label = plot_mag_label
 
             def y_label(imt):
                 return f'Median {imt}'
 
             def groupby(dframe: pd.DataFrame):
-                for dist, dfr in dframe.groupby(dist_col):
-                    x = {m: dfr[mag_col] for m in models}
+                for dist_value, dfr in dframe.groupby(df_dist_label):
+                    x = {model: dfr[df_mag_label].values for model in models}
                     for i in imts:
-                        p = {dist_label: dist, imt_label: i}
+                        p = {plot_dist_label: dist_value, imt_label: i}
                         data = {}
-                        for m in models:
-                            if (i, Clabel.median, m) in dfr.columns:
-                                data[m] = (
-                                    dfr.loc[:, (i, Clabel.median, m)].values,
-                                    dfr.loc[:, (i, Clabel.std, m)].values
+                        for model in models:
+                            if (i, Clabel.median, model) in dfr.columns:
+                                data[model] = (
+                                    dfr.loc[:, (i, Clabel.median, model)].values,
+                                    dfr.loc[:, (i, Clabel.std, model)].values
                                 )
                         yield p, x, data
 
         elif self.cleaned_data['plot_type'] == 'd':
-            x_label = dist_label
+            x_label = plot_dist_label
 
             def y_label(imt):
                 return f'Median {imt}'
 
             def groupby(dframe: pd.DataFrame):
-                for mag, dfr in dframe.groupby(mag_col):
-                    x = {m: dfr[dist_col].values for m in models}
+                for mag_value, dfr in dframe.groupby(df_mag_label):
+                    x = {model: dfr[df_dist_label].values for model in models}
                     for i in imts:
-                        p = {mag_label: mag, imt_label: i}
+                        p = {plot_mag_label: mag_value, imt_label: i}
                         data = {}
-                        for m in models:
-                            if (i, Clabel.median, m) in dfr.columns:
-                                data[m] = (
-                                    dfr.loc[:, (i, Clabel.median, m)].values,
-                                    dfr.loc[:, (i, Clabel.std, m)].values
+                        for model in models:
+                            if (i, Clabel.median, model) in dfr.columns:
+                                data[model] = (
+                                    dfr.loc[:, (i, Clabel.median, model)].values,
+                                    dfr.loc[:, (i, Clabel.std, model)].values
                                 )
                         yield p, x, data
 
@@ -100,14 +106,9 @@ class PredictionsVisualizeForm(PredictionsForm):
             def y_label(imt):  # noqa
                 return 'SA (g)'
 
-            # imts is a dict[str, IMT] of sorted SA(p) (see super.clean_imt and
-            # self.clean) rename it as `sas` just for clarity:
-            # sas = imts
-            # x_values = [float(sa_period(_)) for _ in sas]
-
             def groupby(dframe: pd.DataFrame):
                 sa_cols = {}
-                x_values = {}
+                x_vals = {}
                 for m in models:
                     model_sa_cols = [
                         c for c in dframe.columns
@@ -117,26 +118,30 @@ class PredictionsVisualizeForm(PredictionsForm):
                         (c[0], Clabel.std, c[2]) in dframe.columns
                     ]
                     model_sa_cols = sorted(model_sa_cols, key=lambda c: sa_period(c[0]))
-                    x_values[m] = [float(sa_period(_[0])) for _ in model_sa_cols]
+                    x_vals[m] = [float(sa_period(_[0])) for _ in model_sa_cols]
                     sa_cols[m] = model_sa_cols
 
-                for (d, mag), dfr in dframe.groupby([dist_col, mag_col]):
-                    p = {mag_label: mag, dist_label: d, imt_label: 'SA'}
+                for (d, mag), dfr in dframe.groupby([df_dist_label, df_mag_label]):
+                    p = {plot_mag_label: mag, plot_dist_label: d, imt_label: 'SA'}
                     data = {}
                     for m in models:
                         data[m] = (
                             dfr.loc[:, sa_cols[m]].iloc[0, :].values,
                             dfr.loc[:, sa_cols[m]].iloc[0, :].values
                         )
-                    yield p, x_values, data
+                    yield p, x_vals, data
 
         c_cycle = colors_cycle()
         colors = {m: next(c_cycle) for m in sorted(set(models))}
         plots = []
         for params, x_values, plot_data in groupby(dataframe):
             traces, layout = self.get_plot_traces_and_layout(
-                x_values, plot_data, x_label, y_label(params[imt_label]),
-                colors)
+                x_values,
+                plot_data,
+                x_label,
+                y_label(params[imt_label]),
+                colors
+            )
             plots.append({
                 'data': traces,
                 'params': params,
@@ -147,9 +152,11 @@ class PredictionsVisualizeForm(PredictionsForm):
 
     @staticmethod
     def get_plot_traces_and_layout(
-            x: dict[str, np.ndarray],
-            y: dict[str, tuple[np.ndarray, np.ndarray]],
-            x_label, y_label, colors: dict[str, str]
+        x: dict[str, np.ndarray],
+        y: dict[str, tuple[np.ndarray, np.ndarray]],
+        x_label,
+        y_label,
+        colors: dict[str, str]
     ) -> tuple[list[dict], dict]:
         """
         Return the traces and layout of a prediction plot (to be displayed using the
@@ -158,7 +165,7 @@ class PredictionsVisualizeForm(PredictionsForm):
         layout is a dict of layout configuration, such as plot title, x- or y-axis
         range and type (log/linear)
 
-        :param x: the x values (dict of str (model name) mapped to its x values
+        :param x: the x values, as dict of str (model name) mapped to its x values
         :param y: the y values, as dict. Each dict key is a model name (str) and it's
             mapped to the model y values, as tuple of two elements: (medians, stddev),
             where medians and stddev are numeric arrays of the same length as `x`
@@ -204,7 +211,7 @@ class PredictionsVisualizeForm(PredictionsForm):
                     color=color_transparent,
                     fillcolor=color_transparent,
                     fill='tonexty',
-                    # https://plotly.com/javascript/reference/scatter/#scatter-fill  # noqa
+                    # <https://plotly.com/javascript/reference/scatter/#scatter-fill>
                     x=xs[-1],
                     y=ys[-1],
                     name=model + ' stddev',
@@ -233,16 +240,21 @@ class PredictionsVisualizeForm(PredictionsForm):
 class ResidualsVisualizeForm(ResidualsForm):
     """Form returning residuals in form of plots"""
 
-    x = CharField(required=False, initial=None,
-                  help_text='the flatfile field to use for plot, or None/null: in '
-                            'this latter case a histogram will be returned '
-                            'depending on the value of the param. likelihood '
-                            '(True: LH values, else: residuals Z values)')
+    x = CharField(
+        required=False,
+        initial=None,
+        help_text='The flatfile field to use for plot, or None/null: in this latter '
+                  'case a histogram will be returned depending on the value of the '
+                  'parameter likelihood (True: LH values, else: residuals Z values)'
+    )
 
     def clean(self):
         cleaned_data = super().clean()
-        if not self.has_error('flatfile') and cleaned_data.get('x', None) \
-                and cleaned_data['x'] not in cleaned_data['flatfile'].columns:
+        if (
+            not self.has_error('flatfile') and
+            cleaned_data.get('x', None) and
+            cleaned_data['x'] not in cleaned_data['flatfile'].columns
+        ):
             self.add_error('x', 'not a flatfile column')
         # make super().output() return a multi-index dataframe (legacy code):
         cleaned_data['multi_header'] = True
@@ -275,11 +287,17 @@ class ResidualsVisualizeForm(ResidualsForm):
 
         plots = {}  # will be returned as list (taking the dict values)
 
-        total_res, intra_res, inter_res = \
-            (Clabel.total_res, Clabel.intra_ev_res, Clabel.inter_ev_res)
+        total_res, intra_res, inter_res = (
+            Clabel.total_res,
+            Clabel.intra_ev_res,
+            Clabel.inter_ev_res
+        )
         if likelihood:
-            total_res, intra_res, inter_res = \
-                (Clabel.total_lh, Clabel.intra_ev_lh, Clabel.inter_ev_lh)
+            total_res, intra_res, inter_res = (
+                Clabel.total_lh,
+                Clabel.intra_ev_lh,
+                Clabel.inter_ev_lh
+            )
         res_columns = {total_res, intra_res, inter_res}
         residual_label = {
             total_res: 'Total',
@@ -305,8 +323,9 @@ class ResidualsVisualizeForm(ResidualsForm):
                     y = dataframe[col]
 
                 color = colors.setdefault(model, next(c_cycle))
-                data, layout = self.get_plot_traces_and_layout(model, imt, x, y,
-                                                               likelihood, col_x, color)
+                data, layout = self.get_plot_traces_and_layout(
+                    model, imt, x, y, likelihood, col_x, color
+                )
 
             # provide a key that is comparable for sorting the plots. Note that imt
             # is separated into name and period (so that "SA(9)" < "SA(10)") and that
@@ -346,8 +365,9 @@ class ResidualsVisualizeForm(ResidualsForm):
         return {'plots': [plots[key] for key in sorted(plots.keys())]}
 
     @staticmethod
-    def get_plot_traces_and_layout(model: str, imt: str, x, y, likelihood: bool,
-                                   xlabel: str, color: str) -> tuple[list[dict], dict]:
+    def get_plot_traces_and_layout(
+        model: str, imt: str, x, y, likelihood: bool, xlabel: str, color: str
+    ) -> tuple[list[dict], dict]:
         """
         Return the traces and layout of a residuals plot (to be displayed using the
         JavaScript library Plotly). Traces is a list, where each Trace is a dict
@@ -409,7 +429,10 @@ class ResidualsVisualizeForm(ResidualsForm):
                 step = 0.5
             else:
                 step = 0.1
-            bins = np.arange(x.min(), x.max() + step, step)
+            if len(x) == 1:  # rounding errors, avoid np.arange if x has 1 element
+                bins = np.array(x)
+            else:
+                bins = np.arange(x.min(), x.max() + step, step)
             y = np.histogram(x, bins, density=True)[0]
             data = [bar_trace(
                 color=color_transparent,
@@ -520,8 +543,11 @@ class FlatfileVisualizeForm(APIForm, FlatfileForm):
 
     def clean(self):
         """Call `super.clean()` and handle the flatfile"""
+
         cleaned_data = super().clean()
-        x, y = cleaned_data.get('x', None), cleaned_data.get('y', None)
+        x = cleaned_data.get('x', None)
+        y = cleaned_data.get('y', None)
+
         if not x and not y:
             self.add_error("x", 'either x or y is required')
             self.add_error("y", 'either x or y is required')
@@ -536,19 +562,23 @@ class FlatfileVisualizeForm(APIForm, FlatfileForm):
         return cleaned_data
 
     def output(self) -> dict:
-        """Compute and return the output from the input data (`self.cleaned_data`).
+        """
+        Compute and return the output from the input data (`self.cleaned_data`).
         This method must be called after checking that `self.is_valid()` is True
 
         :return: any Python object (e.g., a JSON-serializable dict)
         """
         cleaned_data = self.cleaned_data
         dataframe = cleaned_data['flatfile']
-        x_label, y_label = cleaned_data.get('x', None), cleaned_data.get('y', None)
+        x_label = cleaned_data.get('x', None)
+        y_label = cleaned_data.get('y', None)
 
         data, layout = self.get_plot_traces_and_layout(
             dataframe[x_label] if x_label else None,
             dataframe[y_label] if y_label else None,
-            x_label, y_label, next(colors_cycle())
+            x_label,
+            y_label,
+            next(colors_cycle())
         )
         plot = {
             'data': data,
@@ -559,8 +589,9 @@ class FlatfileVisualizeForm(APIForm, FlatfileForm):
         return {'plots': [plot]}
 
     @staticmethod
-    def get_plot_traces_and_layout(x, y, x_label: str, y_label: str,
-                                   color: str) -> tuple[list[dict], dict]:
+    def get_plot_traces_and_layout(
+        x, y, x_label: str, y_label: str, color: str
+    ) -> tuple[list[dict], dict]:
         """
         Return the traces and layout of a flatfile plot (to be displayed using the
         JavaScript library Plotly). Traces is a list, where each Trace is a dict

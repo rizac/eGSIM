@@ -29,8 +29,7 @@ from egsim.app.forms import (FlatfileVisualizeForm, PredictionsVisualizeForm,
 from egsim.app.views import URLS, img_ext, form2dict
 from django.test.client import Client
 
-from egsim.smtk import get_sa_limits
-from egsim.smtk.registry import Clabel
+from egsim.smtk.registry import Clabel, sa_limits
 
 GSIM, IMT = 'gsim', 'imt'
 
@@ -138,16 +137,19 @@ class Test:
                 {'data-query': 'mag > 7'}
             )
         ]
-        for (url, yaml_filepath, form, additional_data), file_ext in \
-                product(tests, ['hdf', 'csv']):
+        for (url, yaml_filepath, form, additional_data), file_ext in (
+            product(tests, ['hdf', 'csv'])
+        ):
             with open(yaml_filepath) as _:
                 data = yaml.safe_load(_)
             data |= additional_data
             data['format'] = file_ext
             client = Client()
-            response = client.post(f"/{url}.{file_ext}",
-                                   json.dumps(data),
-                                   content_type="application/json")
+            response = client.post(
+                f"/{url}.{file_ext}",
+                json.dumps(data),
+                content_type="application/json"
+            )
             assert response.status_code == 200
             content = b''.join(response.streaming_content)
             if file_ext == 'csv':
@@ -166,8 +168,10 @@ class Test:
     def test_flatfile_validate(self):
         url = URLS.FLATFILE_VALIDATION
 
-        ff = SimpleUploadedFile('flatfile',
-                                self.flatfile_tk_content)
+        ff = SimpleUploadedFile(
+            'flatfile',
+            self.flatfile_tk_content
+        )
         data = {'flatfile': ff}
         client = Client()  # do not use the fixture client as we want
         # to disable CSRF Token check
@@ -179,8 +183,10 @@ class Test:
         # now try with a bigger flatfile (Django does not use a InMemory uploaded
         # file, we want to check everything is read properly anyway):
         # Build a "double sized" file content:
-        csv = (self.flatfile_tk_content +
-               b'\n'.join(self.flatfile_tk_content.split(b'\n')[1:]))
+        csv = (
+                self.flatfile_tk_content +
+                b'\n'.join(self.flatfile_tk_content.split(b'\n')[1:])
+        )
         ff = SimpleUploadedFile('flatfile', csv)
         data = {'flatfile': ff}
         client = Client()  # do not use the fixture client as we want
@@ -310,13 +316,14 @@ class Test:
             'model': ['CauzziEtAl2014', 'BindiEtAl2014Rjb'],
             'imt': ['PGA'],
             'flatfile': 'esm2018',
-            'flatfile-query': 'mag > 7.5'
+            'flatfile-query': 'mag > 7.399'
         }
         response = client.post(f"/{URLS.SUBMIT_RESIDUALS_VISUALIZATION}",
                                json.dumps(data),
                                content_type="application/json")
         assert response.status_code == 200
         resp = response.json()
+        # with only one point, no bins to display, so zero pts:
         for plot in resp['plots']:
             for trace in plot['data']:
                 assert len(trace['y']) == len(trace['x']) == 0
@@ -329,7 +336,8 @@ class Test:
         assert response.status_code == 400
 
     def test_predictions_visualize_no_missing_plots(self):
-        """Some models do not produce plots for specific IMTs or residuals type
+        """
+        Some models do not produce plots for specific IMTs or residuals type
         Test that we return those plots, albeit empty
         """
         client = Client()
@@ -365,11 +373,14 @@ class Test:
         # first plot has 6 traces (3 Sgobba, 3 Abrhamson)
         # second plot has 3 tracs (3 Abrhamson, Sgobba non-implemented for SA)
         # the 3 plots per model is because we also have std (upper and lower bound)
-        assert (len(plots[0]['data']) == 6 and len(plots[1]['data']) == 3) or \
+        assert (
+            (len(plots[0]['data']) == 6 and len(plots[1]['data']) == 3) or
             (len(plots[1]['data']) == 6 and len(plots[0]['data']) == 3)
+        )
 
     def test_predictions_visualize_missing_periods_no_exc(self):
-        """Some models do not produce plots for specific IMTs or residuals type
+        """
+        Some models do not produce plots for specific IMTs or residuals type
         Test that we return those plots, albeit empty
         """
         client = Client()
@@ -382,8 +393,8 @@ class Test:
             'magnitude': [4],
             'distance': [10]
         }
-        saLim1 = get_sa_limits('SgobbaEtAl2020')
-        salim2 = get_sa_limits('BindiEtAl2014Rjb')
+        saLim1 = sa_limits('SgobbaEtAl2020')
+        salim2 = sa_limits('BindiEtAl2014Rjb')
         response = client.post(f"/{URLS.SUBMIT_PREDICTIONS_VISUALIZATION}",
                                json.dumps(data | {'plot_type': 's'}),
                                content_type="application/json")
@@ -400,7 +411,8 @@ class Test:
         assert all(d['x'] == [0.5, 0.6] for d in data)
 
     def test_residuals_visualize_no_missing_plots(self):
-        """Some models do not produce plots for specific IMTs or residuals type
+        """
+        Some models do not produce plots for specific IMTs or residuals type
         Test that we return those plots, albeit empty
         """
         client = Client()
@@ -413,8 +425,8 @@ class Test:
             'flatfile': 'esm2018',
             'flatfile-query': 'mag > 7'
         }
-        saLim1 = get_sa_limits('SgobbaEtAl2020')
-        salim2 = get_sa_limits('AbrahamsonSilva1997')
+        saLim1 = sa_limits('SgobbaEtAl2020')
+        salim2 = sa_limits('AbrahamsonSilva1997')
         response1 = client.post(f"/{URLS.DOWNLOAD_RESIDUALS_DATA}.csv",
                                 json.dumps(data | {'format': 'csv'}),
                                 content_type="application/json")
@@ -545,17 +557,13 @@ class Test:
             assert response.content.strip().startswith(b'<!DOCTYPE html>')
 
     def test_oq_version(self):
-        """Test oq_version matches. Because we do provide our 'oq_version' global
+        """
+        Test oq_version matches. Because we do provide our 'oq_version' global
         variable to speedup HTML page rendering in egsim.app.views, we need to be
         sure it matches current OQ version """
         from openquake.engine import __version__ as real_oq_version
         from egsim.app.views import oq_version as egsim_claimed_oq_version
         assert real_oq_version == egsim_claimed_oq_version
-
-        # if the test above fails, also change this:!!!
-        from egsim.app.views import oq_gmm_refs_page
-        assert oq_gmm_refs_page == \
-               "https://docs.openquake.org/oq-engine/3.15/reference/"
 
     def test_select_models_from_region(self):
         """
@@ -574,11 +582,14 @@ class Test:
 
         response = client.post(
             f"/{url}",
-            json.dumps({'lat': 35, 'lon': -79}),
+            json.dumps({'lat': 50, 'lon': 20}),
             content_type="application/json"
         )
         assert response.status_code == 200
-        assert response.json()['models'] == {'ESHM20Craton': ['global_stable']}
+        resp_data = response.json()['models']
+        for mod in ["AkkarBommer2010","CauzziFaccioli2008","ChiouYoungs2008","ZhaoEtAl2006Asc","ESHM20Craton"]:
+            assert resp_data.pop(mod) == ['share']
+        assert not resp_data
 
         # this view does not raise even when errors are provided:
         response = client.post(

@@ -1,5 +1,4 @@
 import io
-from typing import Optional
 # required external packages (pip install ...):
 import requests
 import pandas as pd  # https://pandas.pydata.org/docs/user_guide/dsintro.html#dataframe
@@ -11,12 +10,13 @@ def get_egsim_predictions(
         imt: list[str],
         magnitudes: list[float],
         distances: list[float],
-        rupture_params: Optional[dict] = None,
-        site_params: Optional[dict] = None,
+        rupture_params: dict | None = None,
+        site_params: dict | None = None,
         data_format="hdf",
         base_url="https://egsim.gfz-potsdam.de/api/query/predictions"
 ) -> pd.DataFrame:
-    """Retrieve the ground motion predictions for the selected set of ground motion
+    """
+    Retrieve the ground motion predictions for the selected set of ground motion
     models and intensity measure types. Each prediction will be the result of a given
     model, imt, and scenario, which is a configurable set of Rupture parameters and
     Site parameters.

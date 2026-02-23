@@ -34,11 +34,11 @@ def test_model_info():
     # Test no params provided:
     response = client.get(f"/{MODEL_INFO_URL_PATH}")
     assert response.status_code == 400
-    assert error_message(response) == \
-           "name: missing parameter is required. " \
-           "It can be omitted only if both latitude " \
-           "and longitude parameters are provided"
-
+    assert error_message(response) == (
+        "name: missing parameter is required. " 
+        "It can be omitted only if both latitude " 
+        "and longitude parameters are provided"
+    )
     # Test bug found by reviewer (scientific paper summer 2095):
     response = client.get(f"/{MODEL_INFO_URL_PATH}?lat=35.0&lon=-116.0")
     assert response.status_code == 200
@@ -61,9 +61,11 @@ def test_model_info():
     assert all(v['hazard_source_models'] is None for v in resp_json.values())
 
     data = {'model': ['BindiEtAl2014Rjb', 'CauzziEtAl2014']}
-    response = client.post(f"/{MODEL_INFO_URL_PATH}",
-                           json.dumps(data),
-                           content_type="application/json")
+    response = client.post(
+        f"/{MODEL_INFO_URL_PATH}",
+        json.dumps(data),
+        content_type="application/json"
+    )
     assert response.status_code == 200
     resp_json = response.json()
     assert sorted(resp_json.keys()) == ['BindiEtAl2014Rjb', 'CauzziEtAl2014']
@@ -73,9 +75,11 @@ def test_model_info():
     assert all(v['hazard_source_models'] is None for v in resp_json.values())
 
     data = {'model': ['zww', 'CauzziEtAl2014']}
-    response = client.post(f"/{MODEL_INFO_URL_PATH}",
-                           json.dumps(data),
-                           content_type="application/json")
+    response = client.post(
+        f"/{MODEL_INFO_URL_PATH}",
+        json.dumps(data),
+        content_type="application/json"
+    )
     assert response.status_code == 400
     assert error_message(response) == 'model: invalid model(s) zww'
 
@@ -87,34 +91,36 @@ def test_model_info():
     assert response.status_code == 200
 
     # partial names: raises (NOTE: we can also supply "name" instead pf "model"):
-    data = {'lat': 45, 'lon': 47}
+    data = {'lat': 46, 'lon': 1}
     response = client.post(f"/{MODEL_INFO_URL_PATH}",
                            json.dumps(data),
                            content_type="application/json")
     resp_json = response.json()
-    assert list(resp_json) == ['ESHM20Craton']
+    assert sorted(resp_json) == ['ESHM20Craton', "KothaEtAl2020ESHM20"]
     assert all(len(v['hazard_source_models']) > 0 for v in resp_json.values())
     assert response.status_code == 200
 
     # germany:
-    data = {'lat': 50, 'lon': 10}
+    data = {'lat': 48.5, 'lon': 6}
     response = client.post(f"/{MODEL_INFO_URL_PATH}",
                            json.dumps(data),
                            content_type="application/json")
     resp_json = response.json()
-    assert list(resp_json) == ['AkkarBommer2010', 'AkkarEtAlRhyp2014',
-                               'BindiEtAl2014Rhyp', 'BindiEtAl2017Rhypo',
-                               'Campbell2003SHARE', 'CauzziEtAl2014RhypoGermany',
-                               'CauzziFaccioli2008', 'ChiouYoungs2008',
-                               'DerrasEtAl2014RhypoGermany', 'ESHM20Craton',
-                               'KothaEtAl2020ESHM20', 'ToroEtAl2002SHARE']
+    assert sorted(resp_json) == [
+        "AkkarBommer2010",
+        "CauzziFaccioli2008",
+        "ChiouYoungs2008",
+        "ESHM20Craton",
+        "KothaEtAl2020ESHM20",
+        "ZhaoEtAl2006Asc"
+    ]
     assert all(len(v['hazard_source_models']) > 0 for v in resp_json.values())
     assert response.status_code == 200
 
     # get request
-    response = client.get(f"/{MODEL_INFO_URL_PATH}?lat=45&lon=55")
+    response = client.get(f"/{MODEL_INFO_URL_PATH}?lat=47&lon=2")
     resp_json = response.json()
-    assert list(resp_json) == ['ESHM20Craton']
+    assert sorted(resp_json) == ['ESHM20Craton', "KothaEtAl2020ESHM20"]
     # we should have only one hazard source model (check we do not have anymore
     # old bug in creating files):
     assert all(len(v['hazard_source_models']) == 1 for v in resp_json.values())

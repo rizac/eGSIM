@@ -14,9 +14,8 @@ from openquake.hazardlib.gsim.bindi_2017 import BindiEtAl2017Rjb
 from scipy.interpolate import interp1d
 
 from egsim.smtk.registry import Clabel
-from egsim.smtk.flatfile import ColumnType, FlatfileMetadata
+from egsim.smtk.flatfile import ColumnType, column_type
 from egsim.smtk import scenarios
-from egsim.smtk.validation import ModelError
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), "data")
 
@@ -42,7 +41,8 @@ gsims = ["AkkarBommer2010", "CauzziFaccioli2008",
 
 def allclose(actual, expected, *, q=None,
              rtol=1e-05, atol=1e-08, equal_nan=True):
-    """Same as numpy `allclose` but with the possibility to remove outliers using
+    """
+    Same as numpy `allclose` but with the possibility to remove outliers using
     the quantile parameter `q` in [0, 1]. Also note that `equal_nan is True by
     default. E.g., to check if the arrays `a` and `b` are close, ignoring the elements
     whose abs. difference is in the highest 5%: `allclose(a, b, q=0.95)`
@@ -63,17 +63,18 @@ def allclose(actual, expected, *, q=None,
 
 
 def get_scenarios_predictions(gsims, imts, magnitudes, distances, rup_props, site_props):
-    """Run get_scenario_predictions with both multi- and single- header option,
+    """
+    Run get_scenario_predictions with both multi- and single- header option,
     assuring that the two dataframes are equal. Return the multi-header dataframe
     because tests here rely on that
     """
-    df_single_header = scenarios.get_scenarios_predictions(gsims, imts, magnitudes,
-                                                           distances, rup_props,
-                                                           site_props)
-    df_multi_header = scenarios.get_scenarios_predictions(gsims, imts, magnitudes,
-                                                           distances, rup_props,
-                                                           site_props,
-                                                           header_sep=None)
+    df_single_header = scenarios.get_ground_motion_from_scenarios(gsims, imts, magnitudes,
+                                                                  distances, rup_props,
+                                                                  site_props)
+    df_multi_header = scenarios.get_ground_motion_from_scenarios(gsims, imts, magnitudes,
+                                                                 distances, rup_props,
+                                                                 site_props,
+                                                                 header_sep=None)
     df_multi_header2 = df_single_header.rename(
         columns={c: tuple(c.split(Clabel.sep)) for c in df_single_header.columns})
     df_multi_header2.columns = pd.MultiIndex.from_tuples(df_multi_header2.columns)
@@ -82,7 +83,8 @@ def get_scenarios_predictions(gsims, imts, magnitudes, distances, rup_props, sit
 
 
 def test_distance_imt_trellis():
-    """test trellis vs distance"""
+    """Test trellis vs distance"""
+
     distances = np.arange(0, 250.5, 1)
     magnitude = 6.5
     # Get trellis calculations
@@ -161,6 +163,7 @@ def test_distance_imt_trellis():
 
 def test_magnitude_imt_trellis():
     """Test trellis vs magnitudes"""
+
     magnitudes = np.arange(4., 8.1, 0.1)
     distance = 20.
 
@@ -248,11 +251,14 @@ def test_magnitude_distance_spectra_trellis():
     )
     # (no need to convert medians to np.exp(medians for the test below)
     # test that some gsim are not supported for all periods:
-    assert (dfr.columns.get_level_values(0) == 'SA(3.0)').sum() > \
-           (dfr.columns.get_level_values(0) == 'SA(4.001)').sum()
-    assert (dfr.columns.get_level_values(0) == 'SA(4.001)').sum() > \
-           (dfr.columns.get_level_values(0) == 'SA(10.0)').sum()
-
+    assert (
+        (dfr.columns.get_level_values(0) == 'SA(3.0)').sum() >
+        (dfr.columns.get_level_values(0) == 'SA(4.001)').sum()
+    )
+    assert (
+        (dfr.columns.get_level_values(0) == 'SA(4.001)').sum() >
+        (dfr.columns.get_level_values(0) == 'SA(10.0)').sum()
+    )
     # normal test (comparison with old data):
     dfr = get_scenarios_predictions(
         gsims,
@@ -309,7 +315,7 @@ def open_ref_hdf(file_name) -> pd.DataFrame:
             try:
                 c_mapping[c] = (
                     Clabel.input,
-                    str(FlatfileMetadata.get_type(c[0]).value),
+                    str(column_type(c[0]).value),
                     c[0])
             except Exception as exc:
                 raise ValueError(f'`ref` dataframe: unmapped column {c}. {exc}')

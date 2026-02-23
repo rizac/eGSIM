@@ -179,7 +179,7 @@ const EGSIM = Vue.createApp({
 	methods: {
 		setUrlInBrowser(menu){
 			var location = window.location;
-			if (!location.pathname.startsWith(`/${menu}`)){
+			if ((location.pathname != `/${menu}`) && (location.pathname != `/${menu}/`)){
 				var newHref = `${location.origin}/${menu}`
 				// https://developer.mozilla.org/en-US/docs/Web/API/History_API
 				window.history.replaceState({}, document.title, newHref);

@@ -2,7 +2,8 @@ from collections.abc import Callable
 
 
 def get_doc(function: Callable) -> list[str]:  # intro, args, returns sections
-    """Return the docstring of the given function in a list of three
+    """
+    Return the docstring of the given function in a list of three
     strings with the content of 'intro', 'args', and 'returns' sections
     """
     doc:str = function.__doc__.strip()  # noqa
@@ -30,8 +31,7 @@ def create_read_hdf_snippet(file_path: str):
 
 
 def create_write_hdf_snippet(dataframe_var_name: str, file_path: str, key: str):
-    return f'{dataframe_var_name}.to_hdf({file_path}, key={key}, ' \
-           f'format="table")'
+    return f'{dataframe_var_name}.to_hdf({file_path}, key={key}, format="table")'
 
 
 def create_write_csv_snippet(dataframe_var_name: str, file_path: str):

@@ -1,0 +1,26 @@
+{
+  "type":"FeatureCollection",
+  "features":[
+    {
+      "type":"Feature",
+      "geometry":{
+        "type":"MultiPolygon",
+        "coordinates":[
+          [
+            [
+              [5, 48],
+              [21, 48],
+              [21, 51],
+              [5, 51],
+              [5, 48]
+            ]
+          ]
+        ]
+      },
+      "properties":{
+        "region":"Active Shallow Crust",
+        "models":["AkkarBommer2010","CauzziFaccioli2008","ChiouYoungs2008","ZhaoEtAl2006Asc","ESHM20Craton"]
+      }
+    }
+  ]
+}

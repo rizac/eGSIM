@@ -17,7 +17,8 @@ _flatfile = read_flatfile(ifile)
 
 
 def get_gsims_imts_flatfile():
-    """input data used in this module"""
+    """Input data used in this module"""
+
     gsims = ["AkkarEtAlRjb2014", "ChiouYoungs2014"]
     imts = ["PGA", "SA(1.0)"]
     flatfile = _flatfile.copy()

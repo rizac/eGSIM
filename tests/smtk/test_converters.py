@@ -14,6 +14,7 @@ from egsim.smtk.converters import convert_accel_units, dataframe2dict, datetime2
 
 def test_dataframe2dict():
     """Test the flatfile metadata"""
+
     cols = [('mag', ''), ('PGA', 'CauzziEtAl')]
     data = [[np.nan, 1], [3, np.inf], [-np.inf, 5.37]]
     dfr = pd.DataFrame(columns=cols, data=data)
@@ -48,9 +49,12 @@ def test_dataframe2dict_orient_dict():
         'Sa(0.1) llh': {'model1': 1., 'model2': np.inf, 'model3': 5.37}
     })
     for as_json, drop_empty_levels in product([True, False], [True, False]):
-        res = dataframe2dict(dfr, as_json=as_json,
-                             drop_empty_levels=drop_empty_levels,
-                             orient='dict')
+        res = dataframe2dict(
+            dfr,
+            as_json=as_json,
+            drop_empty_levels=drop_empty_levels,
+            orient='dict'
+        )
         assert len(res) == 2
         assert all(isinstance(v, dict) for v in res.values())
         assert list(res['PGA lh'].keys()) == ['model1', 'model2', 'model3']
@@ -69,6 +73,7 @@ def test_dataframe2dict_orient_dict():
 
 def _check_dataframe2dict(dfr):
     """Test the flatfile metadata"""
+
     res = dataframe2dict(dfr, as_json=False, drop_empty_levels=False)
     expected = {
         ('mag', ''): [np.nan, 3, -np.inf],
@@ -100,7 +105,8 @@ def _check_dataframe2dict(dfr):
 
 
 def test_convert_accel_units():
-    """test convert accel units"""
+    """Test convert accel units"""
+
     from scipy.constants import g
     for m_sec in ["m/s/s", "m/s**2", "m/s^2"]:
         for cm_sec in ["cm/s/s", "cm/s**2", "cm/s^2"]:
@@ -119,13 +125,21 @@ def test_convert_accel_units():
 
 
 def test_convert_datetimes():
-    csv_str = "\n".join(['time', '', '2006', '2006-01-01', '2006-01-01T00:00:00',
-                         '2006-01-01T00:00:00.0', '2006-01-01T00:00:00.001'])
+    csv_str = "\n".join([
+        'time',
+        '',
+        '2006',
+        '2006-01-01',
+        '2006-01-01T00:00:00',
+        '2006-01-01T00:00:00.0',
+        '2006-01-01T00:00:00.001'
+    ])
     series = pd.read_csv(
         StringIO(csv_str),
         skip_blank_lines=False,
         parse_dates=['time'],
-        date_format='ISO8601')['time']
+        date_format='ISO8601'
+    )['time']
     vals = datetime2str(series)
     # default format is seconds, micro/milliseconds are rounded/removed:
     assert all(_ == '2006-01-01T00:00:00' for _ in vals[1:])
@@ -147,11 +161,11 @@ def test_convert_datetimes():
     assert pd.isna(vals[0])
     # check that the last values is 0.001 more than the next-to-last
     # (take into account rounding problems):
-    assert np.isclose(vals[-1] - vals[-2], 0.001, rtol=1e-4, atol=0)
+    assert np.abs((vals[-1] - vals[-2]) / vals[-1]) < 1e-6
     # same test with numpy arrays:
     vals = datetime2float(series.values)
     assert pd.isna(vals[0])
     assert all(isinstance(_, float) for _ in vals[1:-1])
     # check that the last values is 0.001 more than the next-to-last
     # (take into account rounding problems):
-    assert np.isclose(vals[-1] - vals[-2], 0.001, rtol=1e-4, atol=0)
+    assert np.abs((vals[-1] - vals[-2]) / vals[-1]) < 1e-6

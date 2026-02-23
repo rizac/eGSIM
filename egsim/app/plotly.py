@@ -4,7 +4,6 @@ For ref, see: https://plotly.com/javascript/reference/
 """
 import pandas as pd
 import numpy as np
-from typing import Optional, Union
 from collections.abc import Iterable, Iterator
 
 from egsim.smtk.converters import array2json, datetime2str
@@ -12,7 +11,8 @@ from egsim.smtk.flatfile import ColumnDtype, get_dtype_of
 
 
 class AxisType:
-    """Container for Plotly axis types supported by this program. For info see:
+    """
+    Container for Plotly axis types supported by this program. For info see:
     https://plotly.com/javascript/reference/layout/xaxis/#layout-xaxis-type
     """
     linear = 'linear'
@@ -22,8 +22,9 @@ class AxisType:
     infer = '-'
 
 
-def axis_type(values: Optional[Union[np.ndarray, pd.Series]]) -> str:
+def axis_type(values: np.ndarray | pd.Series | None) -> str:
     """Return the Plotly axis type (str) to display the given values. See `AxisType`"""
+
     dtype = get_dtype_of(values)
     if dtype in (ColumnDtype.int, ColumnDtype.float):
         return AxisType.linear
@@ -34,8 +35,9 @@ def axis_type(values: Optional[Union[np.ndarray, pd.Series]]) -> str:
     return AxisType.infer
 
 
-def colors_cycle(hex_colors: Optional[Iterable[str]] = None) -> Iterator[str]:
-    """endless iterator cycling through default colors in `rgba(...)` form """
+def colors_cycle(hex_colors: Iterable[str] | None = None) -> Iterator[str]:
+    """Endless iterator cycling through default colors in `rgba(...)` form"""
+
     values = []
     if hex_colors is None:
         hex_colors = [
@@ -58,15 +60,17 @@ def colors_cycle(hex_colors: Optional[Iterable[str]] = None) -> Iterator[str]:
     return cycle(values)
 
 
-def values2json(values: Union[np.ndarray, pd.Series]) -> list:
+def values2json(values: np.ndarray | pd.Series) -> list:
     """Converter from numpy/pandas array to plotly compatible list"""
+
     if axis_type(values) == AxisType.date:  # plotly wants ISO strings
         values = datetime2str(values, '%Y-%m-%dT%H:%M:%S')
     return array2json(values)
 
 
-def axis_range(values: Union[np.ndarray, pd.Series]) -> Union[list, None]:
-    """Compute the optimal axis range for the given values
+def axis_range(values: np.ndarray | pd.Series) -> list | None:
+    """
+    Compute the optimal axis range for the given values
 
     :param values: the numpy array / pandas Series whose values should be
         displayed on the given axis
@@ -92,15 +96,17 @@ def axis_range(values: Union[np.ndarray, pd.Series]) -> Union[list, None]:
 
 
 def scatter_trace(
-        *,
-        color: str,
-        size=10,
-        symbol='circle',
-        line_color=None,
-        line_width=0,
-        # line_dash='solid',
-        **kwargs) -> dict:
+    *,
+    color: str,
+    size=10,
+    symbol='circle',
+    line_color=None,
+    line_width=0,
+    # line_dash='solid',
+    **kwargs
+) -> dict:
     """Return the properties and style for a trace of type scatter"""
+
     if 'x' in kwargs:
         kwargs['x'] = values2json(kwargs['x'])
     if 'y' in kwargs:
@@ -123,6 +129,7 @@ def scatter_trace(
 
 def line_trace(*, color: str, width=2, dash='solid', **kwargs) -> dict:
     """Return the properties and style for a trace of type scatter (lines only)"""
+
     if 'x' in kwargs:
         kwargs['x'] = values2json(kwargs['x'])
     if 'y' in kwargs:
@@ -139,36 +146,43 @@ def line_trace(*, color: str, width=2, dash='solid', **kwargs) -> dict:
 
 
 def bar_trace(
-        *,
-        color: str,
-        line_width=2,
-        line_dash='solid',
-        line_color=None,
-        **kwargs) -> dict:
+    *,
+    color: str,
+    line_width=2,
+    line_dash='solid',
+    line_color=None,
+    **kwargs
+) -> dict:
     """Return the properties and style for a trace of type bar"""
+
     return _bar_like_trace(
-        color, 'bar', line_width, line_dash, line_color, **kwargs)
+        color, 'bar', line_width, line_dash, line_color, **kwargs
+    )
 
 
 def histogram_trace(
-        *,
-        color: str,
-        line_width=2,
-        line_dash='solid',
-        line_color=None,
-        **kwargs) -> dict:
+    *,
+    color: str,
+    line_width=2,
+    line_dash='solid',
+    line_color=None,
+    **kwargs
+) -> dict:
     """Return the properties and style for a trace of type histogram"""
+
     return _bar_like_trace(
-        color, 'histogram', line_width, line_dash, line_color, **kwargs)
+        color, 'histogram', line_width, line_dash, line_color, **kwargs
+    )
 
 
 def _bar_like_trace(
-        color: str,
-        typ: str,
-        width: float,
-        dash: str,
-        line_color=None,
-        **kwargs) -> dict:
+    color: str,
+    typ: str,
+    width: float,
+    dash: str,
+    line_color=None,
+    **kwargs
+) -> dict:
     if 'x' in kwargs:
         kwargs['x'] = values2json(kwargs['x'])
     if 'y' in kwargs:

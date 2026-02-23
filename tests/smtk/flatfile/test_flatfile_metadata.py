@@ -12,24 +12,32 @@ from datetime import datetime
 import yaml
 import pandas as pd
 import numpy as np
+from pandas import StringDtype
 
+from onnxruntime.capi.onnxruntime_pybind11_state import NoSuchFile
+
+from egsim.smtk.registry import SmtkError
 from openquake.hazardlib import imt
-from egsim.smtk import gsim, registered_imts, registered_gsims
-from egsim.smtk.flatfile import (ColumnType, ColumnDtype,
-                                 _flatfile_metadata_path, cast_to_dtype,
-                                 FlatfileMetadata,
-                                 _load_flatfile_metadata, get_dtype_of,
-                                 validate_flatfile_dataframe,
-                                 ColumnDataError)
+from egsim.smtk import gsim, gsim_names, imt_names
+from egsim.smtk.flatfile import (
+    ColumnType,
+    ColumnDtype,
+    cast_to_dtype,
+    column_type, column_aliases,
+    get_dtype_of,
+    validate_flatfile_dataframe,
+    ColumnDataError,
+    ColumnPropertyRegistry
+)
 
 
 def test_flatfile_extract_from_yaml():
     """Test the flatfile metadata"""
 
-    # read directly from columns registry and asure aliases are well formed.
+    # read directly from columns registry and asure aliases are well-formed.
     # Do not use _load_column_registry because it is assumed to rely on the following
-    # test passing (no duplicates, no single alias euqal to column name, and so on):
-    with open(_flatfile_metadata_path) as _:
+    # test passing (no duplicates, no single alias equal to column name, and so on):
+    with open(ColumnPropertyRegistry._flatfile_columns_path) as _:
         dic = yaml.safe_load(_)
         all_names = set(dic)
         all_aliases = set()
@@ -55,7 +63,7 @@ def test_flatfile_extract_from_yaml():
                 raise ValueError(f"alias(es) {dupes} already defined as name")
 
     # Check column properties within itself (no info on other columns required):
-    for c, props in _load_flatfile_metadata(False).items():
+    for c, props in ColumnPropertyRegistry.load_from_yaml(cache=False).items():
         check_column_metadata(name=c, props=dict(props))
 
     # Check that the columns we defined as rupture param, sites param,  distance
@@ -66,8 +74,8 @@ def test_flatfile_extract_from_yaml():
     # dicts (column name as dict key, column aliases as dict values):
     rup, site, dist, imtz = {}, {}, {}, set()
     for n in dic:
-        c_type = FlatfileMetadata.get_type(n)
-        aliases = FlatfileMetadata.get_aliases(n)
+        c_type = column_type(n)
+        aliases = column_aliases(n)
         if c_type == ColumnType.rupture:
             rup[n] = set(aliases)
         elif c_type == ColumnType.site:
@@ -82,7 +90,8 @@ def test_flatfile_extract_from_yaml():
 
 
 def check_column_metadata(*, name: str, props: dict):
-    """checks the Column metadata dict issued from the YAML flatfile"""
+    """Check the Column metadata dict issued from the YAML flatfile"""
+
     # nb: use keyword arguments instead of a dict
     # so that we can easily track typos
     prefix = f'Column "{name}" metadata error (check YAML): '
@@ -163,11 +172,14 @@ def check_column_metadata(*, name: str, props: dict):
                          f'remove from YAML: {list(props.keys())}')
 
 
-def check_with_openquake(rupture_params: dict[str, set[str]],
-                         sites_params: dict[str, set[str]],
-                         distances: dict[str, set[str]],
-                         imts: set[str]):
-    """Checks that the flatfile columns with a specific Type set
+def check_with_openquake(
+        rupture_params: dict[str, set[str]],
+        sites_params: dict[str, set[str]],
+        distances: dict[str, set[str]],
+        imts: set[str]
+):
+    """
+    Check that the flatfile columns with a specific Type set
     (columns.ColumnType) match the OpenQuake corresponding name
     """
     oq_rupture_params = set()
@@ -176,35 +188,57 @@ def check_with_openquake(rupture_params: dict[str, set[str]],
 
     with warnings.catch_warnings(record=False) as w:
         warnings.simplefilter('ignore')
-        for name in registered_gsims:
+        for name in gsim_names():
             try:
                 model = gsim(name)
-            except (TypeError, ValueError, FileNotFoundError, OSError, AttributeError,
-                    IndexError, KeyError, DeprecationWarning) as _:
+            except SmtkError as _:
                 continue
             oq_rupture_params.update(model.REQUIRES_RUPTURE_PARAMETERS)
             oq_sites_params.update(model.REQUIRES_SITES_PARAMETERS)
             oq_distances.update(model.REQUIRES_DISTANCES)
 
+    not_implemented_sites_params = {'fpeak'}
+
     for name in rupture_params:
         if name in {'evt_id', 'evt_time'}:
             continue  # defined in yaml, not in openquake
         if name not in oq_rupture_params:
-            assert len(set(rupture_params[name]) & oq_rupture_params) == 1
+            try:
+                assert len(set(rupture_params[name]) & oq_rupture_params) == 1
+            except AssertionError:
+                # allow pycharm breakpoints and check new names when upgrading OQ:
+                raise
 
     for name in sites_params:
-        if name in {'sta_id', 'event_id'}:
+        if name in {'sta_id', 'event_id'} | not_implemented_sites_params:
             continue  # defined in yaml, not in openquake
         if name not in oq_sites_params:
-            assert len(set(sites_params[name]) & oq_sites_params) == 1
+            try:
+                assert len(set(sites_params[name]) & oq_sites_params) == 1
+            except AssertionError:
+                # allow pycharm breakpoints and check new names when upgrading OQ:
+                raise
 
     for name in distances:
         if name not in oq_distances:
-            assert len(set(distances[name]) & oq_distances) == 1
+            try:
+                assert len(set(distances[name]) & oq_distances) == 1
+            except AssertionError:
+                # allow pycharm breakpoints and check new names when upgrading OQ:
+                raise
 
+    registered_imts = list(imt_names())
     for ix in imts:
         x = getattr(imt, ix)
         assert callable(x) and x.__name__ in registered_imts
+
+
+def np_float(number):
+    # return numpy float (backward compatibility)
+    try:
+        return np.float_(number)
+    except AttributeError:
+        return np.float64(number)  # new numpy 2.0+
 
 
 def test_get_dtype():
@@ -215,7 +249,7 @@ def test_get_dtype():
         [ColumnDtype.int, np.int_(2)],
         [ColumnDtype.float, 2.2],
         [ColumnDtype.float, np.nan],
-        [ColumnDtype.float, np.float_(2.2)],
+        [ColumnDtype.float, np_float(2.2)],
         [ColumnDtype.bool, True],
         [ColumnDtype.bool, np.bool_(False)],
         [ColumnDtype.str, 'a'],
@@ -288,31 +322,27 @@ def test_flatfile_invalid_categories():
 
 
 def test_get_dtype_mixed_categories():
-    """test that get_dtypoe_of mixed categorical returns None and not
-    ColumnDtype.category"""
+    """
+    Test that get_dtypoe_of mixed categorical returns None and not
+    ColumnDtype.category
+    """
     assert get_dtype_of(pd.Series([2, True]).astype('category')) is None
-    assert (get_dtype_of(pd.Series([False, True]).astype('category'))
-            is ColumnDtype.category)
-    assert (get_dtype_of(pd.Series([False, None]).astype('category'))
-            is ColumnDtype.category)
-    assert get_dtype_of(pd.Series([datetime.utcnow(), pd.NaT]).astype(
-        'category')) is ColumnDtype.category
-    assert get_dtype_of(pd.Series([2, 3]).astype(
-        'category')) is ColumnDtype.category
-    assert get_dtype_of(pd.Series([2, None]).astype(
-        'category')) is ColumnDtype.category
-    assert get_dtype_of(pd.Series([2, np.nan]).astype(
-        'category')) is ColumnDtype.category
-    assert get_dtype_of(pd.Series([2, 2.2]).astype(
-        'category')) is ColumnDtype.category
-    assert get_dtype_of(pd.Series(['2', 'None']).astype(
-        'category')) is ColumnDtype.category
-    assert get_dtype_of(pd.Series(['2', None]).astype(
-        'category')) is ColumnDtype.category
+    assert get_dtype_of(pd.Series([False, True]).astype('category')) is ColumnDtype.category
+    assert get_dtype_of(pd.Series([False, None]).astype('category')) is ColumnDtype.category
+    assert get_dtype_of(
+        pd.Series([datetime.utcnow(), pd.NaT]).astype('category')
+    ) is ColumnDtype.category
+    assert get_dtype_of(pd.Series([2, 3]).astype('category')) is ColumnDtype.category
+    assert get_dtype_of(pd.Series([2, None]).astype('category')) is ColumnDtype.category
+    assert get_dtype_of(pd.Series([2, np.nan]).astype('category')) is ColumnDtype.category
+    assert get_dtype_of(pd.Series([2, 2.2]).astype('category')) is ColumnDtype.category
+    assert get_dtype_of(pd.Series(['2', 'None']).astype('category')) is ColumnDtype.category
+    assert get_dtype_of(pd.Series(['2', None]).astype('category')) is ColumnDtype.category
 
 
 def test_mixed_arrays_are_mostly_null_dtype():
     """test that arrays with mixed dtypes have None dtype (with some known exceptions)"""
+
     for val in combinations(['a', 2, 2.2, True, datetime.utcnow()], 2):
         # check that the two values have a dtype set:
         assert get_dtype_of(val[0]) is not None
@@ -352,7 +382,8 @@ def test_mixed_arrays_are_mostly_null_dtype():
 
 
 def test_dtypes_with_null():
-    """test that arrays with known dtype + 1 null preserve their dtype"""
+    """Test that arrays with known dtype + 1 null preserve their dtype"""
+
     for val in ['a', 2, 2.2, True, datetime.utcnow()]:
         # check that the two values have a dtype set:
         cdtype = get_dtype_of(val)
@@ -375,13 +406,20 @@ def test_dtypes_with_null():
 
 
 def test_str_and_o_dtypes_are_the_same():
-    """test that a Series of strings and a Series of strings and Nones have the
-    same dtype"""
+    """
+    Test that a Series of strings and a Series of strings and Nones have the
+    same dtype
+    """
     s1 = pd.Series(['s'])
     s2 = pd.Series(['s', None])
-    assert s1.dtype == np.dtype('O')
-    assert s2.dtype == np.dtype('O')
-    assert pd.api.types.is_string_dtype(s1) != pd.api.types.is_string_dtype(s2)
+    if s1.dtype == s1.dtype == np.dtype('O'):
+        assert s1.dtype == np.dtype('O')
+        assert s2.dtype == np.dtype('O')
+        assert pd.api.types.is_string_dtype(s1) != pd.api.types.is_string_dtype(s2)
+    else:
+        # new strdtype in pandas 3.0:
+        assert s1.dtype == s2.dtype == StringDtype(na_value=np.nan)
+        assert pd.api.types.is_string_dtype(s1) == pd.api.types.is_string_dtype(s2)
 
 
 def test_cast_to_dtype():
@@ -392,7 +430,7 @@ def test_cast_to_dtype():
         [ColumnDtype.int, np.int_(2)],
         [ColumnDtype.float, 2.2],
         [ColumnDtype.float, np.nan],
-        [ColumnDtype.float, np.float_(2.2)],
+        [ColumnDtype.float, np_float(2.2)],
         [ColumnDtype.bool, True],
         [ColumnDtype.bool, np.bool_(False)],
         [ColumnDtype.str, 'a'],

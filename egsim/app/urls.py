@@ -1,4 +1,5 @@
 """eGSIM URL Configuration for the Graphical User Interface (GUI)"""
+
 from django.http import HttpResponse
 from django.urls import re_path, path
 from django.views.decorators.clickjacking import xframe_options_exempt
@@ -13,8 +14,14 @@ from .forms import (
     PredictionsVisualizeForm, ResidualsVisualizeForm, FlatfileVisualizeForm
 )
 from .views import (
-    main, URLS, img_ext, data_ext, PlotsImgDownloader, GsimFromRegion,
-    PredictionsHtmlTutorial, ResidualsHtmlTutorial
+    main,
+    URLS,
+    img_ext,
+    data_ext,
+    PlotsImgDownloader,
+    GsimFromRegion,
+    PredictionsHtmlTutorial,
+    ResidualsHtmlTutorial
 )
 
 
@@ -23,16 +30,23 @@ from .views import (
 
 
 urlpatterns = [
-    re_path(r'^$', RedirectView.as_view(pattern_name='main', url='home',
-                                        permanent=False)),
-    re_path((r'^(?P<page>' +
-             '|'.join([URLS.WEBPAGE_HOME, URLS.WEBPAGE_PREDICTIONS,
-                       URLS.WEBPAGE_RESIDUALS,
-                       URLS.WEBPAGE_FLATFILE_INSPECTION_PLOT,
-                       URLS.WEBPAGE_FLATFILE_COMPILATION_INFO,
-                       URLS.WEBPAGE_API_DOC,
-                       URLS.WEBPAGE_IMPRINT, URLS.WEBPAGE_CITATIONS_AND_LICENSE]) +
-             ')/?$'), main),
+    re_path(
+        r'^$',
+        RedirectView.as_view(pattern_name='main', url='home', permanent=False)
+    ),
+    re_path(
+        (r'^(?P<page>' + '|'.join([
+            URLS.WEBPAGE_HOME,
+            URLS.WEBPAGE_PREDICTIONS,
+            URLS.WEBPAGE_RESIDUALS,
+            URLS.WEBPAGE_FLATFILE_INSPECTION_PLOT,
+            URLS.WEBPAGE_FLATFILE_COMPILATION_INFO,
+            URLS.WEBPAGE_API_DOC,
+            URLS.WEBPAGE_IMPRINT,
+            URLS.WEBPAGE_CITATIONS_AND_LICENSE
+        ]) + ')/?$'),
+        main
+    ),
 
     re_path(
         fr'^{URLS.DOWNLOAD_PREDICTIONS_DATA}.(?:{"|".join(data_ext)})$',
@@ -90,8 +104,12 @@ urlpatterns = [
     path(URLS.GSIMS_INFO, GsimInfoView.as_view()),
 
     # test code returning specific response (in this case, no EgsimView required):
-    path("test_response/<int:code>",
-         csrf_exempt(lambda req, code: HttpResponse(b'test response msg', status=code))),
+    path(
+        "test_response/<int:code>",
+         csrf_exempt(
+             lambda req, code: HttpResponse(b'test response msg', status=code)
+         )
+    ),
 
     # Fallback: return a 404 not-found HttpResponse (unlike Django, with empty content):
     re_path(r".*", csrf_exempt(NotFound.as_view()))
