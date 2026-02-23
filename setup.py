@@ -36,6 +36,7 @@ setup(
             'Django>=4.1.2',
             'plotly>=5.10.0',
             'kaleido>=0.2.1',  # required by plotly to save images
+            'gunicorn>=21.2.0',  # production server (not necessary local browser testing, but harmless)
             # test packages:
             'pytest',
             'pytest-django>=3.4.8',
