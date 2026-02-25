@@ -1,4 +1,4 @@
-name: Test eGSIM web app (kinda deployement)
+name: eGSIM WEB TESTS (produces requirements.txt)
 
 on:
   push:
@@ -73,7 +73,7 @@ jobs:
           pip freeze > requirements-web.txt
 
       - name: Upload requirements-web.txt artifact
-        # GitHub repo -> Actions -> Workflow Run -> Scroll to Section "Artifacts" -> Download requirements-web.txt
+        # GitHub repo -> Actions -> Click on Workflow Run -> Scroll down to "Artifacts" (might take a while) -> Download requirements-web.txt
         uses: actions/upload-artifact@v4
         with:
           name: requirements-web
