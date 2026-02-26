@@ -12,8 +12,6 @@ in the framework of the Thematic Core Services for Seismology of
     <br>
 </p>
 
-![Python](https://img.shields.io/badge/python-3.11-blue) 
-![Python](https://img.shields.io/badge/python-3.12-blue)
 [![License](https://img.shields.io/badge/license-AGPL--3.0-blue)](LICENSE)
 ![Build](https://github.com/rizac/eGSIM/actions/workflows/pytest.yml/badge.svg)
 ![Build](https://github.com/rizac/eGSIM/actions/workflows/pytest-web.yml/badge.svg)
@@ -43,6 +41,9 @@ in the framework of the Thematic Core Services for Seismology of
   - Jupyter notebook examples (Python): https://github.com/rizac/egsim-client/tree/main/notebook
 
 ## Python library
+
+![Python](https://img.shields.io/badge/python-3.11-blue) 
+![Python](https://img.shields.io/badge/python-3.12-blue)
 
 eGSIM can also be installed and used as a Python package under specific Python versions
 and OSs (see below) according to OpenQuake compatibilities.
