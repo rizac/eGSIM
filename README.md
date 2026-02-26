@@ -87,21 +87,61 @@ deactivate
 > **IMPORTANT**: From now on, all following operations must have the virtualenv activated **FIRST**
 > and assume you `cd` into eGSIM repository (If not the case, adjust paths accordingly)
 
-Type the command below (one line) by replacing:
- 
- - `${OS}` with your operating system:
-   - `macos_arm64` (MacOs)
-   - `linux64` (Linux)
-   - `win64` (Windows)
-   - ~~`macos_x86_64` (older macos discontinued. In case of problems, please contact us)~~
-   
- - `${VERSION}` below with your Python version:
-   - `311` (Python 3.11)
-   - `312` (Python 3.12)
 
-```bash
-python -m pip install --upgrade pip setuptools wheel && pip install -r ./requirements/requirements-py${VERSION}-${OS}.txt && pip install .
-```
+#### Linux
+
+- Python 3.11
+
+  ```bash
+  python -m pip install --upgrade pip setuptools wheel && pip install -r ./requirements/requirements-py311-linux64.txt && pip install .
+  ```
+
+- Python 3.12
+
+  ```bash
+  python -m pip install --upgrade pip setuptools wheel && pip install -r ./requirements/requirements-py312-linux64.txt && pip install .
+  ```
+
+#### MacOs
+
+- Python 3.11
+  ```bash
+  python -m pip install --upgrade pip setuptools wheel && pip install -r ./requirements/requirements-py311-macos_arm64.txt && pip install .
+  ```
+
+- Python 3.12
+  ```bash
+  python -m pip install --upgrade pip setuptools wheel && pip install -r ./requirements/requirements-py312-macos_arm64.txt && pip install .
+  ```
+
+<details>
+
+<summary>Older MacOs (discontinued)</summary>
+
+- Python 3.11
+  ```bash
+  python -m pip install --upgrade pip setuptools wheel && pip install -r ./requirements/requirements-py311-macos_x86_64.txt && pip install .
+  ```
+
+- Python 3.12
+  ```bash
+  python -m pip install --upgrade pip setuptools wheel && pip install -r ./requirements/requirements-py312-macos_x86_64.txt && pip install .
+  ```
+
+</details>
+
+#### Windows
+
+- Python 3.11
+  ```bash
+  python -m pip install --upgrade pip setuptools wheel && pip install -r ./requirements/requirements-py311-win64.txt && pip install .
+  ```
+
+- Python 3.12
+  ```bash
+  python -m pip install --upgrade pip setuptools wheel && pip install -r ./requirements/requirements-py312-win64.txt && pip install .
+  ```
+
 
 
 ### Run tests (optional) 
