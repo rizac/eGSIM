@@ -128,23 +128,32 @@ pytest -xvvv ./tests/smtk
 ```
 Fix if needed.
 
-Copy the `requirements` file from Openquake into `./requirements/`
-Edit `.github/pytest.yml` configuration and put the requirements file for testing
-in GitHub CI workflows (see `matrix.config` in YAML).
+Copy the `requirements` files from OpenQuake into `./requirements/`
+(usually N = OperatingSystems &times; PythonVersions). 
+Edit `.github/workflows/pytest.yml` (`matrix.config` section) to assure
+you test all N cases.
+
+*Optional: do at this stage a `pip freeze` and
+update in `setup.py` the newest versions of the listed packages
+(`pandas`, `Django`) ignoring web packages.*
 
 Install web app (force upgrade for Django):
 ```
-pip install -U ".[web]"
-pip install -U --no-deps django
-pip freeze > ./${REQUIREMENTS_FILE}.web
+pip install -U ".[web]" 
+# install django (upgrade aggressively):
+PIP_INDEX_URL=https://pypi.org/simple pip install -U Django --upgrade-strategy eager
 ```
+
 
 Run tests:
 ```
-export DJANGO_SETTINGS_MODULE="egsim.settings.test" && pytest -xvvv ./tests/django
+export DJANGO_SETTINGS_MODULE="egsim.settings.test" && pytest -xvvv ./tests
 ```
 Fix code as needed, commit push and so on
 
+Edit `.github/workflows/pytest-web.yml` (`env` and `strategy` sections) 
+to assure everything is up-to-date (it could be that nothing needs
+to be changed).
 
 
 ## New data

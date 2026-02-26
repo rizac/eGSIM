@@ -25,7 +25,6 @@ jobs:
         python-version: [ "3.11" ]  # add more if needed (the server version should be sufficient)
 
     env:
-      OQ_VERSION: "3.24.1"
       SETTINGS_MODULE: "egsim.settings.test"
       REQUIREMENTS_FILE: "./requirements/requirements-py311-linux64.txt"
 
@@ -61,7 +60,6 @@ jobs:
           source venv/bin/activate
           pip install --upgrade pip 
           # install OpenQuake requirements EXCEPT django* packages:
-          # grep -vi 'django' "${REQUIREMENTS_FILE}" | pip install -r /dev/stdin 
           pip install -r "${REQUIREMENTS_FILE}" 
           # install this package (upgrade when possible to latest):
           pip install -U ".[web]" 
