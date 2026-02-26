@@ -3,8 +3,18 @@ name: eGSIM WEB TESTS (produces requirements.txt)
 on:
   push:
     branches: [ main, master, dev ]
+    paths:
+      - '**/*.py'
+      - '**/*.yaml'
+      - '**/*.yml'
+      - '**/*.json'
   pull_request:
     branches: [ main, master ]
+    paths:
+      - '**/*.py'
+      - '**/*.yaml'
+      - '**/*.yml'
+      - '**/*.json'
 
 jobs:
   run-tests:
@@ -51,7 +61,9 @@ jobs:
           source venv/bin/activate
           python -m pip install --upgrade pip setuptools wheel
           pip install -r "${REQUIREMENTS_FILE}"
+          pip freeze | grep -i '^django' | xargs -r pip uninstall -y
           pip install -U -e ".[web]"  # upgrade all packages to most recent ones
+          # pip install -U --no-deps django  # force django to latest possible
 
       # Run Django migrations and pytest
       - name: Test eGSIM (web app)

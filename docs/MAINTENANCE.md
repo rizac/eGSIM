@@ -117,12 +117,7 @@ pip install --upgrade pip && (cd ../oq-engine${OQ_VERSION} && pip install -r ${R
 Go to eGSIM setup.py and set:
 `__VERSION__=${OQ_VERSION}` (e.g., `__VERSION__="3.24.1"`. 
 As of end 2025, we keep eGSIM version aligned 
-with OpenQuake for simplicity. Now install eGSIM (library only):
-```
-pip install -U -e .
-pip freeze > ./${REQUIREMENTS_FILE}
-```
-
+with OpenQuake for simplicity.
 
 Run tests (smtk only):
 ```
@@ -131,7 +126,11 @@ pip install -U pytest
 ```
 pytest -xvvv ./tests/smtk
 ```
-Fix if needed
+Fix if needed.
+
+Copy the `requirements` file from Openquake into `./requirements/`
+Edit `.github/pytest.yml` configuration and put the requirements file for testing
+in GitHub CI workflows (see `matrix.config` in YAML).
 
 Install web app (force upgrade for Django):
 ```
@@ -139,7 +138,6 @@ pip install -U ".[web]"
 pip install -U --no-deps django
 pip freeze > ./${REQUIREMENTS_FILE}.web
 ```
-Open ${REQUIREMENTS_FILE}.web, and add " --no-deps" at the end of the where Django is installed
 
 Run tests:
 ```
