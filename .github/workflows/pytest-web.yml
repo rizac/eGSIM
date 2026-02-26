@@ -59,13 +59,22 @@ jobs:
         run: |
           python -m venv venv
           source venv/bin/activate
+          
           # python -m pip install --upgrade pip setuptools wheel
-          pip install -r "${REQUIREMENTS_FILE}"
+          # pip install -r "${REQUIREMENTS_FILE}"
           # remove all django* packages from requirements (so we can re-install newer versions):
-          pip list --format=freeze | grep -i '^django' | sed -E 's/[<=>@].*$//' | xargs -r pip uninstall -y
-          pip install -U -e ".[web]" --no-cache-dir # upgrade all packages to most recent ones
-          pipdeptree -r -p Django  # see what django version and why
+          # pip list --format=freeze | grep -i '^django' | sed -E 's/[<=>@].*$//' | xargs -r pip uninstall -y
+          # pip install -U -e ".[web]" --no-cache-dir # upgrade all packages to most recent ones
+          # pipdeptree -r -p Django  # see what django version and why
           # pip install -U --no-deps django  # force django to latest possible
+          
+          pip install --upgrade pip 
+          # install OpenQuake requirements EXCEPT django* packages:
+          grep -vi 'django' "${REQUIREMENTS_FILE}" | pip install -r /dev/stdin 
+          # install this package (upgrade when possible to latest):
+          pip install -U ".[web]" 
+          # install django (upgrade aggressively):
+          PIP_INDEX_URL=https://pypi.org/simple pip install -U Django --upgrade-strategy eager
 
       # Run Django migrations and pytest
       - name: Test eGSIM (web app)
