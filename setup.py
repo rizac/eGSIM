@@ -18,7 +18,7 @@ setup(
     },
     zip_safe=False,
     # include_package_data=True,
-    python_requires='>=3.11',
+    python_requires='>=3.11,<3.13',
     # Minimal requirements for the library (egsim.smtk package).
     # FOR DEV/TESTS, add: `pip install pytest`
     install_requires=[

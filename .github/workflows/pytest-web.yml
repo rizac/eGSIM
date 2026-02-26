@@ -1,10 +1,20 @@
-name: Test eGSIM web app (kinda deployement)
+name: eGSIM WEB TESTS (produces requirements.txt)
 
 on:
   push:
     branches: [ main, master, dev ]
+    paths:
+      - '**/*.py'
+      - '**/*.yaml'
+      - '**/*.yml'
+      - '**/*.json'
   pull_request:
     branches: [ main, master ]
+    paths:
+      - '**/*.py'
+      - '**/*.yaml'
+      - '**/*.yml'
+      - '**/*.json'
 
 jobs:
   run-tests:
@@ -15,9 +25,8 @@ jobs:
         python-version: [ "3.11" ]  # add more if needed (the server version should be sufficient)
 
     env:
-      OQ_VERSION: "3.24.1"
       SETTINGS_MODULE: "egsim.settings.test"
-      REQUIREMENTS_FILE: "requirements-py311-linux64.txt"
+      REQUIREMENTS_FILE: "./requirements/requirements-py311-linux64.txt"
 
     steps:
       # Checkout repository
@@ -49,17 +58,19 @@ jobs:
         run: |
           python -m venv venv
           source venv/bin/activate
-          python -m pip install --upgrade pip setuptools wheel
-          pip install -r "./${REQUIREMENTS_FILE}"
-          pip install -U -e ".[web]"  # upgrade all packages to most recent ones
+          pip install --upgrade pip 
+          # install OpenQuake requirements EXCEPT django* packages:
+          pip install -r "${REQUIREMENTS_FILE}" 
+          # install this package (upgrade when possible to latest):
+          pip install -U ".[web]" 
+          # install django (upgrade aggressively):
+          PIP_INDEX_URL=https://pypi.org/simple pip install -U Django --upgrade-strategy eager
 
       # Run Django migrations and pytest
       - name: Test eGSIM (web app)
         run: |
           source venv/bin/activate
           export DJANGO_SETTINGS_MODULE=${SETTINGS_MODULE}
-          # python manage.py migrate
-          # python manage.py egsim-init --no-input
           pytest --ignore=./tests/tmp/ -xvvv ./tests
 
       - name: Show pip freeze in workflow log
@@ -73,7 +84,7 @@ jobs:
           pip freeze > requirements-web.txt
 
       - name: Upload requirements-web.txt artifact
-        # GitHub repo -> Actions -> Workflow Run -> Scroll to Section "Artifacts" -> Download requirements-web.txt
+        # GitHub repo -> Actions -> Click on Workflow Run -> Scroll down to "Artifacts" (might take a while) -> Download requirements-web.txt
         uses: actions/upload-artifact@v4
         with:
           name: requirements-web

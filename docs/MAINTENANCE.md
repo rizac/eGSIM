@@ -117,12 +117,7 @@ pip install --upgrade pip && (cd ../oq-engine${OQ_VERSION} && pip install -r ${R
 Go to eGSIM setup.py and set:
 `__VERSION__=${OQ_VERSION}` (e.g., `__VERSION__="3.24.1"`. 
 As of end 2025, we keep eGSIM version aligned 
-with OpenQuake for simplicity. Now install eGSIM (library only):
-```
-pip install -U -e .
-pip freeze > ./${REQUIREMENTS_FILE}
-```
-
+with OpenQuake for simplicity.
 
 Run tests (smtk only):
 ```
@@ -131,22 +126,34 @@ pip install -U pytest
 ```
 pytest -xvvv ./tests/smtk
 ```
-Fix if needed
+Fix if needed.
+
+Copy the `requirements` files from OpenQuake into `./requirements/`
+(usually N = OperatingSystems &times; PythonVersions). 
+Edit `.github/workflows/pytest.yml` (`matrix.config` section) to assure
+you test all N cases.
+
+*Optional: do at this stage a `pip freeze` and
+update in `setup.py` the newest versions of the listed packages
+(`pandas`, `Django`) ignoring web packages.*
 
 Install web app (force upgrade for Django):
 ```
-pip install -U ".[web]"
-pip install -U --no-deps django
-pip freeze > ./${REQUIREMENTS_FILE}.web
+pip install -U ".[web]" 
+# install django (upgrade aggressively):
+PIP_INDEX_URL=https://pypi.org/simple pip install -U Django --upgrade-strategy eager
 ```
-Open ${REQUIREMENTS_FILE}.web, and add " --no-deps" at the end of the where Django is installed
+
 
 Run tests:
 ```
-export DJANGO_SETTINGS_MODULE="egsim.settings.test" && pytest -xvvv ./tests/django
+export DJANGO_SETTINGS_MODULE="egsim.settings.test" && pytest -xvvv ./tests
 ```
 Fix code as needed, commit push and so on
 
+Edit `.github/workflows/pytest-web.yml` (`env` and `strategy` sections) 
+to assure everything is up-to-date (it could be that nothing needs
+to be changed).
 
 
 ## New data

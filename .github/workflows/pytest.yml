@@ -1,10 +1,20 @@
-name: Test eGSIM smtk library
+name: eGSIM SMTK TESTS
 
 on:
   push:
     branches: [ main, master, dev ]
+    paths:
+      - '**/*.py'
+      - '**/*.yaml'
+      - '**/*.yml'
+      - '**/*.json'
   pull_request:
     branches: [ main, master ]
+    paths:
+      - '**/*.py'
+      - '**/*.yaml'
+      - '**/*.yml'
+      - '**/*.json'
 
 jobs:
   run-tests:
@@ -91,7 +101,7 @@ jobs:
         run: |
           source venv/bin/activate
           python -m pip install --upgrade pip setuptools wheel
-          pip install -r "./${{ matrix.config.req-file }}"
+          pip install -r "./requirements/${{ matrix.config.req-file }}"
           pip install .
 
       - name: Install eGSIM smtk lib (Windows)
@@ -100,7 +110,7 @@ jobs:
         run: |
           venv\Scripts\activate
           python -m pip install --upgrade pip setuptools wheel
-          python -m pip install -r "${{ matrix.config.req-file }}"
+          python -m pip install -r "requirements\${{ matrix.config.req-file }}"
           python -m pip install .
 
       - name: Test eGSIM (smtk lib)

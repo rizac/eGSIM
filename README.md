@@ -12,9 +12,16 @@ in the framework of the Thematic Core Services for Seismology of
     <br>
 </p>
 
-The web portal (and API documentation) is available at:
+[![License](https://img.shields.io/badge/license-AGPL--3.0-blue)](LICENSE)
+![Build](https://github.com/rizac/eGSIM/actions/workflows/pytest.yml/badge.svg)
+![Build](https://github.com/rizac/eGSIM/actions/workflows/pytest-web.yml/badge.svg)
+
+<!-- [![Coverage](https://codecov.io/gh/rizac/eGSIM/main/main/graph/badge.svg)](https://codecov.io) -->
+
+### The web portal and API documentation is available at:
 
 # https://egsim.gfz.de
+
 
 ## Citation
 
@@ -35,14 +42,19 @@ The web portal (and API documentation) is available at:
 
 ## Python library
 
-eGSIM can also be installed and used as a Python package. 
+![Python](https://img.shields.io/badge/python-3.11-blue) 
+![Python](https://img.shields.io/badge/python-3.12-blue)
+
+eGSIM can also be installed and used as a Python package under specific Python versions
+and OSs (see below) according to OpenQuake compatibilities.
+
 This approach bypasses the web API and, 
 while requiring a steeper learning curve to directly call core functions, 
 allows local execution on the CPU with greater control over optimization.
 
 
 **For usage in your code after installation, 
-see the [Library functions reference](LIBRARY_FUNCTIONS_REFERENCE.md)**
+see the [Library functions reference](docs/LIBRARY_FUNCTIONS_REFERENCE.md)**
 
 
 ### Installation
@@ -82,21 +94,64 @@ deactivate
 
 ### Install eGSIM
 
-> **IMPORTANT: From now on, all following operations must have the virtualenv activated FIRST**
+> **IMPORTANT**: From now on, all following operations must have the virtualenv activated **FIRST**
+> and assume you `cd` into eGSIM repository (If not the case, adjust paths accordingly)
 
 
-Choose your requirements file and then run installation
+#### Linux
 
-- Old macOS (before 2023. Check by typing `uname -m` on terminal, 
-  you should **not** get `arm64`):
-  
-  `pip install -r requirements-py311-macos_x86_64.txt && pip install .`
+- Python 3.11
 
-- New macOS (`uname -m` on terminal gives `arm64`)
-  
-  `pip install -r requirements-py311-macos_arm64.txt && pip install .`
+  ```bash
+  python -m pip install --upgrade pip setuptools wheel && pip install -r ./requirements/requirements-py311-linux64.txt && pip install .
+  ```
 
-- Linux (To be done)
+- Python 3.12
+
+  ```bash
+  python -m pip install --upgrade pip setuptools wheel && pip install -r ./requirements/requirements-py312-linux64.txt && pip install .
+  ```
+
+#### MacOs
+
+- Python 3.11
+  ```bash
+  python -m pip install --upgrade pip setuptools wheel && pip install -r ./requirements/requirements-py311-macos_arm64.txt && pip install .
+  ```
+
+- Python 3.12
+  ```bash
+  python -m pip install --upgrade pip setuptools wheel && pip install -r ./requirements/requirements-py312-macos_arm64.txt && pip install .
+  ```
+
+<details>
+
+<summary>Older MacOs (discontinued)</summary>
+
+- Python 3.11
+  ```bash
+  python -m pip install --upgrade pip setuptools wheel && pip install -r ./requirements/requirements-py311-macos_x86_64.txt && pip install .
+  ```
+
+- Python 3.12
+  ```bash
+  python -m pip install --upgrade pip setuptools wheel && pip install -r ./requirements/requirements-py312-macos_x86_64.txt && pip install .
+  ```
+
+</details>
+
+#### Windows
+
+- Python 3.11
+  ```bash
+  python -m pip install --upgrade pip setuptools wheel && pip install -r ./requirements/requirements-py311-win64.txt && pip install .
+  ```
+
+- Python 3.12
+  ```bash
+  python -m pip install --upgrade pip setuptools wheel && pip install -r ./requirements/requirements-py312-win64.txt && pip install .
+  ```
+
 
 
 ### Run tests (optional) 
