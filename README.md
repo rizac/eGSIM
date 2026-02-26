@@ -49,12 +49,9 @@ eGSIM can also be installed and used as a Python package under specific Python v
 and OSs (see below) according to OpenQuake compatibilities.
 
 This approach bypasses the web API and, 
-while requiring a steeper learning curve to directly call core functions, 
+while requiring a steeper learning curve to directly call core functions
+(see source code or the [Library functions reference](docs/LIBRARY_FUNCTIONS_REFERENCE.md) for details), 
 allows local execution on the CPU with greater control over optimization.
-
-
-**For usage in your code after installation, 
-see the [Library functions reference](docs/LIBRARY_FUNCTIONS_REFERENCE.md)**
 
 
 ### Installation
@@ -86,11 +83,7 @@ Activate virtualenv:
 source .venv/egsim/bin/activate  # replace ".venv/egsim" with your path
 ```
 
-Deactivate virtualeanv:
-
-```bash
-deactivate
-```
+(to later deactivate the virtualeanv, simply type `deactivate` on the terminal)
 
 ### Install eGSIM
 
@@ -152,8 +145,6 @@ deactivate
   python -m pip install --upgrade pip setuptools wheel && pip install -r ./requirements/requirements-py312-win64.txt && pip install .
   ```
 
-
-
 ### Run tests (optional) 
 
 (remember to `pip install pytest` first)
@@ -161,3 +152,7 @@ deactivate
 ```bash
 pytest -vvv ./tests/smtk
 ```
+
+### Usage.
+
+See the [Library functions reference](docs/LIBRARY_FUNCTIONS_REFERENCE.md)
