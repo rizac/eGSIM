@@ -17,7 +17,7 @@ jobs:
     env:
       OQ_VERSION: "3.24.1"
       SETTINGS_MODULE: "egsim.settings.test"
-      REQUIREMENTS_FILE: "requirements-py311-linux64.txt"
+      REQUIREMENTS_FILE: "./requirements/requirements-py311-linux64.txt"
 
     steps:
       # Checkout repository
@@ -50,7 +50,7 @@ jobs:
           python -m venv venv
           source venv/bin/activate
           python -m pip install --upgrade pip setuptools wheel
-          pip install -r "./${REQUIREMENTS_FILE}"
+          pip install -r "${REQUIREMENTS_FILE}"
           pip install -U -e ".[web]"  # upgrade all packages to most recent ones
 
       # Run Django migrations and pytest
