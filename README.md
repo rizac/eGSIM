@@ -12,9 +12,18 @@ in the framework of the Thematic Core Services for Seismology of
     <br>
 </p>
 
-The web portal (and API documentation) is available at:
+![Python](https://img.shields.io/badge/python-3.11-blue) 
+![Python](https://img.shields.io/badge/python-3.12-blue)
+[![License](https://img.shields.io/badge/license-AGPL--3.0-blue)](LICENSE)
+![Build](https://github.com/rizac/eGSIM/actions/workflows/pytest.yml/badge.svg)
+![Build](https://github.com/rizac/eGSIM/actions/workflows/pytest-web.yml/badge.svg)
+
+<!-- [![Coverage](https://codecov.io/gh/rizac/eGSIM/main/main/graph/badge.svg)](https://codecov.io) -->
+
+### The web portal and API documentation is available at:
 
 # https://egsim.gfz.de
+
 
 ## Citation
 
