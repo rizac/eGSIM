@@ -35,7 +35,9 @@ The web portal (and API documentation) is available at:
 
 ## Python library
 
-eGSIM can also be installed and used as a Python package. 
+eGSIM can also be installed and used as a Python package under specific Python versions
+and OSs (see below) according to OpenQuake compatibilities.
+
 This approach bypasses the web API and, 
 while requiring a steeper learning curve to directly call core functions, 
 allows local execution on the CPU with greater control over optimization.
@@ -82,21 +84,24 @@ deactivate
 
 ### Install eGSIM
 
-> **IMPORTANT: From now on, all following operations must have the virtualenv activated FIRST**
+> **IMPORTANT**: From now on, all following operations must have the virtualenv activated **FIRST**
+> and assume you `cd` into eGSIM repository (If not the case, adjust paths accordingly)
 
+Type the command below (one line) by replacing:
+ 
+ - `${OS}` with your operating system:
+   - `macos_arm64` (MacOs)
+   - `linux64` (Linux)
+   - `win64` (Windows)
+   - ~~`macos_x86_64` (older macos discontinued. In case of problems, please contact us)~~
+   
+ - `${VERSION}` below with your Python version:
+   - `311` (Python 3.11)
+   - `312` (Python 3.12)
 
-Choose your requirements file and then run installation
-
-- Old macOS (before 2023. Check by typing `uname -m` on terminal, 
-  you should **not** get `arm64`):
-  
-  `pip install -r requirements-py311-macos_x86_64.txt && pip install .`
-
-- New macOS (`uname -m` on terminal gives `arm64`)
-  
-  `pip install -r requirements-py311-macos_arm64.txt && pip install .`
-
-- Linux (To be done)
+```bash
+python -m pip install --upgrade pip setuptools wheel && pip install -r ./requirements/requirements-py${VERSION}-${OS}.txt && pip install .
+```
 
 
 ### Run tests (optional) 
