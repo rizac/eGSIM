@@ -42,7 +42,7 @@ allows local execution on the CPU with greater control over optimization.
 
 
 **For usage in your code after installation, 
-see the [Library functions reference](LIBRARY_FUNCTIONS_REFERENCE.md)**
+see the [Library functions reference](docs/LIBRARY_FUNCTIONS_REFERENCE.md)**
 
 
 ### Installation
