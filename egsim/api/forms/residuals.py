@@ -68,7 +68,8 @@ class ResidualsForm(GsimImtForm, FlatfileForm, APIForm):
             likelihood=True if is_ranking else cleaned_data['likelihood'],
             mean=is_ranking,
             normalise=True if is_ranking else cleaned_data['normalize'],
-            header_sep=None if is_ranking else header_sep)
+            header_sep=None if is_ranking else header_sep
+        )
         if is_ranking:
             return get_measures_of_fit(gsims, imts, residuals)
         return residuals
