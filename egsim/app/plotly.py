@@ -97,6 +97,8 @@ def axis_range(values: np.ndarray | pd.Series) -> list | None:
 
 def scatter_trace(
     *,
+    x: np.ndarray | pd.Series | None,
+    y: np.ndarray | pd.Series | None,
     color: str,
     size=10,
     symbol='circle',
@@ -107,10 +109,8 @@ def scatter_trace(
 ) -> dict:
     """Return the properties and style for a trace of type scatter"""
 
-    if 'x' in kwargs:
-        kwargs['x'] = values2json(kwargs['x'])
-    if 'y' in kwargs:
-        kwargs['y'] = values2json(kwargs['y'])
+    kwargs['x'] = values2json(x)
+    kwargs['y'] = values2json(y)
     return {
         'type': 'scatter',
         'mode': 'markers',
@@ -127,13 +127,18 @@ def scatter_trace(
     } | kwargs
 
 
-def line_trace(*, color: str, width=2, dash='solid', **kwargs) -> dict:
+def line_trace(
+    *,
+    x: np.ndarray | pd.Series | None,
+    y: np.ndarray | pd.Series | None,
+    color: str,
+    width=2,
+    dash='solid',
+    **kwargs) -> dict:
     """Return the properties and style for a trace of type scatter (lines only)"""
 
-    if 'x' in kwargs:
-        kwargs['x'] = values2json(kwargs['x'])
-    if 'y' in kwargs:
-        kwargs['y'] = values2json(kwargs['y'])
+    kwargs['x'] = values2json(x)
+    kwargs['y'] = values2json(y)
     return {
         'type': 'scatter',
         'mode': 'lines',
@@ -147,6 +152,8 @@ def line_trace(*, color: str, width=2, dash='solid', **kwargs) -> dict:
 
 def bar_trace(
     *,
+    x: np.ndarray | pd.Series | None,
+    y: np.ndarray | pd.Series | None,
     color: str,
     line_width=2,
     line_dash='solid',
@@ -156,12 +163,14 @@ def bar_trace(
     """Return the properties and style for a trace of type bar"""
 
     return _bar_like_trace(
-        color, 'bar', line_width, line_dash, line_color, **kwargs
+        x, y, color, 'bar', line_width, line_dash, line_color, **kwargs
     )
 
 
 def histogram_trace(
     *,
+    x: np.ndarray | pd.Series | None,
+    y: np.ndarray | pd.Series | None,
     color: str,
     line_width=2,
     line_dash='solid',
@@ -171,11 +180,13 @@ def histogram_trace(
     """Return the properties and style for a trace of type histogram"""
 
     return _bar_like_trace(
-        color, 'histogram', line_width, line_dash, line_color, **kwargs
+        x, y, color, 'histogram', line_width, line_dash, line_color, **kwargs
     )
 
 
 def _bar_like_trace(
+    x: np.ndarray | pd.Series | None,
+    y: np.ndarray | pd.Series | None,
     color: str,
     typ: str,
     width: float,
@@ -183,10 +194,8 @@ def _bar_like_trace(
     line_color=None,
     **kwargs
 ) -> dict:
-    if 'x' in kwargs:
-        kwargs['x'] = values2json(kwargs['x'])
-    if 'y' in kwargs:
-        kwargs['y'] = values2json(kwargs['y'])
+    kwargs['x'] = values2json(x)
+    kwargs['y'] = values2json(y)
     return {
         'type': typ,
         'marker': {
