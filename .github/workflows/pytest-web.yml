@@ -2,7 +2,7 @@ name: eGSIM WEB TESTS (produces requirements.txt)
 
 on:
   push:
-    branches: [ main, master, dev ]
+    branches: [ main, master ]
     paths:
       - '**/*.py'
       - '**/*.yaml'

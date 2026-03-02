@@ -2,7 +2,7 @@ name: eGSIM SMTK TESTS
 
 on:
   push:
-    branches: [ main, master, dev ]
+    branches: [ main, master ]
     paths:
       - '**/*.py'
       - '**/*.yaml'
