@@ -22,7 +22,7 @@ jobs:
 
     strategy:
       matrix:
-        python-version: [ "3.11" ]  # add more if needed (the server version should be sufficient)
+        python-version: [ "3.11", "3.12" ]  # add more if needed (the server version should be sufficient)
 
     env:
       SETTINGS_MODULE: "egsim.settings.test"
