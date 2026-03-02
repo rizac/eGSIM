@@ -1,4 +1,4 @@
-"""Forms handling data (flatfiles)"""
+"""Forms for the Django app (web gui)"""
 
 from itertools import product
 
@@ -637,6 +637,7 @@ class FlatfileVisualizeForm(APIForm, FlatfileForm):
                     color=c_transparent,
                     line_color=color,
                     x=x,
+                    y=y,
                     legendgroup=x_label,
                     name=x_label
                 )
@@ -658,6 +659,7 @@ class FlatfileVisualizeForm(APIForm, FlatfileForm):
                 histogram_trace(
                     color=c_transparent,
                     line_color=color,
+                    x=x,
                     y=y,
                     legendgroup=y_label,
                     name=y_label

@@ -196,10 +196,6 @@ EGSIM.component('plots-div', {
 		<!-- RIGHT TOOLBAR (legend, buttons, controls) -->
 		<div class='d-flex flex-column ps-4 gap-3' style='width:21vw !important'>
 			<div class="btn-group">
-				<button v-if="closeButton" type='button' class='btn btn-primary border-0 text-nowrap'
-						@click="show = !show" title='close plots panel'>
-					<i class='fa fa-times-circle ms-2'></i>
-				</button>
 				<div class="btn-group" title="Download visible plots in different image formats" style='flex: 1 1 auto'>
 					<button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
 						<i class='fa fa-download'></i>
@@ -212,6 +208,10 @@ EGSIM.component('plots-div', {
 						</li>
 					</ul>
 				</div>
+				<button v-if="closeButton" type='button' class='btn btn-primary border-0 text-nowrap'
+						@click="show = !show" title='close plots panel'>
+					<i class='fa fa-times-circle ms-2'></i>
+				</button>
 			</div>
 			<div style='flex:1 1 0; overflow: auto' class='d-flex flex-column gap-3'>
 				<div class='d-flex flex-column gap-2'>
