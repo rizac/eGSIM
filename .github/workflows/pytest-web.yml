@@ -52,10 +52,10 @@ jobs:
             libproj-dev
 
       # Set up Python
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python ${{ matrix.config.python-version }}
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: ${{ matrix.config.python-version }}
 
       # Create and activate virtual environment
       - name: Create virtualenv
@@ -64,7 +64,7 @@ jobs:
           source venv/bin/activate
           pip install --upgrade pip 
           # install OpenQuake requirements EXCEPT django* packages:
-          pip install -r "./requirements/${{ matrix.req-file }}" 
+          pip install -r "./requirements/${{ matrix.config.req-file }}" 
           # install this package (upgrade when possible to latest):
           pip install -U ".[web]" 
           # install django (upgrade aggressively):
