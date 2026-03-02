@@ -60,14 +60,6 @@ def colors_cycle(hex_colors: Iterable[str] | None = None) -> Iterator[str]:
     return cycle(values)
 
 
-def values2json(values: np.ndarray | pd.Series) -> list:
-    """Converter from numpy/pandas array to plotly compatible list"""
-
-    if axis_type(values) == AxisType.date:  # plotly wants ISO strings
-        values = datetime2str(values, '%Y-%m-%dT%H:%M:%S')
-    return array2json(values)
-
-
 def axis_range(values: np.ndarray | pd.Series) -> list | None:
     """
     Compute the optimal axis range for the given values
@@ -207,3 +199,12 @@ def _bar_like_trace(
             }
         }
     } | kwargs
+
+
+def values2json(values: np.ndarray | pd.Series) -> list:
+    """Converter from numpy/pandas array to plotly compatible list"""
+
+    if axis_type(values) == AxisType.date:  # plotly wants ISO strings
+        values = datetime2str(values, '%Y-%m-%dT%H:%M:%S')
+    return array2json(values)
+
