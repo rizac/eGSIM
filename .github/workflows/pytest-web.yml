@@ -22,11 +22,15 @@ jobs:
 
     strategy:
       matrix:
-        python-version: [ "3.11", "3.12" ]  # add more if needed (the server version should be sufficient)
+        config:
+#          - req-file: requirements-py311-linux64.txt
+#            python-version: "3.11"
+
+          - req-file: requirements-py312-macos_arm64.txt
+            python-version: "3.12"
 
     env:
       SETTINGS_MODULE: "egsim.settings.test"
-      REQUIREMENTS_FILE: "./requirements/requirements-py311-linux64.txt"
 
     steps:
       # Checkout repository
@@ -60,7 +64,7 @@ jobs:
           source venv/bin/activate
           pip install --upgrade pip 
           # install OpenQuake requirements EXCEPT django* packages:
-          pip install -r "${REQUIREMENTS_FILE}" 
+          pip install -r "./requirements/${{ matrix.req-file }}" 
           # install this package (upgrade when possible to latest):
           pip install -U ".[web]" 
           # install django (upgrade aggressively):
