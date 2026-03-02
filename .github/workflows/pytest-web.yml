@@ -86,6 +86,8 @@ jobs:
         run: |
           source venv/bin/activate
           pip freeze > requirements-web.txt
+          # Remove any line containing eGSIM (case insensitive)
+          grep -v -i "eGSIM" requirements-web.txt > requirements-web.tmp && mv requirements-web.tmp requirements-web.txt
 
       - name: Upload requirements-web.txt artifact
         # GitHub repo -> Actions -> Click on Workflow Run -> Scroll down to "Artifacts" (might take a while) -> Download requirements-web.txt
