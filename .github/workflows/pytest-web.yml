@@ -26,7 +26,7 @@ jobs:
 #          - req-file: requirements-py311-linux64.txt
 #            python-version: "3.11"
 
-          - req-file: requirements-py312-macos_arm64.txt
+          - req-file: requirements-py312-linux64.txt
             python-version: "3.12"
 
     env:
