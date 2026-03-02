@@ -12,12 +12,9 @@ import pytest
 import pandas as pd
 
 from egsim.smtk import flatfile
-from egsim.smtk.flatfile import (read_flatfile,
-                                 query,
-                                 ColumnType,
-                                 FlatfileError,
-                                 column_type,
-                                 get_dtype_of, optimize_flatfile_dataframe, ColumnDtype,
+from egsim.smtk.flatfile import (read_flatfile, query, ColumnType, column_type,
+                                 get_dtype_of, FlatfileError, ColumnDtype,
+                                 optimize_flatfile_dataframe,
                                  FlatfileQueryError)
 from egsim.smtk.flatfile import ColumnPropertyRegistry, column_names
 from egsim.smtk.validation import ConflictError
@@ -55,7 +52,7 @@ def test_flatfile_turkey():
 
 
 def test_query():
-    now = datetime.utcnow()
+    now = datetime.now()
     d = pd.DataFrame({
         'i': [2, 1],
         'f': [1., float('nan')],
@@ -139,9 +136,11 @@ def test_flatfile_exceptions():
         if not is_subcls:
             continue
 
-        for cols in [['hypo_lat'], ['unknown'], ['hypo_lat', 'st_lon'],
-                     ['hypo_lat', 'unknown'],
-                     ['st_lon', 'hypo_lat', 'unknown']]:
+        for cols in [
+            ['hypo_lat'], ['unknown'], ['hypo_lat', 'st_lon'],
+            ['hypo_lat', 'unknown'],
+            ['st_lon', 'hypo_lat', 'unknown']
+        ]:
 
             exc = exc_cls(*cols)
             if issubclass(exc_cls, ConflictError):
@@ -166,7 +165,7 @@ def test_flatfile_exceptions():
 def test_optimize_flatfile():
     dfr = pd.DataFrame({
         'i': [1, 2, 3, 4],
-        'd': [datetime.utcnow(), datetime.utcnow(), datetime.utcnow(), datetime.utcnow()],
+        'd': [datetime.now(), datetime.now(), datetime.now(), datetime.now()],
         'f': [1.2, 1.4, float('nan'), 5],
         'b': [True, False, True, False],
         's': ['asdasd', 'asdasd', 'asdasd', 'asdasd']

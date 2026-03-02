@@ -14,8 +14,6 @@ import pandas as pd
 import numpy as np
 from pandas import StringDtype
 
-from onnxruntime.capi.onnxruntime_pybind11_state import NoSuchFile
-
 from egsim.smtk.registry import SmtkError
 from openquake.hazardlib import imt
 from egsim.smtk import gsim, gsim_names, imt_names
@@ -110,7 +108,9 @@ def check_column_metadata(*, name: str, props: dict):
             raise ValueError(f"{prefix} set 'help' to a non empty string, or "
                              f"remove the key entirely")
         if "  " in help:
-            raise ValueError(f"{name} has a trailing space in its Metadata help. Fix it")
+            raise ValueError(
+                f"{name} has a trailing space in its Metadata help. Fix it"
+            )
 
     # perform some check on the data type consistencies:
     bounds_symbols = {"<", ">", ">=", "<="}
@@ -160,23 +160,23 @@ def check_column_metadata(*, name: str, props: dict):
             if val is not None:
                 assert val == cast_to_dtype(val, dtype)
         if max_val is not None and min_val is not None and max_val <= min_val:
-            raise ValueError(f'{prefix} min. bound must be lower than '
-                             f'max. bound')
+            raise ValueError(f'{prefix} min. bound must be lower than max. bound')
 
     # check default value:
     if default_is_given:
         assert default == cast_to_dtype(default, dtype)
 
     if props:
-        raise ValueError(f'{prefix} Undefined property names, '
-                         f'remove from YAML: {list(props.keys())}')
+        raise ValueError(
+            f'{prefix} Undefined property names, remove from YAML: {list(props.keys())}'
+        )
 
 
 def check_with_openquake(
-        rupture_params: dict[str, set[str]],
-        sites_params: dict[str, set[str]],
-        distances: dict[str, set[str]],
-        imts: set[str]
+    rupture_params: dict[str, set[str]],
+    sites_params: dict[str, set[str]],
+    distances: dict[str, set[str]],
+    imts: set[str]
 ):
     """
     Check that the flatfile columns with a specific Type set
@@ -243,8 +243,8 @@ def np_float(number):
 
 def test_get_dtype():
     vals = [
-        [ColumnDtype.datetime, datetime.utcnow()],
-        [ColumnDtype.datetime, np.datetime64(datetime.utcnow())],
+        [ColumnDtype.datetime, datetime.now()],
+        [ColumnDtype.datetime, np.datetime64(datetime.now())],
         [ColumnDtype.int, 2],
         [ColumnDtype.int, np.int_(2)],
         [ColumnDtype.float, 2.2],
@@ -296,13 +296,15 @@ def test_get_dtype():
     assert get_dtype_of(pd.Series(['True', 2])) is None
     assert get_dtype_of(pd.CategoricalDtype(['True', 2]).categories) is None
 
-    assert get_dtype_of(pd.Series(['x', 2, datetime.utcnow()])) is None
-    assert get_dtype_of(pd.CategoricalDtype(['x', 2, datetime.utcnow()]).categories) \
-           is None
+    assert get_dtype_of(pd.Series(['x', 2, datetime.now()])) is None
+    assert (
+        get_dtype_of(pd.CategoricalDtype(['x', 2, datetime.now()]).categories)
+        is None
+    )
 
     # test series with N/A (more complete tests in the next function):
     vals = [
-        [[datetime.utcnow(), pd.NaT], ColumnDtype.datetime],
+        [[datetime.now(), pd.NaT], ColumnDtype.datetime],
         [[2, None], ColumnDtype.float],
         [[1.2, None], ColumnDtype.float],
         [[True, None], None],
@@ -326,24 +328,25 @@ def test_get_dtype_mixed_categories():
     Test that get_dtypoe_of mixed categorical returns None and not
     ColumnDtype.category
     """
+    cat_dtype = ColumnDtype.category
     assert get_dtype_of(pd.Series([2, True]).astype('category')) is None
-    assert get_dtype_of(pd.Series([False, True]).astype('category')) is ColumnDtype.category
-    assert get_dtype_of(pd.Series([False, None]).astype('category')) is ColumnDtype.category
+    assert get_dtype_of(pd.Series([False, True]).astype('category')) is cat_dtype
+    assert get_dtype_of(pd.Series([False, None]).astype('category')) is cat_dtype
     assert get_dtype_of(
-        pd.Series([datetime.utcnow(), pd.NaT]).astype('category')
-    ) is ColumnDtype.category
-    assert get_dtype_of(pd.Series([2, 3]).astype('category')) is ColumnDtype.category
-    assert get_dtype_of(pd.Series([2, None]).astype('category')) is ColumnDtype.category
-    assert get_dtype_of(pd.Series([2, np.nan]).astype('category')) is ColumnDtype.category
-    assert get_dtype_of(pd.Series([2, 2.2]).astype('category')) is ColumnDtype.category
-    assert get_dtype_of(pd.Series(['2', 'None']).astype('category')) is ColumnDtype.category
-    assert get_dtype_of(pd.Series(['2', None]).astype('category')) is ColumnDtype.category
+        pd.Series([datetime.now(), pd.NaT]).astype('category')
+    ) is cat_dtype
+    assert get_dtype_of(pd.Series([2, 3]).astype('category')) is cat_dtype
+    assert get_dtype_of(pd.Series([2, None]).astype('category')) is cat_dtype
+    assert get_dtype_of(pd.Series([2, np.nan]).astype('category')) is cat_dtype
+    assert get_dtype_of(pd.Series([2, 2.2]).astype('category')) is cat_dtype
+    assert get_dtype_of(pd.Series(['2', 'None']).astype('category')) is cat_dtype
+    assert get_dtype_of(pd.Series(['2', None]).astype('category')) is cat_dtype
 
 
 def test_mixed_arrays_are_mostly_null_dtype():
     """test that arrays with mixed dtypes have None dtype (with some known exceptions)"""
 
-    for val in combinations(['a', 2, 2.2, True, datetime.utcnow()], 2):
+    for val in combinations(['a', 2, 2.2, True, datetime.now()], 2):
         # check that the two values have a dtype set:
         assert get_dtype_of(val[0]) is not None
         assert get_dtype_of(val[1]) is not None
@@ -384,7 +387,7 @@ def test_mixed_arrays_are_mostly_null_dtype():
 def test_dtypes_with_null():
     """Test that arrays with known dtype + 1 null preserve their dtype"""
 
-    for val in ['a', 2, 2.2, True, datetime.utcnow()]:
+    for val in ['a', 2, 2.2, True, datetime.now()]:
         # check that the two values have a dtype set:
         cdtype = get_dtype_of(val)
         assert cdtype is not None
@@ -424,8 +427,8 @@ def test_str_and_o_dtypes_are_the_same():
 
 def test_cast_to_dtype():
     vals = [
-        [ColumnDtype.datetime, datetime.utcnow()],
-        [ColumnDtype.datetime, np.datetime64(datetime.utcnow())],
+        [ColumnDtype.datetime, datetime.now()],
+        [ColumnDtype.datetime, np.datetime64(datetime.now())],
         [ColumnDtype.int, 2],
         [ColumnDtype.int, np.int_(2)],
         [ColumnDtype.float, 2.2],

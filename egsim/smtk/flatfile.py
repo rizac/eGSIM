@@ -311,7 +311,7 @@ def get_dtype_of(
     get_dtype_of(pd.CategoricalDtype())
     get_dtype_of(pd.CategoricalDtype().categories)
     get_dtype_of(dataframe.index)
-    get_dtype_of(datetime.utcnow())
+    get_dtype_of(datetime.datetime.now(datetime.UTC))
     get_dtype_of(5.5)
     ```
 

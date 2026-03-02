@@ -14,7 +14,6 @@ from egsim.smtk import residuals
 from egsim.smtk.flatfile import read_flatfile, ColumnType
 from scipy.constants import g
 from egsim.smtk.registry import Clabel
-from egsim.smtk.validation import ModelError
 
 # load flatfile once:
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), "data")
@@ -52,7 +51,8 @@ def get_residuals(gsims, imts, flatfile, likelihood=False):
     df_multi_header = residuals.get_residuals(gsims, imts, ff, likelihood,
                                               header_sep=None)
     df_multi_header2 = df_single_header.rename(
-        columns={c: tuple(c.split(Clabel.sep)) for c in df_single_header.columns})
+        columns={c: tuple(c.split(Clabel.sep)) for c in df_single_header.columns}
+    )
     df_multi_header2.columns = pd.MultiIndex.from_tuples(df_multi_header2.columns)
     pd.testing.assert_frame_equal(df_multi_header, df_multi_header2)
     return df_multi_header
@@ -207,7 +207,7 @@ def test_assign_series():
         [1, 2],
         [1.1, np.nan],
         [True, False],
-        [datetime.utcnow(), pd.NaT],
+        [datetime.now(), pd.NaT],
         ['a', None]
     ]:
         series = pd.Series(vals)
