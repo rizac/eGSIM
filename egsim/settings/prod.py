@@ -5,7 +5,7 @@ and edit missing data (see declared variables below)
 As convention, you may rename the production file `settings.py`
 """
 
-from egsim.settings.base import *
+from egsim.settings.base import *  # Note: you also import pathlib.Path automatically
 
 DEBUG = False  # DO NOT CHANGE THIS IN PRODUCTION!
 
@@ -23,7 +23,7 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 # python -c "from django.core.management.utils import get_random_secret_key;print(get_random_secret_key())"  # noqa
 SECRET_KEY: str
 
-# path to the sqlite database (can be placed next to MEDIA_ROOT, see below)
+# path to the sqlite database (you may place it next to MEDIA_ROOT)
 DATABASES['default']['NAME']: str
 
 # media root (path on the server):
