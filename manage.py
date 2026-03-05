@@ -21,7 +21,6 @@ if __name__ == "__main__":
                 if not line or line.startswith("#"):
                     continue
                 key, value = line.split("=", 1)
-                print(f'{key}={value}')
                 os.environ.setdefault(key, value)
 
     from django.core.management import execute_from_command_line

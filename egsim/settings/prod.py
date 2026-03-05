@@ -19,12 +19,10 @@ CSRF_TRUSTED_ORIGINS = ["https://egsim.gfz.de", "https://egsim.gfz-potsdam.de"]
 # Apparently, with this 'request.scheme' correctly displays 'https' in production
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
-# SECRET_KEY SHOULD BE UNIQUE FOR EACH SETTINGS FILE AND CAN BE GENERATED ON THE
-# TERMINAL (WITHIN THE DJANGO VIRTUAL ENV)  WITH THE COMMAND:
+# In production, you can generate the secret key via:
 # python -c "from django.core.management.utils import get_random_secret_key;print(get_random_secret_key())"  # noqa
+# (Note: the generated output <O> has unsafe characters removed and can be safely set as SECRET_KEY=<O> in an env file)
 SECRET_KEY = os.environ["EGSIM_SECRET_KEY"]
-
-__DATA_ROOT__ = Path(os.environ['EGSIM_DATA_ROOT'])
 
 # path to the sqlite database (you may place it next to MEDIA_ROOT)
 DATABASES['default']['NAME'] = os.environ['EGSIM_DB_DEFAULT_NAME']
