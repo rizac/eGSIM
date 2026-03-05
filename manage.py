@@ -2,21 +2,27 @@
 import os
 import sys
 
+# Django management command customized for eGSIM. In  production,
+# you can copy this file next to your .env location, providing you execute this
+# script with python venv activated and this repo installed. Also remember to
+# chmod 640 .env AND chown root:<egsim_user> .env)
+
 if __name__ == "__main__":
-    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "egsim.settings")
-    try:
-        from django.core.management import execute_from_command_line
-    except ImportError:
-        # The above import may fail for some other reason. Ensure that the
-        # issue is really that Django is missing to avoid masking other
-        # exceptions on Python 2.
-        try:
-            import django
-        except ImportError:
-            raise ImportError(
-                "Couldn't import Django. Are you sure it's installed and "
-                "available on your PYTHONPATH environment variable? Did you "
-                "forget to activate a virtual environment?"
-            )
-        raise
+    # Line commented (force settings file):
+    # os.environ.setdefault("DJANGO_SETTINGS_MODULE", "djangosnippets.settings.development")
+
+    # Simple .env read (no dotenv package), we need control to implement the same
+    # systemd logic (which is stricter, e.g., no spaces)
+    dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
+    if os.path.isfile(dotenv_path):
+        with open(dotenv_path, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                key, value = line.split("=", 1)
+                print(f'{key}={value}')
+                os.environ.setdefault(key, value)
+
+    from django.core.management import execute_from_command_line
     execute_from_command_line(sys.argv)

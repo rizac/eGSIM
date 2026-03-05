@@ -27,13 +27,13 @@ SECRET_KEY = os.environ["EGSIM_SECRET_KEY"]
 __DATA_ROOT__ = Path(os.environ['EGSIM_DATA_ROOT'])
 
 # path to the sqlite database (you may place it next to MEDIA_ROOT)
-DATABASES['default']['NAME'] = __DATA_ROOT__ / 'db.sqlite'
+DATABASES['default']['NAME'] = os.environ['EGSIM_DB_DEFAULT_NAME']
 
 # media root (path on the server):
-MEDIA_ROOT = __DATA_ROOT__ / 'media'
+MEDIA_ROOT = os.environ['EGSIM_MEDIA_ROOT']
 
 # static files root (path on the server)
-STATIC_ROOT = __DATA_ROOT__ / 'staticfiles'
+STATIC_ROOT = os.environ['EGSIM_STATIC_ROOT']
 
 
 
