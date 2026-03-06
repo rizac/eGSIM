@@ -125,9 +125,11 @@ class PredictionsVisualizeForm(PredictionsForm):
                     p = {plot_mag_label: mag, plot_dist_label: d, imt_label: 'SA'}
                     data = {}
                     for m in models:
+                        median_sa_cols = sa_cols[m]
+                        std_sa_cols =[(c[0], Clabel.std, c[2]) for c in median_sa_cols]
                         data[m] = (
-                            dfr.loc[:, sa_cols[m]].iloc[0, :].values,
-                            dfr.loc[:, sa_cols[m]].iloc[0, :].values
+                            dfr.loc[:, median_sa_cols].iloc[0, :].values,
+                            dfr.loc[:, std_sa_cols].iloc[0, :].values
                         )
                     yield p, x_vals, data
 
