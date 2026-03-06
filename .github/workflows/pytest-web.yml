@@ -66,7 +66,7 @@ jobs:
           # install OpenQuake requirements EXCEPT django* packages:
           pip install -r "./requirements/${{ matrix.config.req-file }}" 
           # install this package (upgrade when possible to latest):
-          pip install -U ".[web]" 
+          pip install -Ue ".[web]" 
           # install django (upgrade aggressively):
           PIP_INDEX_URL=https://pypi.org/simple pip install -U Django --upgrade-strategy eager
 
