@@ -201,9 +201,10 @@ def _bar_like_trace(
     } | kwargs
 
 
-def values2json(values: np.ndarray | pd.Series) -> list:
+def values2json(values: np.ndarray | pd.Series | None) -> list:
     """Converter from numpy/pandas array to plotly compatible list"""
-
+    if values is None:
+        return []
     if axis_type(values) == AxisType.date:  # plotly wants ISO strings
         values = datetime2str(values, '%Y-%m-%dT%H:%M:%S')
     return array2json(values)
