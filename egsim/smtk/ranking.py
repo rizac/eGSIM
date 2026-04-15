@@ -86,9 +86,12 @@ def get_residuals_stats(
             ):
                 mean, std = np.nan, np.nan
                 col = (imt, res_type, gsim)
-                if residuals.get(col) is not None:
-                    mean = residuals[col].mean()
-                    std = residuals[col].std(ddof=0)
+                values = residuals.get(col)
+                if values is not None:
+                    values = values[np.isfinite(values)]
+                    if len(values):
+                        mean = residuals[col].mean()
+                        std = residuals[col].std(ddof=0)
                 result.setdefault(f"{imt} {res_type} mean", {})[gsim] = mean
                 result.setdefault(f"{imt} {res_type} stddev", {})[gsim] = std
 

@@ -3,12 +3,14 @@ test rankings (measures of fit derived from residuals computations)
 """
 import os
 
+import numpy as np
 import pandas as pd
 
 from egsim.smtk import residuals, get_measures_of_fit
 from egsim.smtk.flatfile import read_flatfile, ColumnType
 from scipy.constants import g
 
+from egsim.smtk.registry import Clabel
 
 # load flatfile once:
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), "data")
@@ -80,3 +82,16 @@ def test_measures_of_fit_execution_no_lh_no_edr():
         if test_type == 'normal':
             assert pd.notna(m_fit).all().all()
 
+
+def test_stats_inf_na():
+    gsims, imts, flatfile = get_gsims_imts_flatfile()
+    res_df = residuals.get_residuals(gsims, imts, flatfile.copy())
+    imt_cols = [c for c  in res_df.columns if not c.startswith(Clabel.input)]
+    for c in imt_cols:
+        res_df[c] = np.nan
+    m_fit = get_measures_of_fit(gsims, imts, res_df)
+    assert m_fit.isna().all().all()
+    for c in imt_cols:
+        res_df[c] = np.log(0)
+    m_fit = get_measures_of_fit(gsims, imts, res_df)
+    assert m_fit.isna().all().all()
