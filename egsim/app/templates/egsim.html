@@ -95,6 +95,21 @@ window.fetch = function() {
 	// set up the load bar <div>
 	var bar = document.getElementById('loadbar');
 	bar.style.display = '';
+	var msg = bar.querySelector(".message");
+
+	var timeout = 240; // in sec
+	var updateRate = 5; // in sec
+	let intervalId = null;
+
+	intervalId = setInterval(() => {
+		msg.textContent = `Processing, please wait (≈ ${Math.floor(timeout / 60)}:${String(timeout % 60).padStart(2, "0")} remaining before timeout)`;
+		timeout -= updateRate;
+		if (timeout < 0){
+			clearInterval(intervalId);
+			intervalId = null;
+		}
+	  }, 1000 * updateRate
+	);
 
 	return new Promise((resolve, reject) => {  // https://stackoverflow.com/a/53448336
 		origFetch.apply(this, args).then((response) => {
@@ -118,6 +133,11 @@ window.fetch = function() {
 			reject(error);
 		}).finally(() => {
 			bar.style.display = 'none';
+			if (intervalId !== null) {
+				clearInterval(intervalId);
+				intervalId = null;
+			}
+			msg.textContent = '';
 		});
 	});
 }
