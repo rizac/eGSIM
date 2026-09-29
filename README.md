@@ -40,6 +40,8 @@ in the framework of the Thematic Core Services for Seismology of
 - API Usage (Python): https://github.com/rizac/egsim-client.
   - Jupyter notebook examples (Python): https://github.com/rizac/egsim-client/tree/main/notebook
 
+- **Maintenance (for developers only)** in separate Nextcloud folder "eGSIM" (contact the administrator)
+
 ## Python library
 
 ![Python](https://img.shields.io/badge/python-3.11-blue) 

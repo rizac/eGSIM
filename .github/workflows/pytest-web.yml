@@ -69,6 +69,8 @@ jobs:
           pip install -Ue ".[web]" 
           # install django (upgrade aggressively):
           PIP_INDEX_URL=https://pypi.org/simple pip install -U Django --upgrade-strategy eager
+          # setup kaleido to be able to generate images png and so on to be downloaded
+          python -c "import kaleido; kaleido.get_chrome_sync()"
 
       # Run Django migrations and pytest
       - name: Test eGSIM (web app)
