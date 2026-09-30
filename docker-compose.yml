@@ -1,0 +1,12 @@
+services:
+  egsim:
+    build: .
+    env_file: ../.env
+    ports:
+      - "127.0.0.1:8001:8001"
+    volumes:
+      - ../data:/data  # eGSIM data dir (/media and db sqlite in it)
+      - ../static:/static  # Django static folder
+      - /var/log/egsim:/logs  # where gunicorn.log file is written
+    restart: unless-stopped
+    stop_grace_period: 40s  # needs to match gunicorn --graceful-timeout (plus some margin)
