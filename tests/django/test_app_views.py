@@ -210,6 +210,14 @@ class Test:
         assert response.status_code == 200
         cols1 = response.json()['columns']
 
+        data = {'gsim': 'BoraEtAl2019'}
+        client = Client()  # do not use the fixture client as we want
+        # to disable CSRF Token check
+        response = client.post("/" + url, data=data)
+        assert response.status_code == 200
+        cols1 = response.json()['columns']
+
+
     def test_flatfile_visualization(self):
         url = URLS.SUBMIT_FLATFILE_VISUALIZATION
 

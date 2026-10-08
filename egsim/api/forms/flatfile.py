@@ -189,11 +189,14 @@ class FlatfileMetadataInfoForm(GsimForm, APIForm):
     """
     def clean(self):
         cleaned_data = super().clean()
-        unique_imts = column_names(type='intensity')
+        unique_imts = None
 
         for m_name, model in cleaned_data['gsim'].items():
             imts = intensity_measures_defined_for(model)
-            unique_imts &= set(imts)
+            if unique_imts is None:
+                unique_imts = imts
+            else:
+                unique_imts &= set(imts)
             if not unique_imts:
                 break
 
